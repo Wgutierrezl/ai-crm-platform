@@ -64,6 +64,8 @@
 - Documentacion de endpoints con @ApiTags, @ApiOperation, @ApiResponse, @ApiBody y @ApiBearerAuth.
 - Documentacion de DTOs con @ApiProperty y ejemplos de uso por campo.
 - Configuracion de autenticacion en Swagger mediante Bearer Token JWT.
+- Se agrego el script [src/infrastructure/database/test-connection.ts](src/infrastructure/database/test-connection.ts) para validar la conexion a MySQL con variables de entorno.
+- Se ejecuto la migracion de base de datos para crear/aplicar estructura inicial del CRM.
 
 Fecha: 2026-04-22
 Descripcion breve: Se reforzo la capa de interfaces HTTP con documentacion OpenAPI completa, se mejoro la mantenibilidad con JSDoc en application y se estandarizo el idioma del proyecto al espanol sin alterar la arquitectura hexagonal.
@@ -74,3 +76,4 @@ Descripcion breve: Se reforzo la capa de interfaces HTTP con documentacion OpenA
 - 2026-04-22: Se integro OpenAIService con flujo de tools y ejemplo CREATE_ORDER.
 - 2026-04-22: Se configuraron JWT, guard de autenticacion y extraccion de companyId desde token.
 - 2026-04-22: Se agrego migracion inicial y configuracion MySQL via variables de entorno.
+- 2026-04-22: Se agrego script de prueba de conexion a BD y se corrio la migracion en entorno local.
