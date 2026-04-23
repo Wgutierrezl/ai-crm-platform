@@ -1,73 +1,79 @@
-# React + TypeScript + Vite
+# AI CRM Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Descripcion
+Este frontend corresponde a la interfaz web del proyecto AI CRM. Su objetivo es ofrecer una experiencia visual para la gestion comercial de empresas que usan el CRM, incluyendo autenticacion, dashboard, productos, clientes, conversaciones, ordenes y configuracion.
 
-Currently, two official plugins are available:
+La base visual del frontend parte de un prototipo ya definido en Figma. La implementacion actual toma ese prototipo como referencia de estructura, navegacion y estilo para construir una primera version funcional dentro de React + TypeScript + Vite.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Objetivo del frontend
+- Representar visualmente el flujo del CRM definido en el prototipo de Figma.
+- Servir como base funcional para conectar la interfaz con el backend NestJS del proyecto.
+- Preparar una estructura reutilizable de componentes y paginas para evolucionar desde un prototipo visual hacia una aplicacion real.
 
-## React Compiler
+## Alcance actual
+El frontend actualmente cubre una primera capa funcional de presentacion con las siguientes vistas:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Login
+- Registro
+- Dashboard
+- Productos
+- Clientes
+- Conversaciones
+- Ordenes
+- Detalle de orden
+- Configuracion
 
-## Expanding the ESLint configuration
+Adicionalmente, se implemento una base de componentes UI reutilizables para sostener el sistema visual del proyecto.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Base de diseno
+- El frontend nace a partir de un prototipo dado desde Figma.
+- La implementacion actual respeta la idea general del flujo y la composicion visual del prototipo.
+- Todavia hay partes del proyecto que funcionan con datos simulados para representar el comportamiento esperado antes de conectar completamente con backend.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Stack tecnico
+- React 18
+- TypeScript
+- Vite
+- React Router
+- Tailwind CSS 4
+- Sonner
+- Radix UI
+- Recharts
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Estructura general
+- src/app/components: componentes de layout, KPIs y piezas reutilizables.
+- src/app/components/ui: componentes base de interfaz reutilizables.
+- src/app/pages: vistas principales del sistema.
+- src/styles: estilos globales, tema y configuracion visual.
+- src/routes.tsx: definicion central de rutas.
+- src/lib: utilidades compartidas.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Estado actual
+En este momento el frontend se encuentra en fase de prototipo funcional. Eso significa que:
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+- La navegacion principal ya existe.
+- La interfaz ya compila correctamente.
+- El sistema visual base ya esta montado.
+- La mayor parte del contenido mostrado todavia usa datos quemados o simulados.
+- Aun no se ha completado la integracion real con los endpoints del backend.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Integracion esperada con backend
+La siguiente etapa del frontend consiste en conectarse al backend del AI CRM para dejar de depender de mocks locales. Para eso sera necesario:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- instalar Axios como cliente HTTP
+- centralizar configuracion de base URL, headers y manejo de token
+- crear funciones o servicios para consumir los endpoints existentes
+- definir interfaces TypeScript para request y response
+- reemplazar los datos quemados por datos reales provenientes del backend
+
+## Proximo enfoque de desarrollo
+Las siguientes prioridades del frontend son:
+
+1. Eliminar datos simulados en paginas y componentes.
+2. Instalar Axios y preparar la capa de consumo HTTP.
+3. Implementar servicios para autenticacion, productos, conversaciones, mensajes y ordenes.
+4. Crear interfaces TypeScript para representar contratos de entrada y salida.
+5. Conectar formularios y tablas con datos reales del backend.
+
+## Notas
+Este frontend no debe verse como una version final de producto, sino como la base de una implementacion progresiva que parte desde un diseño de Figma ya definido y evoluciona hacia una aplicacion integrada con backend real.
