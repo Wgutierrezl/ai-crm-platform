@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { UserRepository } from '../../domain/ports/user.repository.port';
@@ -20,19 +20,25 @@ export interface LoginUserOutput {
  */
 @Injectable()
 export class LoginUserUseCase {
+  private readonly logger = new Logger(LoginUserUseCase.name);
+
   constructor(
     private readonly userRepository: UserRepository,
     private readonly jwtService: JwtService,
   ) {}
 
   async execute(input: LoginUserInput): Promise<LoginUserOutput> {
+    this.logger.log(`Iniciando login para email=${input.email}`);
+
     const user = await this.userRepository.findByEmail(input.email);
     if (!user) {
+      this.logger.warn(`Login fallido: usuario no encontrado (${input.email})`);
       throw new UnauthorizedException('Credenciales invalidas');
     }
 
     const passwordMatch = await bcrypt.compare(input.password, user.passwordHash);
     if (!passwordMatch) {
+      this.logger.warn(`Login fallido: password invalido (${input.email})`);
       throw new UnauthorizedException('Credenciales invalidas');
     }
 
@@ -44,6 +50,10 @@ export class LoginUserUseCase {
     };
 
     const accessToken = this.jwtService.sign(payload);
+
+    this.logger.log(
+      `Login generado correctamente userId=${user.id}, companyId=${user.companyId}, role=${user.role}`,
+    );
 
     return {
       accessToken,

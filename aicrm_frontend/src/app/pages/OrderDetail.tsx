@@ -1,4 +1,5 @@
-import { useNavigate } from "react-router";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router";
 import { ArrowLeft, CheckCircle, XCircle, MessageSquare, Bot } from "lucide-react";
 import { Button } from "../components/ui/button.tsx";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card.tsx";
@@ -17,6 +18,8 @@ import {
   AlertDialogTrigger,
 } from "../components/ui/alert-dialog.tsx";
 import { toast } from "sonner";
+import { orderService } from "../../api/services/order.service";
+import { logger } from "../../utils/logger/logger";
 
 const mockOrderDetails = {
   id: "ORD-1234",
@@ -52,7 +55,64 @@ const mockOrderDetails = {
 
 export default function OrderDetail() {
   const navigate = useNavigate();
-  const order = mockOrderDetails;
+  const { id } = useParams();
+  const [order, setOrder] = useState(mockOrderDetails);
+
+  useEffect(() => {
+    const loadOrder = async () => {
+      if (!id) return;
+
+      try {
+        const orders = await orderService.getOrders();
+        const found = orders.find((entry) => entry.id === id);
+
+        if (!found) {
+          logger.warn("Orden no encontrada en API, se mantiene mock fallback", { id });
+          return;
+        }
+
+        setOrder({
+          id: found.id,
+          customer: `Cliente ${found.customerId.slice(0, 6)}`,
+          customerEmail: "No disponible",
+          customerPhone: "No disponible",
+          status: found.status,
+          date: new Date(found.createdAt).toLocaleString("es-CO"),
+          channel: "chat",
+          createdBy: "Sistema",
+          items:
+            found.items?.map((item, idx) => ({
+              id: idx + 1,
+              product: `Producto ${item.productId.slice(0, 6)}`,
+              quantity: item.quantity,
+              unitPrice: item.price,
+              subtotal: item.price * item.quantity,
+            })) ?? [],
+          total: found.total,
+          statusHistory: [
+            {
+              status: "pending",
+              date: new Date(found.createdAt).toLocaleString("es-CO"),
+              user: "Sistema",
+            },
+            ...(found.status !== "pending"
+              ? [
+                  {
+                    status: found.status,
+                    date: new Date(found.createdAt).toLocaleString("es-CO"),
+                    user: "Sistema",
+                  },
+                ]
+              : []),
+          ],
+        });
+      } catch (error) {
+        logger.warn("No se pudo cargar detalle de orden desde API. Se usa mock fallback", error);
+      }
+    };
+
+    loadOrder();
+  }, [id]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -68,10 +128,12 @@ export default function OrderDetail() {
   };
 
   const handleMarkAsPaid = () => {
+    setOrder((prev) => ({ ...prev, status: "paid" }));
     toast.success("Orden marcada como pagada");
   };
 
   const handleCancel = () => {
+    setOrder((prev) => ({ ...prev, status: "cancelled" }));
     toast.success("Orden cancelada");
   };
 

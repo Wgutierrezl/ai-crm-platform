@@ -6,6 +6,8 @@ import { Label } from "../components/ui/label.tsx";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card.tsx";
 import { Alert, AlertDescription } from "../components/ui/alert.tsx";
 import { AlertCircle } from "lucide-react";
+import { authService } from "../../api/services/auth.service";
+import { logger } from "../../utils/logger/logger";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -19,14 +21,25 @@ export default function Login() {
     setError("");
     setLoading(true);
 
-    setTimeout(() => {
-      if (email && password) {
-        navigate("/");
-      } else {
+    try {
+      if (!email || !password) {
         setError("Por favor, ingrese email y contraseña válidos");
+        setLoading(false);
+        return;
       }
+
+      // Llamar al servicio de autenticación
+      await authService.login(email, password);
+
+      logger.info("Login exitoso, redirigiendo al dashboard");
+      navigate("/");
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Error al iniciar sesión";
+      setError(errorMessage || "Error al iniciar sesión. Intenta nuevamente.");
+      logger.error("Error en login", err);
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   return (

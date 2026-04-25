@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
 import { Search, MessageSquare, ShoppingCart } from "lucide-react";
 import { Button } from "../components/ui/button.tsx";
 import { Input } from "../components/ui/input.tsx";
@@ -7,53 +7,69 @@ import { Badge } from "../components/ui/badge.tsx";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table.tsx";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select.tsx";
 import { useNavigate } from "react-router";
+import { toast } from "sonner";
+import { customerService } from "../../api/services/customer.service";
+import { logger } from "../../utils/logger/logger";
+import type { CustomerDto } from "../../api/dtos/customer.dto";
 
-const mockCustomers = [
+type CustomerView = CustomerDto & {
+  identification: string;
+  lastConversation: string;
+  totalPurchased: number;
+  status: "frequent" | "new" | "no-purchase";
+};
+
+const mockCustomers: CustomerView[] = [
   {
-    id: 1,
+    id: "1",
     name: "María González",
     phone: "+57 300 123 4567",
     email: "maria.gonzalez@email.com",
+    companyId: "",
     identification: "CC 1234567890",
     lastConversation: "Hace 5 min",
     totalPurchased: 3250000,
     status: "frequent",
   },
   {
-    id: 2,
+    id: "2",
     name: "Carlos Ruiz",
     phone: "+57 301 234 5678",
     email: "carlos.ruiz@email.com",
+    companyId: "",
     identification: "CC 2345678901",
     lastConversation: "Hace 12 min",
     totalPurchased: 1580000,
     status: "new",
   },
   {
-    id: 3,
+    id: "3",
     name: "Ana López",
     phone: "+57 302 345 6789",
     email: "ana.lopez@email.com",
+    companyId: "",
     identification: "CC 3456789012",
     lastConversation: "Hace 1h",
     totalPurchased: 4750000,
     status: "frequent",
   },
   {
-    id: 4,
+    id: "4",
     name: "Pedro Martínez",
     phone: "+57 303 456 7890",
     email: "pedro.martinez@email.com",
+    companyId: "",
     identification: "CC 4567890123",
     lastConversation: "Hace 2 días",
     totalPurchased: 0,
     status: "no-purchase",
   },
   {
-    id: 5,
+    id: "5",
     name: "Laura Díaz",
     phone: "+57 304 567 8901",
     email: "laura.diaz@email.com",
+    companyId: "",
     identification: "CC 5678901234",
     lastConversation: "Hace 3h",
     totalPurchased: 2100000,
@@ -65,8 +81,32 @@ export default function Customers() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [customers, setCustomers] = useState<CustomerView[]>(mockCustomers);
 
-  const filteredCustomers = mockCustomers.filter((customer) => {
+  useEffect(() => {
+    const loadCustomers = async () => {
+      try {
+        const data = await customerService.getCustomers();
+        const mapped: CustomerView[] = data.map((customer, index) => ({
+          ...customer,
+          identification: `${customer.identificationType ?? "CC"} ${
+            customer.identificationNumber ?? "N/A"
+          }`,
+          lastConversation: "Sin actividad reciente",
+          totalPurchased: 0,
+          status: index % 2 === 0 ? "new" : "no-purchase",
+        }));
+        setCustomers(mapped);
+      } catch (error) {
+        logger.warn("No se pudieron cargar clientes desde API. Se usa mock fallback", error);
+        toast.warning("Clientes cargados desde datos de ejemplo");
+      }
+    };
+
+    loadCustomers();
+  }, []);
+
+  const filteredCustomers = customers.filter((customer) => {
     const matchesSearch =
       customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||

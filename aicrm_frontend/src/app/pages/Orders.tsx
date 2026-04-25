@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
 import { Search, Eye, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "../components/ui/button.tsx";
 import { Input } from "../components/ui/input.tsx";
@@ -9,52 +9,78 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { useNavigate } from "react-router";
 import KPICard from "../components/KPICard";
 import { DollarSign, Clock, CheckCircle as CheckCircleIcon } from "lucide-react";
+import { toast } from "sonner";
+import { orderService } from "../../api/services/order.service";
+import { logger } from "../../utils/logger/logger";
+import type { OrderDto } from "../../api/dtos/order.dto";
 
-const mockOrders = [
+type OrderView = OrderDto & {
+  customer: string;
+  date: string;
+  channel: "chat" | "manual";
+  itemCount: number;
+};
+
+const mockOrders: OrderView[] = [
   {
     id: "ORD-1234",
+    customerId: "cust-1",
+    companyId: "",
     customer: "María González",
     status: "paid",
     total: 4850000,
     date: "2026-04-22",
     channel: "chat",
-    items: 2,
+    itemCount: 2,
+    createdAt: new Date().toISOString(),
   },
   {
     id: "ORD-1235",
+    customerId: "cust-2",
+    companyId: "",
     customer: "Carlos Ruiz",
     status: "pending",
     total: 1200000,
     date: "2026-04-22",
     channel: "chat",
-    items: 1,
+    itemCount: 1,
+    createdAt: new Date().toISOString(),
   },
   {
     id: "ORD-1236",
+    customerId: "cust-3",
+    companyId: "",
     customer: "Ana López",
     status: "paid",
     total: 2100000,
     date: "2026-04-21",
     channel: "manual",
-    items: 3,
+    itemCount: 3,
+    createdAt: new Date().toISOString(),
   },
   {
     id: "ORD-1237",
+    customerId: "cust-4",
+    companyId: "",
     customer: "Pedro Martínez",
     status: "cancelled",
     total: 980000,
     date: "2026-04-21",
     channel: "chat",
-    items: 1,
+    itemCount: 1,
+    createdAt: new Date().toISOString(),
   },
   {
     id: "ORD-1238",
+    customerId: "cust-5",
+    companyId: "",
     customer: "Laura Díaz",
     status: "pending",
     total: 3500000,
     date: "2026-04-20",
     channel: "manual",
-    items: 4,
+    itemCount: 4,
+    createdAt: new Date().toISOString(),
   },
 ];
 
@@ -62,8 +88,30 @@ export default function Orders() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [orders, setOrders] = useState<OrderView[]>(mockOrders);
 
-  const filteredOrders = mockOrders.filter((order) => {
+  useEffect(() => {
+    const loadOrders = async () => {
+      try {
+        const data = await orderService.getOrders();
+        const mapped: OrderView[] = data.map((order) => ({
+          ...order,
+          customer: `Cliente ${order.customerId.slice(0, 6)}`,
+          date: new Date(order.createdAt).toLocaleDateString("es-CO"),
+          channel: "chat",
+          itemCount: order.items?.length ?? 1,
+        }));
+        setOrders(mapped);
+      } catch (error) {
+        logger.warn("No se pudieron cargar órdenes desde API. Se usa mock fallback", error);
+        toast.warning("Órdenes cargadas desde datos de ejemplo");
+      }
+    };
+
+    loadOrders();
+  }, []);
+
+  const filteredOrders = orders.filter((order) => {
     const matchesSearch =
       order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order.customer.toLowerCase().includes(searchQuery.toLowerCase());
@@ -84,10 +132,10 @@ export default function Orders() {
     }
   };
 
-  const totalOrders = mockOrders.length;
-  const pendingOrders = mockOrders.filter((o) => o.status === "pending").length;
-  const paidOrders = mockOrders.filter((o) => o.status === "paid").length;
-  const totalRevenue = mockOrders
+  const totalOrders = orders.length;
+  const pendingOrders = orders.filter((o) => o.status === "pending").length;
+  const paidOrders = orders.filter((o) => o.status === "paid").length;
+  const totalRevenue = orders
     .filter((o) => o.status === "paid")
     .reduce((sum, o) => sum + o.total, 0);
 
@@ -181,7 +229,7 @@ export default function Orders() {
                       {order.channel === "chat" ? "Chat IA" : "Manual"}
                     </Badge>
                   </TableCell>
-                  <TableCell>{order.items}</TableCell>
+                  <TableCell>{order.itemCount}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
                       <Button

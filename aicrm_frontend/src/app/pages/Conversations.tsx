@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent, type KeyboardEvent } from "react";
+import { useEffect, useState, type ChangeEvent, type KeyboardEvent } from "react";
 import { Send, Bot, Package, UserPlus, ShoppingCart, Paperclip } from "lucide-react";
 import { Button } from "../components/ui/button.tsx";
 import { Input } from "../components/ui/input.tsx";
@@ -6,10 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card.
 import { Badge } from "../components/ui/badge.tsx";
 import { ScrollArea } from "../components/ui/scroll-area.tsx";
 import { toast } from "sonner";
+import { conversationService } from "../../api/services/conversation.service";
+import { messageService } from "../../api/services/message.service";
+import { logger } from "../../utils/logger/logger";
+import type { MessageRole } from "../../api/dtos/message.dto";
 
 const mockConversations = [
   {
-    id: 1,
+    id: "1",
     customer: "María González",
     lastMessage: "¿Tienen disponible el producto X?",
     time: "5 min",
@@ -17,7 +21,7 @@ const mockConversations = [
     status: "lead",
   },
   {
-    id: 2,
+    id: "2",
     customer: "Carlos Ruiz",
     lastMessage: "Quiero hacer un pedido",
     time: "12 min",
@@ -25,7 +29,7 @@ const mockConversations = [
     status: "interested",
   },
   {
-    id: 3,
+    id: "3",
     customer: "Ana López",
     lastMessage: "Gracias por la información",
     time: "1h",
@@ -100,26 +104,100 @@ const aiSuggestedActions = [
 ];
 
 export default function Conversations() {
+  const [conversations, setConversations] = useState(mockConversations);
   const [selectedConversation, setSelectedConversation] = useState(mockConversations[0]);
   const [messages, setMessages] = useState(mockMessages);
   const [newMessage, setNewMessage] = useState("");
+  const [sending, setSending] = useState(false);
 
-  const handleSendMessage = (asAgent = true) => {
-    if (!newMessage.trim()) return;
+  useEffect(() => {
+    const loadConversations = async () => {
+      try {
+        const apiConversations = await conversationService.getConversations();
+        if (apiConversations.length === 0) {
+          return;
+        }
 
-    const message = {
-      id: messages.length + 1,
-      role: asAgent ? "agent" : "bot",
-      content: newMessage,
-      timestamp: new Date().toLocaleTimeString("es-CO", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
+        const mapped = apiConversations.map((conv, index) => ({
+          id: conv.id,
+          customer: `Cliente ${index + 1}`,
+          lastMessage: "Conversación activa",
+          time: new Date(conv.createdAt).toLocaleDateString("es-CO"),
+          unread: false,
+          status: "lead",
+        }));
+
+        setConversations(mapped);
+        setSelectedConversation(mapped[0]);
+      } catch (error) {
+        logger.warn("No se pudieron cargar conversaciones desde API. Se usa mock fallback", error);
+        toast.warning("Conversaciones cargadas desde datos de ejemplo");
+      }
     };
 
-    setMessages([...messages, message]);
-    setNewMessage("");
-    toast.success(`Mensaje enviado como ${asAgent ? "agente" : "IA"}`);
+    loadConversations();
+  }, []);
+
+  const handleSendMessage = async (asAgent = true) => {
+    if (!newMessage.trim()) return;
+
+    setSending(true);
+    try {
+      if (asAgent) {
+        const response = await messageService.sendMessage(
+          String(selectedConversation.id),
+          newMessage,
+        );
+
+        const message = {
+          id: messages.length + 1,
+          role: response.role as MessageRole,
+          content: response.content,
+          timestamp: new Date(response.createdAt).toLocaleTimeString("es-CO", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        };
+
+        setMessages((prev) => [...prev, message]);
+      } else {
+        const response = await messageService.processIncomingMessage(
+          String(selectedConversation.id),
+          newMessage,
+        );
+
+        const customerMessage = {
+          id: messages.length + 1,
+          role: response.customerMessage.role as MessageRole,
+          content: response.customerMessage.content,
+          timestamp: new Date(response.customerMessage.createdAt).toLocaleTimeString("es-CO", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        };
+
+        const botMessage = {
+          id: messages.length + 2,
+          role: response.botMessage.role as MessageRole,
+          content: response.botMessage.content,
+          timestamp: new Date(response.botMessage.createdAt).toLocaleTimeString("es-CO", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          action: response.actionExecuted,
+        };
+
+        setMessages((prev) => [...prev, customerMessage, botMessage]);
+      }
+
+      setNewMessage("");
+      toast.success(`Mensaje enviado como ${asAgent ? "agente" : "IA"}`);
+    } catch (error) {
+      logger.error("Error al enviar mensaje", error);
+      toast.error("No fue posible enviar el mensaje");
+    } finally {
+      setSending(false);
+    }
   };
 
   const getMessageBubbleClass = (role: string) => {
@@ -165,7 +243,7 @@ export default function Conversations() {
           <CardContent className="flex-1 overflow-hidden p-0">
             <ScrollArea className="h-full">
               <div className="space-y-1 p-4">
-                {mockConversations.map((conv) => (
+                {conversations.map((conv) => (
                   <div
                     key={conv.id}
                     onClick={() => setSelectedConversation(conv)}
@@ -251,14 +329,15 @@ export default function Conversations() {
                 <Input
                   placeholder="Escribe un mensaje..."
                   value={newMessage}
+                  disabled={sending}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => setNewMessage(e.target.value)}
                   onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => e.key === "Enter" && handleSendMessage()}
                 />
-                <Button onClick={() => handleSendMessage()}>
+                <Button onClick={() => handleSendMessage()} disabled={sending}>
                   <Send className="w-4 h-4 mr-2" />
-                  Como Agente
+                  {sending ? "Enviando..." : "Como Agente"}
                 </Button>
-                <Button variant="secondary" onClick={() => handleSendMessage(false)}>
+                <Button variant="secondary" onClick={() => handleSendMessage(false)} disabled={sending}>
                   <Bot className="w-4 h-4 mr-2" />
                   Enviar a IA
                 </Button>

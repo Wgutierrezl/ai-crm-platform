@@ -9,6 +9,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Badge } from "../components/ui/badge.tsx";
 import { Textarea } from "../components/ui/textarea.tsx";
 import { toast } from "sonner";
+import { useNavigate } from "react-router";
+import { authService } from "../../api/services/auth.service";
+import { authStorage } from "../../utils/storage/authStorage";
 
 const mockUsers = [
   { id: 1, name: "Juan Pérez", email: "juan.perez@miempresa.com", role: "admin" },
@@ -17,10 +20,12 @@ const mockUsers = [
 ];
 
 export default function Settings() {
+  const navigate = useNavigate();
   const [companyData, setCompanyData] = useState({
     name: "Mi Empresa S.A.",
     primaryColor: "#0EA5A4",
   });
+  const authData = authStorage.getAuthData();
 
   const [salesPrompt, setSalesPrompt] = useState(
     "Actúa como un asistente de ventas profesional y amigable. Ayuda a los clientes a encontrar productos, responde sus preguntas y facilita la creación de órdenes."
@@ -47,6 +52,12 @@ export default function Settings() {
     }
     toast.success("Contraseña actualizada exitosamente");
     setPassword({ current: "", new: "", confirm: "" });
+  };
+
+  const handleLogout = () => {
+    authService.logout();
+    toast.success("Sesión cerrada correctamente");
+    navigate("/login");
   };
 
   return (
@@ -232,7 +243,9 @@ export default function Settings() {
                   <div>
                     <p className="font-medium">Sesión Activa</p>
                     <p className="text-sm text-muted-foreground">
-                      Token JWT válido hasta: 2026-04-23 14:30
+                      {authData
+                        ? `Usuario ${authData.userId.slice(0, 8)} · Empresa ${authData.companyId.slice(0, 8)}`
+                        : "Sin sesión activa"}
                     </p>
                   </div>
                 </div>
@@ -275,6 +288,10 @@ export default function Settings() {
               <Button onClick={handleChangePassword}>
                 <Save className="w-4 h-4 mr-2" />
                 Cambiar Contraseña
+              </Button>
+
+              <Button variant="destructive" onClick={handleLogout}>
+                Cerrar Sesión
               </Button>
             </CardContent>
           </Card>

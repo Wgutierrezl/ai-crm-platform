@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ChangeEvent } from "react";
 import { useNavigate, Link } from "react-router";
 import { Button } from "../components/ui/button.tsx";
 import { Input } from "../components/ui/input.tsx";
@@ -7,6 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../co
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select.tsx";
 import { Alert, AlertDescription } from "../components/ui/alert.tsx";
 import { AlertCircle } from "lucide-react";
+import { toast } from "sonner";
+import { authService } from "../../api/services/auth.service";
+import { logger } from "../../utils/logger/logger";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -26,14 +29,41 @@ export default function Register() {
     setError("");
     setLoading(true);
 
-    setTimeout(() => {
-      if (formData.companyName && formData.email && formData.password && formData.identificationType && formData.identificationNumber) {
-        navigate("/login");
-      } else {
+    try {
+      if (
+        !formData.companyName ||
+        !formData.email ||
+        !formData.password ||
+        !formData.identificationType ||
+        !formData.identificationNumber
+      ) {
         setError("Por favor, completa todos los campos obligatorios");
+        return;
       }
+
+      await authService.register(
+        formData.companyName,
+        formData.email,
+        formData.password,
+        formData.identificationType,
+        formData.identificationNumber,
+        formData.fullName || undefined,
+      );
+
+      await authService.login(formData.email, formData.password);
+      toast.success("Cuenta creada correctamente");
+      navigate("/");
+    } catch (err: unknown) {
+      const maybeAxiosError = err as {
+        response?: { data?: { message?: string | string[] } };
+      };
+      const message = maybeAxiosError.response?.data?.message;
+      const parsedMessage = Array.isArray(message) ? message.join(", ") : message;
+      setError(parsedMessage || "No fue posible completar el registro");
+      logger.error("Error en registro", err);
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   return (
@@ -65,7 +95,9 @@ export default function Register() {
                 id="companyName"
                 placeholder="Mi Empresa S.A."
                 value={formData.companyName}
-                onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setFormData({ ...formData, companyName: e.target.value })
+                }
                 required
               />
             </div>
@@ -77,7 +109,9 @@ export default function Register() {
                 type="email"
                 placeholder="tu@email.com"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
                 required
               />
             </div>
@@ -89,7 +123,9 @@ export default function Register() {
                 type="password"
                 placeholder="••••••••"
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
                 required
               />
             </div>
@@ -104,10 +140,10 @@ export default function Register() {
                   <SelectValue placeholder="Selecciona un tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="nit">NIT</SelectItem>
-                  <SelectItem value="cc">Cédula de Ciudadanía</SelectItem>
-                  <SelectItem value="ce">Cédula de Extranjería</SelectItem>
-                  <SelectItem value="passport">Pasaporte</SelectItem>
+                  <SelectItem value="NIT">NIT</SelectItem>
+                  <SelectItem value="CC">Cédula de Ciudadanía</SelectItem>
+                  <SelectItem value="CE">Cédula de Extranjería</SelectItem>
+                  <SelectItem value="PASSPORT">Pasaporte</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -118,7 +154,9 @@ export default function Register() {
                 id="identificationNumber"
                 placeholder="123456789"
                 value={formData.identificationNumber}
-                onChange={(e) => setFormData({ ...formData, identificationNumber: e.target.value })}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setFormData({ ...formData, identificationNumber: e.target.value })
+                }
                 required
               />
             </div>
@@ -129,7 +167,9 @@ export default function Register() {
                 id="fullName"
                 placeholder="Juan Pérez"
                 value={formData.fullName}
-                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setFormData({ ...formData, fullName: e.target.value })
+                }
               />
             </div>
 

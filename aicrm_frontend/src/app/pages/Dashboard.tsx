@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { MessageSquare, DollarSign, Clock, CheckCircle, TrendingUp } from "lucide-react";
 import KPICard from "../components/KPICard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card.tsx";
@@ -5,6 +6,11 @@ import { Badge } from "../components/ui/badge.tsx";
 import { Button } from "../components/ui/button.tsx";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useNavigate } from "react-router";
+import { productService } from "../../api/services/product.service";
+import { conversationService } from "../../api/services/conversation.service";
+import { orderService } from "../../api/services/order.service";
+import { logger } from "../../utils/logger/logger";
+import { toast } from "sonner";
 
 const salesData = [
   { day: "Lun", sales: 4200 },
@@ -36,6 +42,49 @@ const aiRecommendations = [
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const [activeConversations, setActiveConversations] = useState(23);
+  const [pendingOrders, setPendingOrders] = useState(8);
+  const [paidOrders, setPaidOrders] = useState(42);
+  const [dailySales, setDailySales] = useState("$4.9M");
+
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      try {
+        const [conversations, orders, products] = await Promise.all([
+          conversationService.getConversations(),
+          orderService.getOrders(),
+          productService.getProducts(),
+        ]);
+
+        const pending = orders.filter((order) => order.status === "pending").length;
+        const paid = orders.filter((order) => order.status === "paid").length;
+        const today = new Date().toDateString();
+        const todayRevenue = orders
+          .filter(
+            (order) =>
+              order.status === "paid" &&
+              new Date(order.createdAt).toDateString() === today,
+          )
+          .reduce((sum, order) => sum + order.total, 0);
+
+        setActiveConversations(conversations.length);
+        setPendingOrders(pending);
+        setPaidOrders(paid);
+        setDailySales(`$${(todayRevenue / 1000000).toFixed(1)}M`);
+
+        logger.info("Dashboard actualizado", {
+          conversations: conversations.length,
+          orders: orders.length,
+          products: products.length,
+        });
+      } catch (error) {
+        logger.warn("No fue posible cargar dashboard desde API. Se mantiene fallback visual", error);
+        toast.warning("Dashboard usando datos de ejemplo");
+      }
+    };
+
+    loadDashboardData();
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -47,26 +96,26 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <KPICard
           title="Conversaciones Activas"
-          value={23}
+          value={activeConversations}
           icon={MessageSquare}
           trend={{ value: 12, isPositive: true }}
         />
         <KPICard
           title="Ventas del Día"
-          value="$4.9M"
+          value={dailySales}
           icon={DollarSign}
           trend={{ value: 8, isPositive: true }}
           iconColor="text-[var(--success)]"
         />
         <KPICard
           title="Órdenes Pendientes"
-          value={8}
+          value={pendingOrders}
           icon={Clock}
           iconColor="text-[var(--warning)]"
         />
         <KPICard
           title="Órdenes Pagadas"
-          value={42}
+          value={paidOrders}
           icon={CheckCircle}
           trend={{ value: 15, isPositive: true }}
           iconColor="text-[var(--success)]"

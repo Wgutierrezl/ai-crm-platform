@@ -78,3 +78,26 @@ El frontend del AI CRM se encuentra en una fase de prototipo funcional basado en
 
 ## Fecha de actualizacion
 2026-04-23
+
+## Entrada 2026-04-24
+
+### Funcionalidades implementadas
+- Integracion con backend:
+  - Registro de usuario
+  - Login
+  - Creacion de productos
+- Implementacion de capa API con axios.
+- Persistencia de sesion con localStorage.
+
+### Mejoras tecnicas
+- Configuracion de axios con interceptores.
+- Implementacion de logger.
+- Organizacion de servicios por dominio.
+
+### Pendientes
+- Reemplazar datos mock por datos reales.
+- Integrar endpoints faltantes:
+  - Customers
+  - Orders
+  - Conversations
+- Mejorar manejo de errores en UI.

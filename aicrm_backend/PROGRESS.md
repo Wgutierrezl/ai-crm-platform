@@ -77,3 +77,28 @@ Descripcion breve: Se reforzo la capa de interfaces HTTP con documentacion OpenA
 - 2026-04-22: Se configuraron JWT, guard de autenticacion y extraccion de companyId desde token.
 - 2026-04-22: Se agrego migracion inicial y configuracion MySQL via variables de entorno.
 - 2026-04-22: Se agrego script de prueba de conexion a BD y se corrio la migracion en entorno local.
+
+## Entrada 2026-04-24
+
+### Funcionalidades implementadas
+- Registro de usuario.
+- Login con autenticacion JWT.
+- Creacion de productos.
+
+### Mejoras tecnicas
+- Implementacion inicial de logging en:
+  - Auth
+  - Register
+- Configuracion de CORS para habilitar consumo desde frontend en desarrollo.
+- Versionado inicial de rutas HTTP bajo prefijo global /api/v1.
+
+### Pendientes
+- Implementar modulo completo de Customer:
+  - Controller
+  - Service
+  - Repository
+- Completar sistema de logging en:
+  - Products
+  - Orders
+  - Conversations
+  - Otros endpoints
