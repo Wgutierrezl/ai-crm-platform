@@ -101,3 +101,24 @@ El frontend del AI CRM se encuentra en una fase de prototipo funcional basado en
   - Orders
   - Conversations
 - Mejorar manejo de errores en UI.
+
+## Entrada 2026-04-25
+
+### Funcionalidades implementadas
+- Backend actualizado con modulo Customer completo y disponible para consumo desde frontend.
+- Endpoints Customer disponibles y versionados:
+  - POST /api/v1/customers
+  - GET /api/v1/customers
+  - GET /api/v1/customers/:id
+- Documentacion Swagger de Customer alineada con el patron del proyecto.
+
+### Mejoras tecnicas
+- Logging integrado en flujo Customer del backend (controller, use cases y repository).
+- DTO de Customer documentado en Swagger con ejemplos y campos requeridos/opcionales.
+
+### Pendientes
+- Reemplazar datos mock por datos reales en Customers.tsx (retirar fallback progresivamente).
+- Integrar completamente endpoints faltantes en frontend:
+  - Orders
+  - Conversations
+- Mejorar manejo de errores en UI con mensajes consistentes por tipo de fallo.

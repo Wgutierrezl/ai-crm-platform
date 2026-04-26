@@ -37,11 +37,16 @@ import { GetConversationsUseCase } from './application/use-cases/get-conversatio
 import { CreateMessageUseCase, ProcessIncomingMessageUseCase } from './application/use-cases/create-message.use-case';
 import { CreateOrderUseCase } from './application/use-cases/create-order.use-case';
 import { GetOrdersByCompanyUseCase } from './application/use-cases/get-orders-by-company.use-case';
+import { CreateCustomerUseCase } from './application/use-cases/create-customer.use-case';
+import { GetCustomersByCompanyUseCase } from './application/use-cases/get-customers-by-company.use-case';
+import { GetCustomerByIdUseCase } from './application/use-cases/get-customer-by-id.use-case';
+import { GetCustomerByPhoneUseCase } from './application/use-cases/get-customer-by-phone.use-case';
 import { AuthController } from './interfaces/http/controllers/auth.controller';
 import { ProductController } from './interfaces/http/controllers/product.controller';
 import { ConversationController } from './interfaces/http/controllers/conversation.controller';
 import { MessageController } from './interfaces/http/controllers/message.controller';
 import { OrderController } from './interfaces/http/controllers/order.controller';
+import { CustomerController } from './interfaces/http/controllers/customer.controller';
 import { JwtAuthGuard } from './interfaces/http/guards/jwt-auth.guard';
 import { AiModule } from './infrastructure/ai/ai.module';
 
@@ -97,6 +102,7 @@ import { AiModule } from './infrastructure/ai/ai.module';
     AppController,
     AuthController,
     ProductController,
+    CustomerController,
     ConversationController,
     MessageController,
     OrderController,
@@ -108,6 +114,10 @@ import { AiModule } from './infrastructure/ai/ai.module';
     LoginUserUseCase,
     CreateProductUseCase,
     GetProductsByCompanyUseCase,
+    CreateCustomerUseCase,
+    GetCustomersByCompanyUseCase,
+    GetCustomerByIdUseCase,
+    GetCustomerByPhoneUseCase,
     CreateConversationUseCase,
     GetConversationsUseCase,
     CreateMessageUseCase,
