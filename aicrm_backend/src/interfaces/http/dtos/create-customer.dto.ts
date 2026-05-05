@@ -31,7 +31,10 @@ export class CreateCustomerDto {
   @IsString()
   identificationType?: string;
 
-  @ApiPropertyOptional({ example: '1234567890', description: 'Numero de identificacion' })
+  @ApiPropertyOptional({
+    example: '1234567890',
+    description: 'Numero de identificacion',
+  })
   @IsOptional()
   @IsString()
   identificationNumber?: string;

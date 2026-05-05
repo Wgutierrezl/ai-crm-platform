@@ -9,7 +9,10 @@ export class RegisterDto {
   @IsString()
   companyName!: string;
 
-  @ApiProperty({ example: 'admin@acme.com', description: 'Email del usuario admin' })
+  @ApiProperty({
+    example: 'admin@acme.com',
+    description: 'Email del usuario admin',
+  })
   @IsEmail()
   email!: string;
 
@@ -25,11 +28,17 @@ export class RegisterDto {
   @IsString()
   identificationType!: string;
 
-  @ApiProperty({ example: '123456789', description: 'Numero de identificacion' })
+  @ApiProperty({
+    example: '123456789',
+    description: 'Numero de identificacion',
+  })
   @IsString()
   identificationNumber!: string;
 
-  @ApiPropertyOptional({ example: 'Juan Perez', description: 'Nombre completo del usuario' })
+  @ApiPropertyOptional({
+    example: 'Juan Perez',
+    description: 'Nombre completo del usuario',
+  })
   @IsOptional()
   @IsString()
   fullName?: string;

@@ -7,7 +7,9 @@ import { Conversation } from '../../domain/entities/conversation.entity';
  */
 @Injectable()
 export class GetConversationsUseCase {
-  constructor(private readonly conversationRepository: ConversationRepository) {}
+  constructor(
+    private readonly conversationRepository: ConversationRepository,
+  ) {}
 
   async execute(companyId: string): Promise<Conversation[]> {
     return this.conversationRepository.findAllByCompanyId(companyId);

@@ -144,8 +144,11 @@ export class ProcessIncomingMessageUseCase {
 
       if (type === 'CREATE_ORDER' && payload) {
         // Calcular total con los items del pedido
-        const items: Array<{ productId: string; quantity: number; price: number }> =
-          payload.items ?? [];
+        const items: Array<{
+          productId: string;
+          quantity: number;
+          price: number;
+        }> = payload.items ?? [];
         const total = items.reduce(
           (sum: number, i: { price: number; quantity: number }) =>
             sum + i.price * i.quantity,

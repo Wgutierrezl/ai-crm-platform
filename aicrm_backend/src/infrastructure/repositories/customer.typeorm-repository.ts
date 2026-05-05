@@ -28,7 +28,9 @@ export class CustomerTypeormRepository implements CustomerRepository {
 
   async create(customer: Customer): Promise<Customer> {
     try {
-      this.logger.log(`Saving customer entity id=${customer.id}, companyId=${customer.companyId}`);
+      this.logger.log(
+        `Saving customer entity id=${customer.id}, companyId=${customer.companyId}`,
+      );
       const entity = this.ormRepo.create({
         id: customer.id,
         name: customer.name,
@@ -39,7 +41,9 @@ export class CustomerTypeormRepository implements CustomerRepository {
         identificationNumber: customer.identificationNumber,
       });
       const saved = await this.ormRepo.save(entity);
-      this.logger.log(`Customer persisted id=${saved.id}, companyId=${saved.companyId}`);
+      this.logger.log(
+        `Customer persisted id=${saved.id}, companyId=${saved.companyId}`,
+      );
       return this.toDomain(saved);
     } catch (error) {
       this.logger.error(
@@ -69,15 +73,24 @@ export class CustomerTypeormRepository implements CustomerRepository {
     }
   }
 
-  async findByPhone(phone: string, companyId: string): Promise<Customer | null> {
+  async findByPhone(
+    phone: string,
+    companyId: string,
+  ): Promise<Customer | null> {
     try {
-      this.logger.log(`Searching customer by phone=${phone}, companyId=${companyId}`);
+      this.logger.log(
+        `Searching customer by phone=${phone}, companyId=${companyId}`,
+      );
       const entity = await this.ormRepo.findOneBy({ phone, companyId });
       if (!entity) {
-        this.logger.warn(`Customer not found by phone=${phone}, companyId=${companyId}`);
+        this.logger.warn(
+          `Customer not found by phone=${phone}, companyId=${companyId}`,
+        );
         return null;
       }
-      this.logger.log(`Customer found by phone=${phone}, companyId=${companyId}`);
+      this.logger.log(
+        `Customer found by phone=${phone}, companyId=${companyId}`,
+      );
       return this.toDomain(entity);
     } catch (error) {
       this.logger.error(
@@ -92,7 +105,9 @@ export class CustomerTypeormRepository implements CustomerRepository {
     try {
       this.logger.log(`Listing customers by companyId=${companyId}`);
       const entities = await this.ormRepo.findBy({ companyId });
-      this.logger.log(`Customers listed count=${entities.length}, companyId=${companyId}`);
+      this.logger.log(
+        `Customers listed count=${entities.length}, companyId=${companyId}`,
+      );
       return entities.map((e) => this.toDomain(e));
     } catch (error) {
       this.logger.error(

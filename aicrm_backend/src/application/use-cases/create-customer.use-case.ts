@@ -38,7 +38,9 @@ export class CreateCustomerUseCase {
       );
 
       const saved = await this.customerRepository.create(customer);
-      this.logger.log(`Customer created id=${saved.id}, companyId=${saved.companyId}`);
+      this.logger.log(
+        `Customer created id=${saved.id}, companyId=${saved.companyId}`,
+      );
 
       return saved;
     } catch (error) {

@@ -21,7 +21,10 @@ export class CreateOrderItemDto {
   @Min(1)
   quantity!: number;
 
-  @ApiProperty({ example: 4999.99, description: 'Precio unitario del producto' })
+  @ApiProperty({
+    example: 4999.99,
+    description: 'Precio unitario del producto',
+  })
   @IsNumber()
   @Min(0)
   price!: number;

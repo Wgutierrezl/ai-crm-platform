@@ -1,10 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -32,7 +26,10 @@ export class ConversationController {
   @Post()
   @ApiOperation({ summary: 'Crear conversacion para un cliente de la empresa' })
   @ApiBody({ type: CreateConversationDto })
-  @ApiResponse({ status: 201, description: 'Conversacion creada correctamente' })
+  @ApiResponse({
+    status: 201,
+    description: 'Conversacion creada correctamente',
+  })
   @ApiResponse({ status: 401, description: 'No autenticado' })
   async create(
     @CurrentUser() user: CurrentUserPayload,

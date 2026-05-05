@@ -14,15 +14,24 @@ export class GetCustomerByPhoneUseCase {
 
   async execute(phone: string, companyId: string): Promise<Customer | null> {
     try {
-      this.logger.log(`Executing get customer by phone=${phone}, companyId=${companyId}`);
-      const customer = await this.customerRepository.findByPhone(phone, companyId);
+      this.logger.log(
+        `Executing get customer by phone=${phone}, companyId=${companyId}`,
+      );
+      const customer = await this.customerRepository.findByPhone(
+        phone,
+        companyId,
+      );
 
       if (!customer) {
-        this.logger.warn(`Customer not found for phone=${phone}, companyId=${companyId}`);
+        this.logger.warn(
+          `Customer not found for phone=${phone}, companyId=${companyId}`,
+        );
         return null;
       }
 
-      this.logger.log(`Customer found id=${customer.id}, companyId=${customer.companyId}`);
+      this.logger.log(
+        `Customer found id=${customer.id}, companyId=${customer.companyId}`,
+      );
       return customer;
     } catch (error) {
       this.logger.error(

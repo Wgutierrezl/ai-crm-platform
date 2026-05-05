@@ -78,6 +78,28 @@ Descripcion breve: Se reforzo la capa de interfaces HTTP con documentacion OpenA
 - 2026-04-22: Se agrego migracion inicial y configuracion MySQL via variables de entorno.
 - 2026-04-22: Se agrego script de prueba de conexion a BD y se corrio la migracion en entorno local.
 
+## Entrada 2026-05-05
+
+### Integracion inicial WhatsApp Cloud API (Meta)
+- Se agrego soporte multi-tenant para credenciales de WhatsApp por empresa:
+  - Entidad de dominio `CompanyWhatsappCredential`.
+  - Entidad ORM `company_whatsapp_credentials`.
+  - Puerto de repositorio y adaptador TypeORM.
+  - Migracion `1710000000001-AddCompanyWhatsappCredentials`.
+- Se implemento caso de uso `UpsertCompanyWhatsappCredentialUseCase`:
+  - Crea o actualiza credenciales por `companyId`.
+  - Valida conflicto de `phoneNumberId` entre empresas.
+  - Devuelve salida saneada (sin secretos).
+- Se agrego endpoint interno:
+  - `POST /api/v1/company-whatsapp-credentials`
+  - Protegido con header `X-Internal-Api-Key` contra `INTERNAL_API_KEY`.
+- Se implementaron endpoints de webhook:
+  - `GET /api/v1/webhooks/whatsapp` (verificacion Meta por token en BD y fallback opcional global).
+  - `POST /api/v1/webhooks/whatsapp` (recepcion base, extraccion de `phone_number_id`, resolucion de `companyId`, log de mensaje).
+- Se creo adaptador `MetaWhatsappService` con metodo `sendTextMessage(...)` para envio a Graph API.
+- Se actualizaron variables de entorno en `.env.example`.
+- Se registraron controllers/providers/entities nuevos en `AppModule`.
+
 ## Entrada 2026-04-24
 
 ### Funcionalidades implementadas

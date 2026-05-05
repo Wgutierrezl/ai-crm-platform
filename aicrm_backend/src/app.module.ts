@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
+import type { SignOptions } from 'jsonwebtoken';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { CompanyOrmEntity } from './infrastructure/database/entities/company.orm-entity';
@@ -12,6 +13,8 @@ import { ConversationOrmEntity } from './infrastructure/database/entities/conver
 import { MessageOrmEntity } from './infrastructure/database/entities/message.orm-entity';
 import { OrderOrmEntity } from './infrastructure/database/entities/order.orm-entity';
 import { OrderItemOrmEntity } from './infrastructure/database/entities/order-item.orm-entity';
+import { CompanyWhatsappCredentialOrmEntity } from './infrastructure/database/entities/company-whatsapp-credential.orm-entity';
+import { CompanyWhatsappAppOrmEntity } from './infrastructure/database/entities/company-whatsapp-app.orm-entity';
 import { CompanyRepository } from './domain/ports/company.repository.port';
 import { UserRepository } from './domain/ports/user.repository.port';
 import { CustomerRepository } from './domain/ports/customer.repository.port';
@@ -20,6 +23,8 @@ import { ConversationRepository } from './domain/ports/conversation.repository.p
 import { MessageRepository } from './domain/ports/message.repository.port';
 import { OrderRepository } from './domain/ports/order.repository.port';
 import { OrderItemRepository } from './domain/ports/order-item.repository.port';
+import { CompanyWhatsappCredentialRepository } from './domain/ports/company-whatsapp-credential.repository.port';
+import { CompanyWhatsappAppRepository } from './domain/ports/company-whatsapp-app.repository.port';
 import { CompanyTypeormRepository } from './infrastructure/repositories/company.typeorm-repository';
 import { UserTypeormRepository } from './infrastructure/repositories/user.typeorm-repository';
 import { CustomerTypeormRepository } from './infrastructure/repositories/customer.typeorm-repository';
@@ -28,27 +33,40 @@ import { ConversationTypeormRepository } from './infrastructure/repositories/con
 import { MessageTypeormRepository } from './infrastructure/repositories/message.typeorm-repository';
 import { OrderTypeormRepository } from './infrastructure/repositories/order.typeorm-repository';
 import { OrderItemTypeormRepository } from './infrastructure/repositories/order-item.typeorm-repository';
+import { CompanyWhatsappCredentialTypeormRepository } from './infrastructure/repositories/company-whatsapp-credential.typeorm-repository';
+import { CompanyWhatsappAppTypeormRepository } from './infrastructure/repositories/company-whatsapp-app.typeorm-repository';
 import { RegisterUserUseCase } from './application/use-cases/register-user.use-case';
 import { LoginUserUseCase } from './application/use-cases/login-user.use-case';
 import { CreateProductUseCase } from './application/use-cases/create-product.use-case';
 import { GetProductsByCompanyUseCase } from './application/use-cases/get-products-by-company.use-case';
 import { CreateConversationUseCase } from './application/use-cases/create-conversation.use-case';
 import { GetConversationsUseCase } from './application/use-cases/get-conversations.use-case';
-import { CreateMessageUseCase, ProcessIncomingMessageUseCase } from './application/use-cases/create-message.use-case';
+import {
+  CreateMessageUseCase,
+  ProcessIncomingMessageUseCase,
+} from './application/use-cases/create-message.use-case';
 import { CreateOrderUseCase } from './application/use-cases/create-order.use-case';
 import { GetOrdersByCompanyUseCase } from './application/use-cases/get-orders-by-company.use-case';
 import { CreateCustomerUseCase } from './application/use-cases/create-customer.use-case';
 import { GetCustomersByCompanyUseCase } from './application/use-cases/get-customers-by-company.use-case';
 import { GetCustomerByIdUseCase } from './application/use-cases/get-customer-by-id.use-case';
 import { GetCustomerByPhoneUseCase } from './application/use-cases/get-customer-by-phone.use-case';
+import { UpsertCompanyWhatsappCredentialUseCase } from './application/use-cases/upsert-company-whatsapp-credential.use-case';
+import { UpsertCompanyWhatsappAppUseCase } from './application/use-cases/upsert-company-whatsapp-app.use-case';
+import { VerifyWhatsappWebhookUseCase } from './application/use-cases/verify-whatsapp-webhook.use-case';
+import { HandleWhatsappWebhookUseCase } from './application/use-cases/handle-whatsapp-webhook.use-case';
 import { AuthController } from './interfaces/http/controllers/auth.controller';
 import { ProductController } from './interfaces/http/controllers/product.controller';
 import { ConversationController } from './interfaces/http/controllers/conversation.controller';
 import { MessageController } from './interfaces/http/controllers/message.controller';
 import { OrderController } from './interfaces/http/controllers/order.controller';
 import { CustomerController } from './interfaces/http/controllers/customer.controller';
+import { CompanyWhatsappCredentialController } from './interfaces/http/controllers/company-whatsapp-credential.controller';
+import { CompanyWhatsappAppController } from './interfaces/http/controllers/company-whatsapp-app.controller';
+import { WhatsappWebhookController } from './interfaces/http/controllers/whatsapp-webhook.controller';
 import { JwtAuthGuard } from './interfaces/http/guards/jwt-auth.guard';
 import { AiModule } from './infrastructure/ai/ai.module';
+import { MetaWhatsappService } from './infrastructure/whatsapp/meta-whatsapp.service';
 
 @Module({
   imports: [
@@ -71,6 +89,8 @@ import { AiModule } from './infrastructure/ai/ai.module';
           MessageOrmEntity,
           OrderOrmEntity,
           OrderItemOrmEntity,
+          CompanyWhatsappAppOrmEntity,
+          CompanyWhatsappCredentialOrmEntity,
         ],
         synchronize: false,
       }),
@@ -84,16 +104,23 @@ import { AiModule } from './infrastructure/ai/ai.module';
       MessageOrmEntity,
       OrderOrmEntity,
       OrderItemOrmEntity,
+      CompanyWhatsappAppOrmEntity,
+      CompanyWhatsappCredentialOrmEntity,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET', 'supersecretkey'),
-        signOptions: {
-          expiresIn: configService.get<string>('JWT_EXPIRES_IN', '1d') as any,
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const expiresIn = (configService.get<string>('JWT_EXPIRES_IN') ??
+          '1d') as SignOptions['expiresIn'];
+
+        return {
+          secret: configService.get<string>('JWT_SECRET', 'supersecretkey'),
+          signOptions: {
+            expiresIn,
+          },
+        };
+      },
       global: true,
     }),
     AiModule,
@@ -106,6 +133,9 @@ import { AiModule } from './infrastructure/ai/ai.module';
     ConversationController,
     MessageController,
     OrderController,
+    CompanyWhatsappAppController,
+    CompanyWhatsappCredentialController,
+    WhatsappWebhookController,
   ],
   providers: [
     AppService,
@@ -118,6 +148,11 @@ import { AiModule } from './infrastructure/ai/ai.module';
     GetCustomersByCompanyUseCase,
     GetCustomerByIdUseCase,
     GetCustomerByPhoneUseCase,
+    UpsertCompanyWhatsappAppUseCase,
+    UpsertCompanyWhatsappCredentialUseCase,
+    VerifyWhatsappWebhookUseCase,
+    HandleWhatsappWebhookUseCase,
+    MetaWhatsappService,
     CreateConversationUseCase,
     GetConversationsUseCase,
     CreateMessageUseCase,
@@ -155,6 +190,14 @@ import { AiModule } from './infrastructure/ai/ai.module';
     {
       provide: OrderItemRepository,
       useClass: OrderItemTypeormRepository,
+    },
+    {
+      provide: CompanyWhatsappAppRepository,
+      useClass: CompanyWhatsappAppTypeormRepository,
+    },
+    {
+      provide: CompanyWhatsappCredentialRepository,
+      useClass: CompanyWhatsappCredentialTypeormRepository,
     },
   ],
 })

@@ -74,7 +74,8 @@ El campo "reply" es SIEMPRE requerido.
     const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
       { role: 'system', content: systemPrompt },
       ...input.history.map((h) => ({
-        role: h.role === 'customer' ? ('user' as const) : ('assistant' as const),
+        role:
+          h.role === 'customer' ? ('user' as const) : ('assistant' as const),
         content: h.content,
       })),
       { role: 'user', content: input.customerMessage },
@@ -92,14 +93,16 @@ El campo "reply" es SIEMPRE requerido.
       const parsed = JSON.parse(raw) as AIResponse;
 
       if (!parsed.reply) {
-        parsed.reply = 'Disculpa, no pude procesar tu mensaje. ¿Puedes repetirlo?';
+        parsed.reply =
+          'Disculpa, no pude procesar tu mensaje. ¿Puedes repetirlo?';
       }
 
       return parsed;
     } catch (error) {
       this.logger.error('Fallo la solicitud a OpenAI', error);
       return {
-        reply: 'Lo siento, estoy experimentando dificultades técnicas. Por favor intenta más tarde.',
+        reply:
+          'Lo siento, estoy experimentando dificultades técnicas. Por favor intenta más tarde.',
       };
     }
   }

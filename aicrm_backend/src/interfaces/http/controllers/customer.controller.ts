@@ -46,14 +46,18 @@ export class CustomerController {
     @Body() dto: CreateCustomerDto,
   ) {
     try {
-      this.logger.log(`Creating customer request for companyId=${user.companyId}`);
+      this.logger.log(
+        `Creating customer request for companyId=${user.companyId}`,
+      );
 
       const customer = await this.createCustomerUseCase.execute({
         ...dto,
         companyId: user.companyId,
       });
 
-      this.logger.log(`Customer created id=${customer.id}, companyId=${customer.companyId}`);
+      this.logger.log(
+        `Customer created id=${customer.id}, companyId=${customer.companyId}`,
+      );
       return customer;
     } catch (error) {
       this.logger.error(
@@ -72,8 +76,12 @@ export class CustomerController {
   async findAll(@CurrentUser() user: CurrentUserPayload) {
     try {
       this.logger.log(`Listing customers for companyId=${user.companyId}`);
-      const customers = await this.getCustomersByCompanyUseCase.execute(user.companyId);
-      this.logger.log(`Listed customers count=${customers.length} for companyId=${user.companyId}`);
+      const customers = await this.getCustomersByCompanyUseCase.execute(
+        user.companyId,
+      );
+      this.logger.log(
+        `Listed customers count=${customers.length} for companyId=${user.companyId}`,
+      );
       return customers;
     } catch (error) {
       this.logger.error(
@@ -96,8 +104,13 @@ export class CustomerController {
   ) {
     try {
       this.logger.log(`Finding customer id=${id}, companyId=${user.companyId}`);
-      const customer = await this.getCustomerByIdUseCase.execute(id, user.companyId);
-      this.logger.log(`Customer found id=${customer.id}, companyId=${customer.companyId}`);
+      const customer = await this.getCustomerByIdUseCase.execute(
+        id,
+        user.companyId,
+      );
+      this.logger.log(
+        `Customer found id=${customer.id}, companyId=${customer.companyId}`,
+      );
       return customer;
     } catch (error) {
       this.logger.error(

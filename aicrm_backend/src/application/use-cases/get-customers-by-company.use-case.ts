@@ -14,8 +14,11 @@ export class GetCustomersByCompanyUseCase {
   async execute(companyId: string): Promise<Customer[]> {
     try {
       this.logger.log(`Executing list customers for companyId=${companyId}`);
-      const customers = await this.customerRepository.findAllByCompanyId(companyId);
-      this.logger.log(`Customers found=${customers.length} for companyId=${companyId}`);
+      const customers =
+        await this.customerRepository.findAllByCompanyId(companyId);
+      this.logger.log(
+        `Customers found=${customers.length} for companyId=${companyId}`,
+      );
       return customers;
     } catch (error) {
       this.logger.error(

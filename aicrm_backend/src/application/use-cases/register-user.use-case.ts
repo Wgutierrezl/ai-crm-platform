@@ -62,7 +62,9 @@ export class RegisterUserUseCase {
     );
 
     await this.userRepository.create(user);
-    this.logger.log(`Usuario admin creado userId=${userId}, companyId=${companyId}`);
+    this.logger.log(
+      `Usuario admin creado userId=${userId}, companyId=${companyId}`,
+    );
 
     return { userId, companyId, email: user.email };
   }

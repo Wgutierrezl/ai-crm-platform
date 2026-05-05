@@ -8,6 +8,8 @@ import { ConversationOrmEntity } from './entities/conversation.orm-entity';
 import { MessageOrmEntity } from './entities/message.orm-entity';
 import { OrderOrmEntity } from './entities/order.orm-entity';
 import { OrderItemOrmEntity } from './entities/order-item.orm-entity';
+import { CompanyWhatsappCredentialOrmEntity } from './entities/company-whatsapp-credential.orm-entity';
+import { CompanyWhatsappAppOrmEntity } from './entities/company-whatsapp-app.orm-entity';
 
 dotenv.config();
 
@@ -27,6 +29,8 @@ export const AppDataSource = new DataSource({
     MessageOrmEntity,
     OrderOrmEntity,
     OrderItemOrmEntity,
+    CompanyWhatsappAppOrmEntity,
+    CompanyWhatsappCredentialOrmEntity,
   ],
   migrations: ['src/infrastructure/database/migrations/*.ts'],
   synchronize: false,

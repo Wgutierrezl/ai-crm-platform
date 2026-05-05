@@ -36,7 +36,10 @@ export class LoginUserUseCase {
       throw new UnauthorizedException('Credenciales invalidas');
     }
 
-    const passwordMatch = await bcrypt.compare(input.password, user.passwordHash);
+    const passwordMatch = await bcrypt.compare(
+      input.password,
+      user.passwordHash,
+    );
     if (!passwordMatch) {
       this.logger.warn(`Login fallido: password invalido (${input.email})`);
       throw new UnauthorizedException('Credenciales invalidas');

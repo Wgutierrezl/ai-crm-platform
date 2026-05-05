@@ -13,7 +13,9 @@ export interface CreateConversationInput {
  */
 @Injectable()
 export class CreateConversationUseCase {
-  constructor(private readonly conversationRepository: ConversationRepository) {}
+  constructor(
+    private readonly conversationRepository: ConversationRepository,
+  ) {}
 
   async execute(input: CreateConversationInput): Promise<Conversation> {
     const conversation = new Conversation(

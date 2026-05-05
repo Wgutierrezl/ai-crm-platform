@@ -13,7 +13,9 @@ export class GetCustomerByIdUseCase {
 
   async execute(customerId: string, companyId: string): Promise<Customer> {
     try {
-      this.logger.log(`Executing get customer by id=${customerId}, companyId=${companyId}`);
+      this.logger.log(
+        `Executing get customer by id=${customerId}, companyId=${companyId}`,
+      );
 
       const customer = await this.customerRepository.findById(customerId);
       if (!customer || customer.companyId !== companyId) {
@@ -23,7 +25,9 @@ export class GetCustomerByIdUseCase {
         throw new NotFoundException('Cliente no encontrado');
       }
 
-      this.logger.log(`Customer resolved id=${customer.id}, companyId=${customer.companyId}`);
+      this.logger.log(
+        `Customer resolved id=${customer.id}, companyId=${customer.companyId}`,
+      );
       return customer;
     } catch (error) {
       if (error instanceof NotFoundException) {
