@@ -20,6 +20,9 @@ export class MessageTypeormRepository implements MessageRepository {
       e.content,
       e.role as MessageRole,
       e.createdAt,
+      (e.sourceChannel as 'api' | 'whatsapp') ?? 'api',
+      e.channelMessageId ?? null,
+      e.metadataJson ?? null,
     );
   }
 
@@ -31,6 +34,9 @@ export class MessageTypeormRepository implements MessageRepository {
       content: message.content,
       role: message.role,
       createdAt: message.createdAt,
+      sourceChannel: message.sourceChannel,
+      channelMessageId: message.channelMessageId,
+      metadataJson: message.metadata,
     });
     const saved = await this.ormRepo.save(entity);
     return this.toDomain(saved);
@@ -52,5 +58,16 @@ export class MessageTypeormRepository implements MessageRepository {
       order: { createdAt: 'ASC' },
     });
     return entities.map((e) => this.toDomain(e));
+  }
+
+  async findByChannelMessageId(
+    companyId: string,
+    sourceChannel: string,
+    channelMessageId: string,
+  ): Promise<Message | null> {
+    const entity = await this.ormRepo.findOne({
+      where: { companyId, sourceChannel, channelMessageId },
+    });
+    return entity ? this.toDomain(entity) : null;
   }
 }

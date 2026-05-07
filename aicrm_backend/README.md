@@ -72,14 +72,66 @@ Respuesta temporal actual:
 
 ## Pendientes inmediatos
 
-1. Persistir mensajes WhatsApp en DB.
-2. Resolver/crear cliente por telefono o `wa_id`.
-3. Crear/reusar `Conversation`.
-4. Integrar webhook con `ProcessIncomingMessageUseCase`.
-5. Responder con IA real y tools.
-6. Implementar idempotencia por `message_id`/`wamid`.
-7. Validar firma `X-Hub-Signature-256`.
-8. Cifrar `accessToken` y `appSecret` en BD.
+1. Validar firma `X-Hub-Signature-256`.
+2. Cifrar `accessToken` y `appSecret` en BD.
+3. Introducir registro de ejecucion de tools (`tool_executions`) con auditoria.
+4. Integrar estrategia de prompts por capas en `OpenAIService` (base/canal/asistente/tenant).
+5. Pruebas unitarias y e2e del flujo WhatsApp onboarding + IA.
+
+## Estado nuevo: flujo conversacional WhatsApp (implementado)
+
+- Orquestador de entrada en `application`: `HandleInboundChannelMessageUseCase`.
+- Resolucion de identidad externa por canal:
+  - tabla `external_identities`.
+- Estado conversacional para onboarding:
+  - tabla `conversation_states`.
+- Persistencia de mensajes con metadatos de canal:
+  - columnas `source_channel`, `channel_message_id`, `metadata_json` en `messages`.
+- Idempotencia inbound por `channel_message_id`.
+- Onboarding conversacional:
+  - usuario desconocido -> solicitud nombre -> registro -> saludo personalizado.
+- Integracion con IA:
+  - WhatsApp delega al orquestador, el orquestador delega a `ProcessIncomingMessageUseCase`.
+- Base para tools desacopladas:
+  - `ToolExecutionService` en `application/services`.
+
+## Migraciones nuevas
+
+- `1710000000003-AddConversationalFoundation`
+  - agrega `company_id` a `company_whatsapp_apps` (para multi-tenant consistente),
+  - crea `external_identities`,
+  - crea `conversation_states`,
+  - extiende `messages` con metadata de canal e idempotencia.
+- `1710000000004-BackfillWhatsappAppsCompanyId`
+  - backfill seguro de `company_whatsapp_apps.company_id` solo si existe un unico tenant.
+- `1710000000005-EnhanceCustomerConversationalProfile`
+  - amplía `customers` para onboarding conversacional y perfil progresivo.
+
+## Nota operativa: warning de companyId nulo en app WhatsApp
+
+Si aparece:
+- `Configuracion incompleta: app WhatsApp id=<id> sin companyId...`
+
+Significa que:
+- la configuracion interna del tenant/app esta incompleta,
+- NO que el usuario final de WhatsApp necesite credenciales.
+
+Regla correcta:
+- `phone_number_id` -> `company_whatsapp_apps` -> `companyId` (tenant) -> credenciales Meta -> cliente externo (`wa_id`/telefono).
+
+SQL de diagnostico:
+```sql
+SELECT id, company_id, phone_number_id, name
+FROM company_whatsapp_apps
+WHERE company_id IS NULL;
+```
+
+SQL correctivo manual (si aplica):
+```sql
+UPDATE company_whatsapp_apps
+SET company_id = '<COMPANY_ID_CORRECTO>'
+WHERE id = 2;
+```
 
 ## Vision de evolucion
 

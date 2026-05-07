@@ -1,7 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class UpsertCompanyWhatsappAppDto {
+  @ApiProperty({
+    example: 'tenant-company-id-uuid',
+    description: 'Company ID interno del tenant propietario de esta app',
+  })
+  @IsUUID()
+  @IsNotEmpty()
+  @IsString()
+  companyId!: string;
+
   @ApiProperty({
     example: 'AI CRM Demo WhatsApp',
     description: 'Nombre interno de la app/numero de WhatsApp',

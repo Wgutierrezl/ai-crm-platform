@@ -36,4 +36,15 @@ export class ConversationTypeormRepository implements ConversationRepository {
     const entities = await this.ormRepo.findBy({ companyId });
     return entities.map((e) => this.toDomain(e));
   }
+
+  async findLatestByCustomerId(
+    customerId: string,
+    companyId: string,
+  ): Promise<Conversation | null> {
+    const entity = await this.ormRepo.findOne({
+      where: { customerId, companyId },
+      order: { createdAt: 'DESC' },
+    });
+    return entity ? this.toDomain(entity) : null;
+  }
 }

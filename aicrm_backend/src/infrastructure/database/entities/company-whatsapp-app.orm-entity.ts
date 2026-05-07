@@ -13,6 +13,9 @@ export class CompanyWhatsappAppOrmEntity {
   @PrimaryGeneratedColumn({ type: 'int', unsigned: true })
   id: number;
 
+  @Column({ name: 'company_id', type: 'varchar', length: 36, nullable: true })
+  companyId: string | null;
+
   @Column({ name: 'name', type: 'varchar', length: 150 })
   name: string;
 

@@ -21,8 +21,18 @@ export class CustomerTypeormRepository implements CustomerRepository {
       e.phone,
       e.email,
       e.companyId,
-      e.identificationType,
-      e.identificationNumber,
+      e.identificationType ?? null,
+      e.identificationNumber ?? null,
+      e.firstName ?? null,
+      e.lastName ?? null,
+      e.fullName ?? null,
+      e.address ?? null,
+      e.city ?? null,
+      e.age ?? null,
+      e.metadataJson ?? null,
+      e.onboardingCompleted ?? false,
+      e.onboardingStep ?? null,
+      e.profileCompletionPercentage ?? 0,
     );
   }
 
@@ -39,6 +49,16 @@ export class CustomerTypeormRepository implements CustomerRepository {
         companyId: customer.companyId,
         identificationType: customer.identificationType,
         identificationNumber: customer.identificationNumber,
+        firstName: customer.firstName,
+        lastName: customer.lastName,
+        fullName: customer.fullName,
+        address: customer.address,
+        city: customer.city,
+        age: customer.age,
+        metadataJson: customer.metadata as any,
+        onboardingCompleted: customer.onboardingCompleted,
+        onboardingStep: customer.onboardingStep,
+        profileCompletionPercentage: customer.profileCompletionPercentage,
       });
       const saved = await this.ormRepo.save(entity);
       this.logger.log(
@@ -71,6 +91,32 @@ export class CustomerTypeormRepository implements CustomerRepository {
       );
       throw error;
     }
+  }
+
+  async update(customer: Customer): Promise<Customer> {
+    await this.ormRepo.update(
+      { id: customer.id },
+      {
+        name: customer.name,
+        phone: customer.phone,
+        email: customer.email,
+        companyId: customer.companyId,
+        identificationType: customer.identificationType,
+        identificationNumber: customer.identificationNumber,
+        firstName: customer.firstName,
+        lastName: customer.lastName,
+        fullName: customer.fullName,
+        address: customer.address,
+        city: customer.city,
+        age: customer.age,
+        metadataJson: customer.metadata as any,
+        onboardingCompleted: customer.onboardingCompleted,
+        onboardingStep: customer.onboardingStep,
+        profileCompletionPercentage: customer.profileCompletionPercentage,
+      },
+    );
+    const updated = await this.ormRepo.findOneByOrFail({ id: customer.id });
+    return this.toDomain(updated);
   }
 
   async findByPhone(

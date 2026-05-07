@@ -156,6 +156,199 @@ Descripcion breve: Se reforzo la capa de interfaces HTTP con documentacion OpenA
 - Validacion de firma `X-Hub-Signature-256`.
 - Cifrado de `accessToken` / `appSecret` en base de datos.
 
+## Entrada 2026-05-07
+
+### Fase 1 - Fundacion conversacional (implementado)
+- Se creo `HandleInboundChannelMessageUseCase` en `application` como punto unico de orquestacion del flujo entrante por canal.
+- El webhook de WhatsApp quedo desacoplado y solo actua como adapter de entrada/salida.
+- Se agrego idempotencia por `channel_message_id` en mensajes de canal.
+
+### Fase 2 - Resolucion de identidad (implementado)
+- Nueva entidad/tabla `external_identities` para mapear `company + channel + external_user_id` -> `customer`.
+- Resolucion de cliente por identidad externa y fallback por telefono.
+- Se agrega `company_id` en `company_whatsapp_apps` para mapear tenant real.
+
+### Fase 3 - Onboarding conversacional (implementado)
+- Nueva entidad/tabla `conversation_states` con `registration_step`.
+- Flujo:
+  - cliente desconocido => estado `awaiting_name`
+  - captura nombre valida => update customer + estado `completed`
+  - saludo personalizado post-registro.
+
+### Fase 4 - Persistencia real de conversaciones/mensajes (implementado)
+- `messages` ahora persiste:
+  - `source_channel`
+  - `channel_message_id`
+  - `metadata_json`
+- Se persiste inbound WhatsApp y outbound bot dentro de la conversacion.
+
+### Fase 5 - Integracion con ProcessIncomingMessageUseCase (implementado)
+- Orquestador de canal invoca `ProcessIncomingMessageUseCase` cuando onboarding esta completo.
+- Se agregaron opciones de ejecucion:
+  - `persistCustomerMessage?: boolean`
+  - `outputChannel?: 'api' | 'whatsapp'`
+  - `botReplyPrefix?: string`
+
+### Fase 6 - Base desacoplada para future tools engine (implementado base)
+- Se extrajo ejecucion de tools a `ToolExecutionService` (`application/services`).
+- `ProcessIncomingMessageUseCase` ya no hardcodea toda la logica de herramientas.
+
+### Migracion agregada
+- `1710000000003-AddConversationalFoundation`:
+  - `company_whatsapp_apps.company_id`
+  - `external_identities`
+  - `conversation_states`
+  - columnas nuevas en `messages` para idempotencia y metadata.
+
+### Verificacion tecnica
+- Compilacion TypeScript validada con:
+  - `npx tsc -p tsconfig.json --noEmit`
+
+## Entrada 2026-05-07 (correccion warning companyId WhatsApp)
+
+### Problema detectado
+- Warning en webhook:
+  - `Configuracion incompleta: app WhatsApp id=... sin companyId...`
+- Causa raiz:
+  - migracion `1710000000003` agrego `company_id` nullable en `company_whatsapp_apps`,
+  - registros existentes quedaron en `NULL` (legacy).
+
+### Correcciones implementadas
+- Validacion fuerte en registro de app WhatsApp:
+  - DTO exige `companyId` valido (`IsUUID` + `IsNotEmpty`).
+- Validacion de integridad en use case:
+  - `UpsertCompanyWhatsappAppUseCase` valida que la empresa exista.
+- Migracion correctiva:
+  - `1710000000004-BackfillWhatsappAppsCompanyId`,
+  - backfill automatico solo cuando hay un unico tenant (escenario seguro).
+- Mensaje de warning actualizado para dejar claro que es configuracion interna y no del usuario final.
+
+### Impacto funcional
+- El usuario final de WhatsApp no requiere credenciales Meta.
+- Se mantiene el flujo correcto:
+  - `phone_number_id` -> `company_whatsapp_apps` -> `companyId` -> credenciales Meta -> cliente externo (`wa_id`/telefono).
+
+### Accion operativa recomendada para entornos con multiples tenants
+- Ejecutar SQL manual para apps legacy sin `company_id`:
+  - `UPDATE company_whatsapp_apps SET company_id = '<COMPANY_ID>' WHERE id = <APP_ID>;`
+
+## Entrada 2026-05-07 (mejora onboarding conversacional)
+
+### Objetivo
+- Transformar onboarding básico en flujo conversacional natural, progresivo y más humano.
+
+### Implementado
+- Nuevas tools de onboarding en capa `application`:
+  - `ASSISTANT_RESOLVE_USER_IDENTITY`
+  - `ASSISTANT_START_ONBOARDING`
+  - `ASSISTANT_COLLECT_PROFILE_DATA`
+  - `ASSISTANT_REGISTER_USER`
+  - `ASSISTANT_GET_USER_PROFILE`
+  - `ASSISTANT_UPDATE_USER_PROFILE`
+- Nuevo extractor de perfil:
+  - `OnboardingProfileExtractorService`
+  - extrae múltiples datos en un mismo mensaje.
+- Rework de `HandleInboundChannelMessageUseCase`:
+  - onboarding conversacional paso a paso,
+  - mensajes más amigables,
+  - personalización por nombre/perfil.
+- Prompts runtime mejorados:
+  - reglas explícitas de tono humano,
+  - emojis moderados,
+  - mensajes cortos,
+  - no repetir preguntas.
+
+### Customer ampliado para CRM/IA
+- Nuevos campos de perfil y onboarding:
+  - `firstName`, `lastName`, `fullName`, `address`, `city`, `age`,
+  - `metadata_json`,
+  - `onboardingCompleted`, `onboardingStep`, `profileCompletionPercentage`.
+
+### Migración agregada
+- `1710000000005-EnhanceCustomerConversationalProfile`.
+
+### Verificación
+- `npx tsc -p tsconfig.json --noEmit` en verde.
+
+## Entrada 2026-05-07 (cascade delete para customers de prueba)
+
+### Problema
+- MySQL bloqueaba `DELETE FROM customers ...` con error 1451 por FKs en `conversations`.
+
+### Solucion implementada
+- Migracion: `1710000000006-AddCustomerCascadeDeleteRelations`.
+- FKs actualizadas con `ON DELETE CASCADE` (+ `ON UPDATE CASCADE`) en cadena:
+  - `FK_conversations_customer`
+  - `FK_messages_conversation`
+  - `FK_conversation_states_conversation`
+  - `FK_external_identities_customer`
+  - `FK_orders_customer`
+  - `FK_order_items_order`
+
+### Resultado esperado
+- Al eliminar un customer de prueba, se limpian automaticamente:
+  - conversaciones,
+  - mensajes,
+  - estados conversacionales,
+  - identidades externas,
+  - ordenes y order_items.
+
+## Entrada 2026-05-07 (fix de flujo: resolver identidad antes de onboarding)
+
+### Problema corregido
+- El flujo podía iniciar extracción/onboarding sin respetar claramente el estado de usuario existente.
+
+### Ajustes aplicados
+- `HandleInboundChannelMessageUseCase` ahora sigue secuencia estricta:
+  1. resolver identidad,
+  2. evaluar estado,
+  3. onboarding o IA según estado.
+- Si `registered`:
+  - no reinicia onboarding,
+  - saluda con nombre desde BD,
+  - reutiliza conversación/contexto.
+- Si incompleto:
+  - continúa desde `onboardingStep`,
+  - no repite campos ya completados.
+- Extractor actualizado para no tomar saludos como nombre.
+- OpenAI recibe contexto estructurado (`customer_exists`, `onboarding_*`, `missing_fields`, etc.).
+
+## Entrada 2026-05-07 (documentacion tecnica de sesion)
+
+### Componentes nuevos/actualizados (estado funcional)
+- Onboarding conversacional progresivo via WhatsApp.
+- Resolucion de identidad externa antes de onboarding.
+- Persistencia de estado conversacional y perfil extendido de customer.
+- Prompt runtime por capas con reglas de tono y control de onboarding.
+- Tools conversacionales `ASSISTANT_*` para lifecycle de onboarding.
+
+### Lo que ya funciona
+- Resolver/reusar identidad (`wa_id`, telefono, external identity).
+- Reusar customer y conversacion existente.
+- Separar flujo usuario registrado vs nuevo/incompleto.
+- Inyectar contexto onboarding a OpenAI.
+
+### Lo que sigue inestable
+- Repeticion de la misma pregunta de onboarding (ej. cédula).
+- `onboardingStep` y `missing_fields` pueden desalinearse en algunos turnos.
+- Respuestas IA ocasionalmente construidas con contexto no totalmente actualizado.
+
+### Causas probables documentadas
+1. Persistencia no atomica entre perfil customer y conversation state.
+2. Context builder potencialmente usando snapshot previo al update.
+3. Recalculo de `missing_fields` sin tabla de transicion deterministica.
+4. Extraccion parcial sin guardas de repeticion por campo.
+5. Historial conversacional sin marcadores de ultimo campo solicitado/respondido.
+
+### Siguiente sesion - prioridad
+1. Corregir repeticion onboardingStep.
+2. Sincronizar estado backend <-> contexto OpenAI por turno.
+3. Refinar context builder post-update.
+4. Validar persistencia onboarding con transaccion.
+5. Endurecer validaciones de extraccion y transiciones.
+6. Mejorar machine state conversacional.
+7. Refinar flujo de tools y coherencia IA post-onboarding.
+
 ## Entrada 2026-04-24
 
 ### Funcionalidades implementadas

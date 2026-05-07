@@ -15,6 +15,8 @@ import { OrderOrmEntity } from './infrastructure/database/entities/order.orm-ent
 import { OrderItemOrmEntity } from './infrastructure/database/entities/order-item.orm-entity';
 import { CompanyWhatsappCredentialOrmEntity } from './infrastructure/database/entities/company-whatsapp-credential.orm-entity';
 import { CompanyWhatsappAppOrmEntity } from './infrastructure/database/entities/company-whatsapp-app.orm-entity';
+import { ExternalIdentityOrmEntity } from './infrastructure/database/entities/external-identity.orm-entity';
+import { ConversationStateOrmEntity } from './infrastructure/database/entities/conversation-state.orm-entity';
 import { CompanyRepository } from './domain/ports/company.repository.port';
 import { UserRepository } from './domain/ports/user.repository.port';
 import { CustomerRepository } from './domain/ports/customer.repository.port';
@@ -26,6 +28,8 @@ import { OrderItemRepository } from './domain/ports/order-item.repository.port';
 import { CompanyWhatsappCredentialRepository } from './domain/ports/company-whatsapp-credential.repository.port';
 import { CompanyWhatsappAppRepository } from './domain/ports/company-whatsapp-app.repository.port';
 import { WhatsappMessageSender } from './domain/ports/whatsapp-message-sender.port';
+import { ExternalIdentityRepository } from './domain/ports/external-identity.repository.port';
+import { ConversationStateRepository } from './domain/ports/conversation-state.repository.port';
 import { CompanyTypeormRepository } from './infrastructure/repositories/company.typeorm-repository';
 import { UserTypeormRepository } from './infrastructure/repositories/user.typeorm-repository';
 import { CustomerTypeormRepository } from './infrastructure/repositories/customer.typeorm-repository';
@@ -36,6 +40,8 @@ import { OrderTypeormRepository } from './infrastructure/repositories/order.type
 import { OrderItemTypeormRepository } from './infrastructure/repositories/order-item.typeorm-repository';
 import { CompanyWhatsappCredentialTypeormRepository } from './infrastructure/repositories/company-whatsapp-credential.typeorm-repository';
 import { CompanyWhatsappAppTypeormRepository } from './infrastructure/repositories/company-whatsapp-app.typeorm-repository';
+import { ExternalIdentityTypeormRepository } from './infrastructure/repositories/external-identity.typeorm-repository';
+import { ConversationStateTypeormRepository } from './infrastructure/repositories/conversation-state.typeorm-repository';
 import { RegisterUserUseCase } from './application/use-cases/register-user.use-case';
 import { LoginUserUseCase } from './application/use-cases/login-user.use-case';
 import { CreateProductUseCase } from './application/use-cases/create-product.use-case';
@@ -56,6 +62,10 @@ import { UpsertCompanyWhatsappCredentialUseCase } from './application/use-cases/
 import { UpsertCompanyWhatsappAppUseCase } from './application/use-cases/upsert-company-whatsapp-app.use-case';
 import { VerifyWhatsappWebhookUseCase } from './application/use-cases/verify-whatsapp-webhook.use-case';
 import { HandleWhatsappWebhookUseCase } from './application/use-cases/handle-whatsapp-webhook.use-case';
+import { HandleInboundChannelMessageUseCase } from './application/use-cases/handle-inbound-channel-message.use-case';
+import { ToolExecutionService } from './application/services/tool-execution.service';
+import { OnboardingProfileExtractorService } from './application/services/onboarding-profile-extractor.service';
+import { AssistantOnboardingToolsService } from './application/services/assistant-onboarding-tools.service';
 import { AuthController } from './interfaces/http/controllers/auth.controller';
 import { ProductController } from './interfaces/http/controllers/product.controller';
 import { ConversationController } from './interfaces/http/controllers/conversation.controller';
@@ -92,6 +102,8 @@ import { MetaWhatsappService } from './infrastructure/whatsapp/meta-whatsapp.ser
           OrderItemOrmEntity,
           CompanyWhatsappAppOrmEntity,
           CompanyWhatsappCredentialOrmEntity,
+          ExternalIdentityOrmEntity,
+          ConversationStateOrmEntity,
         ],
         synchronize: false,
       }),
@@ -107,6 +119,8 @@ import { MetaWhatsappService } from './infrastructure/whatsapp/meta-whatsapp.ser
       OrderItemOrmEntity,
       CompanyWhatsappAppOrmEntity,
       CompanyWhatsappCredentialOrmEntity,
+      ExternalIdentityOrmEntity,
+      ConversationStateOrmEntity,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -153,6 +167,10 @@ import { MetaWhatsappService } from './infrastructure/whatsapp/meta-whatsapp.ser
     UpsertCompanyWhatsappCredentialUseCase,
     VerifyWhatsappWebhookUseCase,
     HandleWhatsappWebhookUseCase,
+    HandleInboundChannelMessageUseCase,
+    ToolExecutionService,
+    OnboardingProfileExtractorService,
+    AssistantOnboardingToolsService,
     MetaWhatsappService,
     CreateConversationUseCase,
     GetConversationsUseCase,
@@ -199,6 +217,14 @@ import { MetaWhatsappService } from './infrastructure/whatsapp/meta-whatsapp.ser
     {
       provide: CompanyWhatsappCredentialRepository,
       useClass: CompanyWhatsappCredentialTypeormRepository,
+    },
+    {
+      provide: ExternalIdentityRepository,
+      useClass: ExternalIdentityTypeormRepository,
+    },
+    {
+      provide: ConversationStateRepository,
+      useClass: ConversationStateTypeormRepository,
     },
     {
       provide: WhatsappMessageSender,

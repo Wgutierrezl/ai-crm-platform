@@ -13,6 +13,7 @@ export interface AIMessageInput {
   companyId: string;
   customerMessage: string;
   history: Array<{ role: 'customer' | 'agent' | 'bot'; content: string }>;
+  assistantContext?: Record<string, unknown>;
 }
 
 export abstract class AIService {

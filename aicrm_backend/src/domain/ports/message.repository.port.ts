@@ -5,4 +5,9 @@ export abstract class MessageRepository {
   abstract findById(id: string): Promise<Message | null>;
   abstract findAllByCompanyId(companyId: string): Promise<Message[]>;
   abstract findByConversationId(conversationId: string): Promise<Message[]>;
+  abstract findByChannelMessageId(
+    companyId: string,
+    sourceChannel: string,
+    channelMessageId: string,
+  ): Promise<Message | null>;
 }

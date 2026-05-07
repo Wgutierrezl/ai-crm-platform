@@ -1,6 +1,7 @@
 export class CompanyWhatsappApp {
   constructor(
     public readonly id: number,
+    public readonly companyId: string | null,
     public readonly name: string,
     public readonly phoneNumberId: string,
     public readonly businessAccountId: string,

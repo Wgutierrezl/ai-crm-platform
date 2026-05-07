@@ -1,26 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
+import * as fs from 'fs';
+import * as path from 'path';
 import {
   AIService,
   AIMessageInput,
   AIResponse,
 } from '../../domain/ports/ai.service.port';
 
-/**
- * OpenAIService — Adaptador de infraestructura que implementa el puerto AIService.
- *
- * Flujo:
- * 1. Construye el prompt del sistema con rol, reglas y formato de respuesta JSON.
- * 2. Envía el historial de conversación + el nuevo mensaje del cliente.
- * 3. Parsea la respuesta JSON de OpenAI.
- * 4. Devuelve { reply, action? } al caso de uso que lo invoco.
- *
- * La IA puede devolver acciones (tools):
- *   - GET_PRODUCTS: para obtener catálogo real
- *   - CREATE_CUSTOMER: para registrar un nuevo cliente
- *   - CREATE_ORDER: para crear un pedido (order + items)
- */
 @Injectable()
 export class OpenAIService implements AIService {
   private readonly openai: OpenAI;
@@ -32,44 +20,74 @@ export class OpenAIService implements AIService {
     });
   }
 
-  private buildSystemPrompt(): string {
+  private buildSystemPrompt(input: AIMessageInput): string {
+    const basePrompt = this.safeReadPrompt('base/system.md');
+    const whatsappPrompt = this.safeReadPrompt('channels/whatsapp/system.md');
+    const salesPrompt = this.safeReadPrompt('assistants/sales/system.md');
+    const noHallucination = this.safeReadPrompt(
+      'partials/policies/no-hallucination.md',
+    );
+    const conciseStyle = this.safeReadPrompt('partials/style/concise-whatsapp.md');
+    const onboardingToolsPrompt = this.safeReadPrompt(
+      'partials/tools/onboarding-tools.md',
+    );
+
     return `
-Eres un asistente de ventas virtual para un CRM multi-empresa. Tu objetivo es ayudar a los clientes a encontrar productos, resolver dudas y cerrar ventas de forma efectiva.
+${basePrompt}
 
-## REGLAS ESTRICTAS:
-- NUNCA inventes datos (precios, stock, nombres de productos).
-- Usa SIEMPRE las tools disponibles para obtener datos reales.
-- Detecta la intención del cliente: consulta, interés en comprar, comparación de precios.
-- Guía al cliente hacia cerrar la venta de forma natural y amable.
-- Si el cliente quiere comprar, recopila: producto(s), cantidad, datos del cliente (nombre, teléfono, email).
-- Responde SIEMPRE en el mismo idioma que usa el cliente.
+${whatsappPrompt}
 
-## TOOLS DISPONIBLES:
-- GET_PRODUCTS: Obtiene el catálogo de productos de la empresa.
-- CREATE_CUSTOMER: Registra un nuevo cliente con sus datos.
-- CREATE_ORDER: Crea un pedido con los ítems seleccionados.
+${salesPrompt}
 
-## FORMATO DE RESPUESTA (JSON estricto):
+${noHallucination}
+
+${conciseStyle}
+
+${onboardingToolsPrompt}
+
+REGLAS OPERATIVAS DE RUNTIME:
+1. Habla como asistente humano, cercano y moderno.
+2. Usa emojis con moderación para transmitir calidez.
+3. Evita respuestas secas o de una sola palabra.
+4. Mantén mensajes cortos y claros para WhatsApp.
+5. No repitas preguntas si ya tienes el dato.
+6. Reutiliza contexto del perfil cuando exista.
+7. Si faltan datos de negocio para responder, haz una sola pregunta concreta.
+8. Explica en una frase breve por qué pides un dato.
+9. Ofrece ayuda accionable al final del mensaje.
+10. Nunca inventes datos de catálogo, precios o stock.
+11. Nunca adivines si el usuario existe; usa solo el contexto "customer_exists".
+12. Si "customer_exists=true" y "onboarding_completed=true", no inicies onboarding.
+13. Si "onboarding_completed=false", continua desde "onboarding_step".
+14. Un saludo por sí solo no es dato de perfil.
+
+TOOLS DISPONIBLES:
+- ASSISTANT_RESOLVE_USER_IDENTITY
+- ASSISTANT_START_ONBOARDING
+- ASSISTANT_COLLECT_PROFILE_DATA
+- ASSISTANT_REGISTER_USER
+- ASSISTANT_GET_USER_PROFILE
+- ASSISTANT_UPDATE_USER_PROFILE
+- GET_PRODUCTS
+- CREATE_CUSTOMER
+- CREATE_ORDER
+
+FORMATO DE RESPUESTA:
 {
-  "reply": "Texto de respuesta al cliente",
+  "reply": "mensaje final para el usuario",
   "action": {
     "type": "GET_PRODUCTS | CREATE_CUSTOMER | CREATE_ORDER",
     "payload": {}
   }
 }
 
-Si no necesitas ejecutar ninguna acción, omite el campo "action".
-El campo "reply" es SIEMPRE requerido.
-
-## PAYLOAD por acción:
-- GET_PRODUCTS: no requiere payload
-- CREATE_CUSTOMER: { "name": "", "phone": "", "email": "", "identificationType": "", "identificationNumber": "" }
-- CREATE_ORDER: { "customerId": "", "items": [{ "productId": "", "quantity": 0, "price": 0 }] }
+CONTEXTO ADICIONAL:
+${JSON.stringify(input.assistantContext ?? {}, null, 2)}
 `.trim();
   }
 
   async processMessage(input: AIMessageInput): Promise<AIResponse> {
-    const systemPrompt = this.buildSystemPrompt();
+    const systemPrompt = this.buildSystemPrompt(input);
 
     const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
       { role: 'system', content: systemPrompt },
@@ -85,25 +103,32 @@ El campo "reply" es SIEMPRE requerido.
       const completion = await this.openai.chat.completions.create({
         model: 'gpt-4o-mini',
         messages,
-        temperature: 0.4,
+        temperature: 0.5,
         response_format: { type: 'json_object' },
       });
 
       const raw = completion.choices[0]?.message?.content ?? '{}';
       const parsed = JSON.parse(raw) as AIResponse;
-
       if (!parsed.reply) {
         parsed.reply =
-          'Disculpa, no pude procesar tu mensaje. ¿Puedes repetirlo?';
+          'Gracias por tu mensaje 😊 ¿Me cuentas un poco más para ayudarte mejor?';
       }
-
       return parsed;
     } catch (error) {
       this.logger.error('Fallo la solicitud a OpenAI', error);
       return {
         reply:
-          'Lo siento, estoy experimentando dificultades técnicas. Por favor intenta más tarde.',
+          'Perdón, tuve un problema técnico 🙏 Inténtalo de nuevo en unos segundos.',
       };
+    }
+  }
+
+  private safeReadPrompt(relativePath: string): string {
+    const absolute = path.resolve(process.cwd(), 'prompts', relativePath);
+    try {
+      return fs.readFileSync(absolute, 'utf-8');
+    } catch {
+      return '';
     }
   }
 }

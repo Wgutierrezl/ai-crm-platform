@@ -42,6 +42,10 @@ Se implementa arquitectura hexagonal estricta (Ports and Adapters):
 - El companyId se incluye en entidades de negocio y persistencia multi-empresa.
 - El companyId se extrae automaticamente desde JWT en JwtAuthGuard.
 - Controladores usan CurrentUser para evitar recibir companyId manual desde body.
+- En WhatsApp, conviven dos objetivos:
+  - operacion global temporal (iteracion rapida del onboarding),
+  - preparacion para tenant-routing estricto futuro.
+- Esta dualidad requiere alineacion final en proxima fase para evitar divergencias entre entornos.
 
 ## Modulos principales
 - Autenticacion: register/login con hash de password y JWT.
@@ -71,6 +75,57 @@ Flujo completo:
 7. Backend compone respuesta final del bot.
 8. Guarda respuesta del bot en DB.
 9. Devuelve resultado al cliente/API consumer.
+
+## Onboarding conversacional (nuevo)
+
+El onboarding ahora es progresivo y humano:
+- solicita un dato por turno,
+- reutiliza datos detectados para no repreguntar,
+- acepta multiples datos en un solo mensaje,
+- mantiene tono cercano para WhatsApp.
+
+Tools internas de onboarding en `application/services/assistant-onboarding-tools.service.ts`:
+- `ASSISTANT_RESOLVE_USER_IDENTITY`
+- `ASSISTANT_START_ONBOARDING`
+- `ASSISTANT_COLLECT_PROFILE_DATA`
+- `ASSISTANT_REGISTER_USER`
+- `ASSISTANT_GET_USER_PROFILE`
+- `ASSISTANT_UPDATE_USER_PROFILE`
+
+Regla de lifecycle:
+- La resolucion de identidad es obligatoria antes de onboarding o IA.
+- El modelo no decide si el usuario existe; ese estado lo decide backend/application.
+- Si `registered`, no se reinicia onboarding.
+- Si perfil incompleto, se retoma desde `onboardingStep` actual.
+
+Estado real de estabilidad:
+- Funciona: resolucion de identidad y bifurcacion base por estado.
+- Inestable: repeticion ocasional de preguntas y desalineacion de paso actual.
+- Riesgo principal: sincronizacion incompleta estado conversacional <-> contexto IA.
+
+Extraccion progresiva:
+- Servicio: `OnboardingProfileExtractorService`.
+- Detecta: nombre, apellido, email, cédula, ciudad, direccion, edad.
+- Permite extraer varios campos en el mismo mensaje.
+
+## Perfil Customer (extendido)
+- Se amplía el perfil para personalizacion CRM/IA:
+  - `firstName`, `lastName`, `fullName`,
+  - `address`, `city`, `age`,
+  - `metadata_json`,
+  - `onboardingCompleted`,
+  - `onboardingStep`,
+  - `profileCompletionPercentage`.
+
+## Politica de borrado para testing
+- Se habilitó cascade delete orientado a pruebas de onboarding por WhatsApp:
+  - `customers -> conversations` (`ON DELETE CASCADE`)
+  - `conversations -> messages` (`ON DELETE CASCADE`)
+  - `conversations -> conversation_states` (`ON DELETE CASCADE`)
+  - `customers -> external_identities` (`ON DELETE CASCADE`)
+  - `customers -> orders` (`ON DELETE CASCADE`)
+  - `orders -> order_items` (`ON DELETE CASCADE`)
+- Objetivo: permitir recrear clientes de prueba desde cero sin basura referencial.
 
 ## Ejemplo detallado con CREATE_ORDER
 Caso de uso real:
@@ -116,22 +171,40 @@ Resultado: Order y OrderItem creados correctamente en MySQL dentro del tenant de
   - `WHATSAPP_WEBHOOK_VALIDATE_SIGNATURE`
   - `META_APP_SECRET`
 - Modelo desacoplado:
-  - `company_whatsapp_apps`: identidad de app/numero WhatsApp.
+  - `company_whatsapp_apps`: identidad de app/numero WhatsApp + ownership por tenant via `company_id`.
   - `company_whatsapp_credentials`: secretos/tokens de acceso/verificacion.
-- Flujo de canal validado:
-  - mensaje entrante real -> parseo payload -> resolucion app -> respuesta automatica temporal.
+- Flujo de canal productivo:
+  - mensaje entrante real -> parseo payload -> resolucion app/tenant ->
+    orquestacion conversacional (`HandleInboundChannelMessageUseCase`) ->
+    persistencia de identidad/conversacion/mensajes ->
+    onboarding o IA -> respuesta outbound.
 
-### Respuesta temporal activa
-- El backend responde con un mensaje predeterminado de confirmacion para validar el canal outbound.
+### Flujo activo implementado
+- Idempotencia inbound por `channel_message_id`.
+- Resolucion/creacion de `Customer` por `wa_id` y telefono.
+- Reutilizacion/creacion de `Conversation`.
+- Persistencia completa de inbound/outbound en `messages`.
+- Onboarding conversacional de nombre para cliente desconocido.
+- Saludo personalizado para cliente resuelto.
+- Delegacion a IA + tools via `ProcessIncomingMessageUseCase`.
+- Requisito de configuracion:
+  - `company_whatsapp_apps.company_id` es obligatorio para resolver tenant.
+  - si falta, el webhook reporta warning de configuracion interna y omite procesamiento del mensaje.
+
+Nota de producto actual:
+- En esta etapa se prioriza canal/bot global temporal para acelerar validacion UX.
+- Se mantiene preparado el camino para multi-tenant estricto por app en fases siguientes.
+
+### Aclaracion de modelo de identidad
+- El cliente externo que escribe por WhatsApp NO tiene ni necesita credenciales Meta.
+- Las credenciales Meta pertenecen al tenant/empresa (`company_whatsapp_credentials`).
+- El tenant se resuelve por `phone_number_id` usando `company_whatsapp_apps`.
 
 ### No implementado aun
-- Persistencia de mensajes WhatsApp en entidades `Conversation/Message`.
-- Resolucion y registro de cliente por telefono/wa_id.
-- Integracion webhook -> `ProcessIncomingMessageUseCase`.
-- Respuesta IA real con tools en el flujo de WhatsApp.
-- Idempotencia por `message_id`/`wamid`.
 - Firma `X-Hub-Signature-256`.
 - Cifrado de secretos en BD.
+- Motor dinamico de tools por tenant con registry persistido.
+- Resolucion de prompts por capas en runtime (base/canal/asistente/tenant).
 
 ## Vision de evolucion del producto
 

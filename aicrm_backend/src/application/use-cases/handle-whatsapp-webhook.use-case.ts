@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { CompanyWhatsappAppRepository } from '../../domain/ports/company-whatsapp-app.repository.port';
 import { CompanyWhatsappCredentialRepository } from '../../domain/ports/company-whatsapp-credential.repository.port';
 import { WhatsappMessageSender } from '../../domain/ports/whatsapp-message-sender.port';
+import { HandleInboundChannelMessageUseCase } from './handle-inbound-channel-message.use-case';
 
 interface IncomingWhatsappMessage {
   waId: string | null;
@@ -45,15 +46,13 @@ export class HandleWhatsappWebhookUseCase {
     private readonly appRepository: CompanyWhatsappAppRepository,
     private readonly credentialRepository: CompanyWhatsappCredentialRepository,
     private readonly whatsappMessageSender: WhatsappMessageSender,
+    private readonly handleInboundChannelMessageUseCase: HandleInboundChannelMessageUseCase,
   ) {}
 
   async execute(payload: unknown): Promise<void> {
-    this.logger.log('Webhook WhatsApp recibido');
-
     const parsedPayload = payload as WhatsappWebhookPayload;
-    const entries = Array.isArray(parsedPayload.entry)
-      ? parsedPayload.entry
-      : [];
+    const entries = Array.isArray(parsedPayload.entry) ? parsedPayload.entry : [];
+
     for (const entry of entries) {
       const changes = Array.isArray(entry.changes) ? entry.changes : [];
       for (const change of changes) {
@@ -61,39 +60,23 @@ export class HandleWhatsappWebhookUseCase {
         const phoneNumberId = value?.metadata?.phone_number_id;
 
         if (!phoneNumberId) {
-          this.logger.warn(
-            'Webhook recibido sin metadata.phone_number_id, se omite cambio',
-          );
           continue;
         }
 
         const app = await this.appRepository.findByPhoneNumberId(phoneNumberId);
         if (!app || !app.isActive) {
-          this.logger.warn(
-            `No existe app activa para phone_number_id=${phoneNumberId}`,
-          );
           continue;
         }
 
         const credential =
           await this.credentialRepository.findActiveByWhatsappAppId(app.id);
         if (!credential) {
-          this.logger.warn(
-            `No existe credencial activa para whatsapp_app_id=${app.id}`,
-          );
           continue;
         }
-
-        this.logger.log(
-          `Webhook resuelto whatsappAppId=${app.id}, phoneNumberId=${app.phoneNumberId}`,
-        );
 
         const messages = Array.isArray(value?.messages) ? value.messages : [];
         for (const message of messages) {
           if (!message.text?.body) {
-            this.logger.log(
-              'Evento WhatsApp no es mensaje de texto. Se ignora.',
-            );
             continue;
           }
 
@@ -104,36 +87,43 @@ export class HandleWhatsappWebhookUseCase {
             messageId: message.id ?? null,
           };
 
-          this.logger.log(
-            `Mensaje entrante whatsappAppId=${app.id}, wa_id=${extracted.waId ?? 'N/A'}, message_id=${extracted.messageId ?? 'N/A'}`,
-          );
-          this.logger.debug(
-            `Contenido mensaje: ${extracted.body ?? '[sin texto]'} `,
-          );
-
           const recipientPhone = extracted.waId ?? extracted.from;
-          if (!recipientPhone) {
-            this.logger.warn(
-              'Mensaje de texto sin wa_id/from. No se puede responder.',
-            );
+          if (!recipientPhone || !extracted.body) {
             continue;
           }
 
-          const autoReply =
-            'Hola 👋 Soy el asistente virtual de AI CRM. Ya recibí tu mensaje. Pronto podré ayudarte a consultar productos, crear pedidos y resolver dudas comerciales.';
-
           try {
-            this.logger.log('Enviando respuesta automática a WhatsApp');
-            await this.whatsappMessageSender.sendTextMessage(
-              app.phoneNumberId,
-              credential.accessToken,
-              recipientPhone,
-              autoReply,
-            );
-            this.logger.log('Respuesta automática enviada correctamente');
+            if (!app.companyId) {
+              this.logger.warn(
+                `Configuracion incompleta: app WhatsApp id=${app.id} sin companyId. El mensaje se omite hasta asociar tenant.`,
+              );
+              continue;
+            }
+
+            const result = await this.handleInboundChannelMessageUseCase.execute({
+              companyId: app.companyId,
+              channel: 'whatsapp',
+              externalUserId: recipientPhone,
+              phone: extracted.from,
+              text: extracted.body,
+              channelMessageId: extracted.messageId,
+              metadata: {
+                whatsappAppId: app.id,
+                phoneNumberId: app.phoneNumberId,
+              },
+            });
+
+            if (result.shouldReply && result.reply) {
+              await this.whatsappMessageSender.sendTextMessage(
+                app.phoneNumberId,
+                credential.accessToken,
+                recipientPhone,
+                result.reply,
+              );
+            }
           } catch (error) {
             this.logger.error(
-              'Error enviando respuesta automática',
+              'Error procesando webhook de WhatsApp',
               error instanceof Error ? error.stack : undefined,
             );
           }

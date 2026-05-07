@@ -17,6 +17,7 @@ export class CompanyWhatsappAppTypeormRepository
   private toDomain(entity: CompanyWhatsappAppOrmEntity): CompanyWhatsappApp {
     return new CompanyWhatsappApp(
       entity.id,
+      entity.companyId ?? null,
       entity.name,
       entity.phoneNumberId,
       entity.businessAccountId,
@@ -33,6 +34,7 @@ export class CompanyWhatsappAppTypeormRepository
   ): Promise<CompanyWhatsappApp> {
     const entity = this.ormRepo.create({
       name: app.name,
+      companyId: app.companyId,
       phoneNumberId: app.phoneNumberId,
       businessAccountId: app.businessAccountId,
       appId: app.appId,
@@ -62,6 +64,7 @@ export class CompanyWhatsappAppTypeormRepository
       { id: app.id },
       {
         name: app.name,
+        companyId: app.companyId,
         phoneNumberId: app.phoneNumberId,
         businessAccountId: app.businessAccountId,
         appId: app.appId,
