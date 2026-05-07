@@ -43,29 +43,37 @@
 - Profile extraction captures multiple fields in one message.
 
 ## Current Instabilities (Observed)
-- Repeated question loops (example: repeated ID number request).
-- Occasional mismatch between `onboardingStep` and asked question.
-- AI replies may reflect stale or partial onboarding context.
-- Missing fields can be recalculated inconsistently after partial updates.
+- Resueltas en esta iteracion para flujo NAME -> EMAIL -> DOCUMENT.
+- Antes ocurria repeticion de cédula por transicion no deterministica.
 
 ## Probable Root Causes
-1. `onboardingStep` not persisted atomically with profile update.
-2. Context builder sending pre-update state to OpenAI.
-3. Conversation state and customer profile out of sync in same turn.
-4. Extractor returns partial data but step transition remains unchanged.
-5. Missing field calculation and completion percentage drift.
-6. Reused history includes prior onboarding questions without turn-level guard.
-7. Prompt rules and backend state machine are not fully deterministic yet.
+1. `onboardingStep` no deterministico (dependia de extraccion libre y missingFields).
+2. Validacion de cédula no separaba "inválido" vs "omitir".
+3. Paso siguiente no era una tabla de transicion explicita.
+
+## Fixed State Machine
+- `WAITING_NAME`
+- `WAITING_EMAIL`
+- `WAITING_DOCUMENT`
+- `COMPLETED`
+
+Reglas:
+1. El backend decide el paso siguiente (no OpenAI).
+2. Solo valida el dato esperado del paso actual.
+3. Si dato valido:
+   - persiste customer,
+   - persiste conversation_state,
+   - avanza al siguiente paso.
+4. Si dato invalido:
+   - no avanza,
+   - responde mensaje de correccion.
+5. Si paso `WAITING_DOCUMENT` y usuario responde:
+   - `omitir|saltar|prefiero no|después|no` => onboarding completo.
 
 ## Priority Fixes (Next Session)
 1. Atomic update transaction: customer profile + conversation state.
-2. Deterministic step transition table (`current_step + extracted_fields -> next_step`).
-3. Post-update context build only (never pre-update).
-4. Add `last_asked_field` and `last_answered_field` in conversation state context.
-5. Prevent asking same field twice in consecutive turns unless validation fails.
-6. Add onboarding validation errors with reason codes (`invalid_email`, etc.).
-7. Add integration tests for:
+2. Add integration tests for:
    - new user path
    - existing user greeting path
    - incomplete profile continuation path
-   - multi-field single message extraction path
+   - document skip path (`omitir`)

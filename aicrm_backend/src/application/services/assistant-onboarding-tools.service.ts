@@ -8,16 +8,15 @@ import { ConversationRepository } from '../../domain/ports/conversation.reposito
 import { ConversationStateRepository } from '../../domain/ports/conversation-state.repository.port';
 import { CustomerRepository } from '../../domain/ports/customer.repository.port';
 import { ExternalIdentityRepository } from '../../domain/ports/external-identity.repository.port';
-import {
-  ExtractedProfileData,
-  OnboardingProfileExtractorService,
-} from './onboarding-profile-extractor.service';
+import { OnboardingProfileExtractorService } from './onboarding-profile-extractor.service';
 
-type IdentityStatus =
-  | 'new_user'
-  | 'onboarding_pending'
-  | 'registered'
-  | 'profile_incomplete';
+export type OnboardingStep =
+  | 'WAITING_NAME'
+  | 'WAITING_EMAIL'
+  | 'WAITING_DOCUMENT'
+  | 'COMPLETED';
+
+type IdentityStatus = 'new_user' | 'onboarding_pending' | 'registered';
 
 @Injectable()
 export class AssistantOnboardingToolsService {
@@ -38,7 +37,7 @@ export class AssistantOnboardingToolsService {
     status: IdentityStatus;
     customerExists: boolean;
     onboardingCompleted: boolean;
-    onboardingStep: string;
+    onboardingStep: OnboardingStep;
     missingFields: string[];
     identity: ExternalIdentity;
     customer: Customer;
@@ -50,15 +49,16 @@ export class AssistantOnboardingToolsService {
     const conversation = await this.resolveConversation(customer, input.companyId);
     const state =
       await this.conversationStateRepository.findByConversationId(conversation.id);
+    const onboardingStep = this.normalizeStep(customer.onboardingStep, state);
+    const missingFields = this.calculateMissingFields(customer, onboardingStep);
+    const onboardingCompleted = onboardingStep === 'COMPLETED';
 
-    const status = this.resolveStatus(customer, state);
-    const profile = this.ASSISTANT_GET_USER_PROFILE(customer);
     return {
-      status,
+      status: onboardingCompleted ? 'registered' : 'onboarding_pending',
       customerExists: Boolean(identity.customerId),
-      onboardingCompleted: customer.onboardingCompleted || status === 'registered',
-      onboardingStep: customer.onboardingStep ?? 'awaiting_firstName',
-      missingFields: profile.missingFields,
+      onboardingCompleted,
+      onboardingStep,
+      missingFields,
       identity,
       customer,
       conversation,
@@ -73,9 +73,7 @@ export class AssistantOnboardingToolsService {
     const existing = await this.conversationStateRepository.findByConversationId(
       input.conversationId,
     );
-    if (existing) {
-      return existing;
-    }
+    if (existing) return existing;
 
     return this.conversationStateRepository.create(
       new ConversationState(
@@ -83,8 +81,8 @@ export class AssistantOnboardingToolsService {
         input.conversationId,
         input.companyId,
         'active',
-        'awaiting_name',
-        { missingFields: this.getDefaultMissingFields(), collectedFields: [] },
+        'WAITING_NAME',
+        { missingFields: ['firstName', 'email', 'identificationNumber'] },
         new Date(),
         new Date(),
       ),
@@ -95,21 +93,62 @@ export class AssistantOnboardingToolsService {
     message: string;
     customer: Customer;
     state: ConversationState;
+    step: OnboardingStep;
   }): Promise<{
     customer: Customer;
     state: ConversationState;
-    extracted: ExtractedProfileData;
-    nextField: string | null;
-    completion: number;
+    nextStep: OnboardingStep;
+    completed: boolean;
+    validationError: string | null;
   }> {
-    const extracted = this.extractorService.extract(input.message, {
-      allowLooseNameDetection: input.customer.onboardingStep === 'awaiting_firstName',
-    });
-    const merged = this.mergeCustomer(input.customer, extracted);
-    const completion = this.calculateCompletion(merged);
-    const nextField = this.resolveNextField(merged);
+    let patch: Partial<Customer> = {};
+    let validationError: string | null = null;
 
-    const updatedCustomer = await this.customerRepository.update(
+    if (input.step === 'WAITING_NAME') {
+      const name = this.extractorService.validateName(input.message);
+      if (!name.valid) {
+        validationError = 'name';
+      } else {
+        patch = {
+          firstName: name.firstName,
+          fullName: name.fullName,
+          name: name.fullName,
+        };
+      }
+    }
+
+    if (input.step === 'WAITING_EMAIL') {
+      const email = this.extractorService.validateEmail(input.message);
+      if (!email.valid) {
+        validationError = 'email';
+      } else {
+        patch = { email: email.email };
+      }
+    }
+
+    if (input.step === 'WAITING_DOCUMENT') {
+      const doc = this.extractorService.validateDocument(input.message);
+      if (!doc.provided) {
+        validationError = 'document';
+      } else if (doc.valid) {
+        patch = { identificationNumber: doc.identificationNumber };
+      } else {
+        validationError = 'document';
+      }
+      if (doc.skipped) {
+        patch = { identificationNumber: null };
+      }
+    }
+
+    const merged = this.mergeCustomer(input.customer, patch);
+    const nextStep = validationError
+      ? input.step
+      : this.computeNextStep(input.step, merged);
+    const completed = nextStep === 'COMPLETED';
+    const missingFields = this.calculateMissingFields(merged, nextStep);
+    const completion = this.calculateCompletion(nextStep);
+
+    const savedCustomer = await this.customerRepository.update(
       new Customer(
         merged.id,
         merged.name,
@@ -125,64 +164,8 @@ export class AssistantOnboardingToolsService {
         merged.city,
         merged.age,
         merged.metadata,
-        completion >= 70,
-        nextField ? `awaiting_${nextField}` : 'completed',
-        completion,
-      ),
-    );
-
-    const missingFields = this.getDefaultMissingFields().filter((field) =>
-      this.isFieldMissing(updatedCustomer, field),
-    );
-
-    const updatedState = await this.conversationStateRepository.update(
-      new ConversationState(
-        input.state.id,
-        input.state.conversationId,
-        input.state.companyId,
-        input.state.status,
-        nextField ? `awaiting_${nextField}` : 'completed',
-        {
-          missingFields,
-          lastExtracted: extracted,
-        },
-        input.state.createdAt,
-        new Date(),
-      ),
-    );
-
-    return {
-      customer: updatedCustomer,
-      state: updatedState,
-      extracted,
-      nextField,
-      completion,
-    };
-  }
-
-  async ASSISTANT_REGISTER_USER(input: {
-    customer: Customer;
-    state: ConversationState;
-  }): Promise<{ customer: Customer; state: ConversationState }> {
-    const completion = this.calculateCompletion(input.customer);
-    const savedCustomer = await this.customerRepository.update(
-      new Customer(
-        input.customer.id,
-        input.customer.name,
-        input.customer.phone,
-        input.customer.email,
-        input.customer.companyId,
-        input.customer.identificationType,
-        input.customer.identificationNumber,
-        input.customer.firstName,
-        input.customer.lastName,
-        input.customer.fullName,
-        input.customer.address,
-        input.customer.city,
-        input.customer.age,
-        input.customer.metadata,
-        true,
-        'completed',
+        completed,
+        nextStep,
         completion,
       ),
     );
@@ -192,15 +175,26 @@ export class AssistantOnboardingToolsService {
         input.state.id,
         input.state.conversationId,
         input.state.companyId,
-        'active',
-        'completed',
-        input.state.context,
+        input.state.status,
+        nextStep,
+        {
+          missingFields,
+          lastAskedStep: input.step,
+          lastUpdatedStep: nextStep,
+          validationError,
+        },
         input.state.createdAt,
         new Date(),
       ),
     );
 
-    return { customer: savedCustomer, state: savedState };
+    return {
+      customer: savedCustomer,
+      state: savedState,
+      nextStep,
+      completed,
+      validationError,
+    };
   }
 
   ASSISTANT_GET_USER_PROFILE(customer: Customer): {
@@ -208,66 +202,79 @@ export class AssistantOnboardingToolsService {
     missingFields: string[];
     completion: number;
   } {
-    const missingFields = this.getDefaultMissingFields().filter((field) =>
-      this.isFieldMissing(customer, field),
-    );
+    const step = this.normalizeStep(customer.onboardingStep, null);
     return {
-      summary: `Perfil de ${customer.fullName ?? customer.firstName ?? 'cliente'} con ${customer.profileCompletionPercentage}% completado`,
-      missingFields,
+      summary: `Perfil de ${customer.fullName ?? customer.firstName ?? 'cliente'} (${customer.profileCompletionPercentage}%)`,
+      missingFields: this.calculateMissingFields(customer, step),
       completion: customer.profileCompletionPercentage,
     };
   }
 
   isGreetingMessage(text: string): boolean {
     const cleaned = text.toLowerCase().replace(/[!¡?¿.,]/g, '').trim();
-    return [
-      'hola',
-      'buenas',
-      'buenos dias',
-      'buenas tardes',
-      'buenas noches',
-      'hello',
-      'hi',
-    ].includes(cleaned);
-  }
-
-  async ASSISTANT_UPDATE_USER_PROFILE(input: {
-    customer: Customer;
-    patch: Partial<ExtractedProfileData>;
-  }): Promise<Customer> {
-    const merged = this.mergeCustomer(input.customer, input.patch);
-    const completion = this.calculateCompletion(merged);
-    return this.customerRepository.update(
-      new Customer(
-        merged.id,
-        merged.name,
-        merged.phone,
-        merged.email,
-        merged.companyId,
-        merged.identificationType,
-        merged.identificationNumber,
-        merged.firstName,
-        merged.lastName,
-        merged.fullName,
-        merged.address,
-        merged.city,
-        merged.age,
-        merged.metadata,
-        completion >= 70,
-        completion >= 70 ? 'completed' : merged.onboardingStep,
-        completion,
-      ),
+    return ['hola', 'buenas', 'buenos dias', 'buenas tardes', 'hi'].includes(
+      cleaned,
     );
   }
 
-  private resolveStatus(
-    customer: Customer,
+  private computeNextStep(step: OnboardingStep, customer: Customer): OnboardingStep {
+    if (step === 'WAITING_NAME') return 'WAITING_EMAIL';
+    if (step === 'WAITING_EMAIL') return 'WAITING_DOCUMENT';
+    if (step === 'WAITING_DOCUMENT') return 'COMPLETED';
+    if (customer.firstName && customer.email) return 'WAITING_DOCUMENT';
+    return 'WAITING_NAME';
+  }
+
+  private normalizeStep(
+    customerStep: string | null,
     state: ConversationState | null,
-  ): IdentityStatus {
-    if (!state) return 'new_user';
-    if (state.registrationStep !== 'completed') return 'onboarding_pending';
-    if (customer.profileCompletionPercentage < 70) return 'profile_incomplete';
-    return 'registered';
+  ): OnboardingStep {
+    const source = (customerStep ?? state?.registrationStep ?? '').toUpperCase();
+    if (source.includes('WAITING_EMAIL')) return 'WAITING_EMAIL';
+    if (source.includes('WAITING_DOCUMENT')) return 'WAITING_DOCUMENT';
+    if (source.includes('COMPLETED')) return 'COMPLETED';
+    return 'WAITING_NAME';
+  }
+
+  private calculateMissingFields(
+    customer: Customer,
+    step: OnboardingStep,
+  ): string[] {
+    const missing: string[] = [];
+    if (!customer.firstName) missing.push('firstName');
+    if (!customer.email) missing.push('email');
+    if (step !== 'COMPLETED' && step === 'WAITING_DOCUMENT')
+      missing.push('identificationNumber');
+    return missing;
+  }
+
+  private calculateCompletion(step: OnboardingStep): number {
+    if (step === 'WAITING_NAME') return 20;
+    if (step === 'WAITING_EMAIL') return 50;
+    if (step === 'WAITING_DOCUMENT') return 80;
+    return 100;
+  }
+
+  private mergeCustomer(customer: Customer, patch: Partial<Customer>): Customer {
+    return new Customer(
+      customer.id,
+      patch.name ?? customer.name,
+      customer.phone,
+      patch.email ?? customer.email,
+      customer.companyId,
+      customer.identificationType,
+      patch.identificationNumber ?? customer.identificationNumber,
+      patch.firstName ?? customer.firstName,
+      customer.lastName,
+      patch.fullName ?? customer.fullName,
+      customer.address,
+      customer.city,
+      customer.age,
+      customer.metadata,
+      customer.onboardingCompleted,
+      customer.onboardingStep,
+      customer.profileCompletionPercentage,
+    );
   }
 
   private async resolveIdentity(input: {
@@ -310,9 +317,24 @@ export class AssistantOnboardingToolsService {
         input.phone,
         input.companyId,
       );
-      if (byPhone) return byPhone;
+      if (byPhone) {
+        await this.externalIdentityRepository.update(
+          new ExternalIdentity(
+            identity.id,
+            identity.companyId,
+            identity.channel,
+            identity.externalUserId,
+            input.phone,
+            byPhone.id,
+            identity.createdAt,
+            new Date(),
+          ),
+        );
+        return byPhone;
+      }
     }
-    const placeholder = await this.customerRepository.create(
+
+    const created = await this.customerRepository.create(
       new Customer(
         uuidv4(),
         null,
@@ -329,7 +351,7 @@ export class AssistantOnboardingToolsService {
         null,
         { source: 'whatsapp' },
         false,
-        'awaiting_first_name',
+        'WAITING_NAME',
         20,
       ),
     );
@@ -340,12 +362,12 @@ export class AssistantOnboardingToolsService {
         identity.channel,
         identity.externalUserId,
         input.phone,
-        placeholder.id,
+        created.id,
         identity.createdAt,
         new Date(),
       ),
     );
-    return placeholder;
+    return created;
   }
 
   private async resolveConversation(
@@ -360,63 +382,5 @@ export class AssistantOnboardingToolsService {
     return this.conversationRepository.create(
       new Conversation(uuidv4(), customer.id, companyId, new Date()),
     );
-  }
-
-  private mergeCustomer(customer: Customer, data: Partial<ExtractedProfileData>): Customer {
-    const firstName = data.firstName ?? customer.firstName;
-    const lastName = data.lastName ?? customer.lastName;
-    const fullName =
-      data.fullName ??
-      customer.fullName ??
-      ([firstName, lastName].filter(Boolean).join(' ').trim() || null);
-    const name = customer.name ?? fullName ?? firstName ?? null;
-
-    return new Customer(
-      customer.id,
-      name,
-      customer.phone,
-      data.email ?? customer.email,
-      customer.companyId,
-      customer.identificationType,
-      data.identificationNumber ?? customer.identificationNumber,
-      firstName ?? null,
-      lastName ?? null,
-      fullName || null,
-      data.address ?? customer.address,
-      data.city ?? customer.city,
-      data.age ?? customer.age,
-      customer.metadata,
-      customer.onboardingCompleted,
-      customer.onboardingStep,
-      customer.profileCompletionPercentage,
-    );
-  }
-
-  private getDefaultMissingFields(): string[] {
-    return [
-      'firstName',
-      'lastName',
-      'email',
-      'identificationNumber',
-      'city',
-      'address',
-    ];
-  }
-
-  private isFieldMissing(customer: Customer, field: string): boolean {
-    const value = (customer as unknown as Record<string, unknown>)[field];
-    return value === null || value === undefined || value === '';
-  }
-
-  private resolveNextField(customer: Customer): string | null {
-    return this.getDefaultMissingFields().find((field) =>
-      this.isFieldMissing(customer, field),
-    ) ?? null;
-  }
-
-  private calculateCompletion(customer: Customer): number {
-    const fields = this.getDefaultMissingFields();
-    const done = fields.filter((field) => !this.isFieldMissing(customer, field)).length;
-    return Math.min(100, Math.round((done / fields.length) * 100));
   }
 }

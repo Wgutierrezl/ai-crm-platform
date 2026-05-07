@@ -349,6 +349,36 @@ Descripcion breve: Se reforzo la capa de interfaces HTTP con documentacion OpenA
 6. Mejorar machine state conversacional.
 7. Refinar flujo de tools y coherencia IA post-onboarding.
 
+## Entrada 2026-05-07 (fix definitivo repeticion de cedula)
+
+### Bug corregido
+- El bot repetia la pregunta de cédula aun despues de recibirla.
+
+### Causa raiz
+- Flujo de transicion de onboarding no deterministico.
+- Paso y missing fields se recalculaban de forma ambigua.
+- Validacion de cédula no diferenciaba bien "invalida" vs "omitir".
+
+### Solucion implementada
+- Maquina de estados en backend:
+  - `WAITING_NAME`
+  - `WAITING_EMAIL`
+  - `WAITING_DOCUMENT`
+  - `COMPLETED`
+- `ASSISTANT_COLLECT_PROFILE_DATA` ahora:
+  - valida por paso actual,
+  - persiste customer y state,
+  - calcula siguiente paso de forma deterministica.
+- Cédula opcional:
+  - soporta `omitir`, `saltar`, `prefiero no`, `después`, `no`.
+  - al omitir, marca onboarding como `COMPLETED`.
+- Saludos como `hola` ya no se guardan como nombre.
+
+### Resultado esperado
+- No se repite cédula tras respuesta válida.
+- No se reinicia onboarding para usuario registrado.
+- Usuario registrado recibe saludo con nombre desde BD.
+
 ## Entrada 2026-04-24
 
 ### Funcionalidades implementadas

@@ -20,7 +20,13 @@ export class ConversationStateTypeormRepository
       entity.conversationId,
       entity.companyId,
       entity.status as 'active' | 'closed',
-      entity.registrationStep as `awaiting_${string}` | 'completed',
+      entity.registrationStep as
+        | 'WAITING_NAME'
+        | 'WAITING_EMAIL'
+        | 'WAITING_DOCUMENT'
+        | 'COMPLETED'
+        | `awaiting_${string}`
+        | 'completed',
       entity.contextJson ?? null,
       entity.createdAt,
       entity.updatedAt,

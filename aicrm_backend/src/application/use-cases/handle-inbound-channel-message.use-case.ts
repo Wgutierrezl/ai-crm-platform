@@ -3,7 +3,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { Message } from '../../domain/entities/message.entity';
 import { MessageRepository } from '../../domain/ports/message.repository.port';
 import { ProcessIncomingMessageUseCase } from './create-message.use-case';
-import { AssistantOnboardingToolsService } from '../services/assistant-onboarding-tools.service';
+import {
+  AssistantOnboardingToolsService,
+  OnboardingStep,
+} from '../services/assistant-onboarding-tools.service';
 
 export interface HandleInboundChannelMessageInput {
   companyId: string;
@@ -47,7 +50,6 @@ export class HandleInboundChannelMessageUseCase {
       }
     }
 
-    // 1) Resolucion obligatoria de identidad antes de cualquier decision.
     const resolved = await this.onboardingTools.ASSISTANT_RESOLVE_USER_IDENTITY({
       companyId: input.companyId,
       channel: input.channel,
@@ -69,26 +71,11 @@ export class HandleInboundChannelMessageUseCase {
       ),
     );
 
-    // 2) Usuario registrado: nunca reinicia onboarding.
     if (resolved.status === 'registered') {
       if (this.onboardingTools.isGreetingMessage(input.text)) {
-        const welcome = `Hola ${resolved.customer.firstName ?? resolved.customer.fullName ?? 'de nuevo'} 👋 Qué gusto verte nuevamente.\n\nPuedo ayudarte con:\n- productos,\n- pedidos,\n- soporte,\n- consultas,\n- y mucho más 😊\n\n¿Qué necesitas hoy?`;
-        await this.messageRepository.create(
-          new Message(
-            uuidv4(),
-            resolved.conversation.id,
-            input.companyId,
-            welcome,
-            'bot',
-            new Date(),
-            input.channel,
-          ),
-        );
-        return {
-          shouldReply: true,
-          reply: welcome,
-          recipientExternalUserId: input.externalUserId,
-        };
+        const welcome = `Hola ${resolved.customer.firstName ?? resolved.customer.fullName ?? 'de nuevo'} 👋 Qué gusto verte nuevamente.\n\nPuedo ayudarte con:\n- consultar productos,\n- crear pedidos,\n- resolver dudas,\n- revisar tu perfil,\n- y mucho más 😊\n\n¿Qué te gustaría hacer?`;
+        await this.persistBot(input.companyId, resolved.conversation.id, input.channel, welcome);
+        return { shouldReply: true, reply: welcome, recipientExternalUserId: input.externalUserId };
       }
 
       const aiResult = await this.processIncomingMessageUseCase.execute({
@@ -100,7 +87,6 @@ export class HandleInboundChannelMessageUseCase {
         botReplyPrefix: `Hola ${resolved.customer.firstName ?? resolved.customer.fullName ?? 'de nuevo'} 👋 `,
         assistantContext: this.buildAssistantContext(resolved, input.channel),
       });
-
       return {
         shouldReply: true,
         reply: aiResult.botMessage.content,
@@ -108,7 +94,6 @@ export class HandleInboundChannelMessageUseCase {
       };
     }
 
-    // 3) Nuevo o incompleto: continuar onboarding desde estado actual.
     const state =
       resolved.state ??
       (await this.onboardingTools.ASSISTANT_START_ONBOARDING({
@@ -116,46 +101,75 @@ export class HandleInboundChannelMessageUseCase {
         conversationId: resolved.conversation.id,
       }));
 
-    const collection = await this.onboardingTools.ASSISTANT_COLLECT_PROFILE_DATA({
+    const step = resolved.onboardingStep;
+    const collected = await this.onboardingTools.ASSISTANT_COLLECT_PROFILE_DATA({
       message: input.text,
       customer: resolved.customer,
       state,
+      step,
     });
 
-    const nextQuestion = this.buildOnboardingReply({
-      customerExists: resolved.customerExists,
-      firstName: collection.customer.firstName,
-      nextField: collection.nextField,
-      completion: collection.completion,
-      greeting: this.onboardingTools.isGreetingMessage(input.text),
+    const reply = this.buildOnboardingReply({
+      currentStep: step,
+      nextStep: collected.nextStep,
+      validationError: collected.validationError,
+      firstName: collected.customer.firstName,
+      isNew: !resolved.customerExists,
     });
 
-    if (!collection.nextField) {
-      await this.onboardingTools.ASSISTANT_REGISTER_USER({
-        customer: collection.customer,
-        state: collection.state,
-      });
-    }
+    await this.persistBot(input.companyId, resolved.conversation.id, input.channel, reply);
+    return { shouldReply: true, reply, recipientExternalUserId: input.externalUserId };
+  }
 
+  private async persistBot(
+    companyId: string,
+    conversationId: string,
+    channel: 'whatsapp',
+    content: string,
+  ): Promise<void> {
     await this.messageRepository.create(
       new Message(
         uuidv4(),
-        resolved.conversation.id,
-        input.companyId,
-        nextQuestion,
+        conversationId,
+        companyId,
+        content,
         'bot',
         new Date(),
-        input.channel,
-        null,
-        { flow: 'onboarding', completion: collection.completion },
+        channel,
       ),
     );
+  }
 
-    return {
-      shouldReply: true,
-      reply: nextQuestion,
-      recipientExternalUserId: input.externalUserId,
-    };
+  private buildOnboardingReply(input: {
+    currentStep: OnboardingStep;
+    nextStep: OnboardingStep;
+    validationError: string | null;
+    firstName: string | null;
+    isNew: boolean;
+  }): string {
+    if (input.validationError === 'name') {
+      return 'Para registrarte bien 😊 necesito tu nombre real. Ejemplo: "Walter Gutiérrez".';
+    }
+    if (input.validationError === 'email') {
+      return 'Ese correo no parece válido 🙏 ¿Me lo compartes de nuevo? Ejemplo: nombre@correo.com';
+    }
+    if (input.validationError === 'document') {
+      return 'La cédula no parece válida. Puedes enviarla de nuevo o escribir "omitir" si prefieres saltarla 👌';
+    }
+
+    if (input.currentStep === 'WAITING_NAME' && input.nextStep === 'WAITING_EMAIL') {
+      return `Excelente ${input.firstName ?? ''} ✨ ¿Me compartes tu correo? Lo usamos para seguimiento y confirmaciones.`.trim();
+    }
+    if (input.currentStep === 'WAITING_EMAIL' && input.nextStep === 'WAITING_DOCUMENT') {
+      return 'Perfecto 👌 ¿Quieres compartirme tu número de cédula? Es opcional y ayuda en validaciones de pedidos.';
+    }
+    if (input.nextStep === 'COMPLETED') {
+      return `¡Listo ${input.firstName ?? ''}! 🎉 Tu registro quedó completo.\n\nAhora puedo ayudarte con:\n- consultar productos,\n- crear pedidos,\n- resolver dudas,\n- revisar tu perfil,\n- y mucho más.\n\n¿Qué te gustaría hacer?`.trim();
+    }
+    if (input.isNew) {
+      return 'Hola 👋 Bienvenido a AI CRM.\n\nSoy tu asistente virtual y puedo ayudarte con productos, pedidos y soporte 😊\n\nAntes de comenzar, ¿cómo te llamas?';
+    }
+    return 'Continuemos con tu registro 😊 ¿cómo te llamas?';
   }
 
   private buildAssistantContext(
@@ -166,55 +180,18 @@ export class HandleInboundChannelMessageUseCase {
   ): Record<string, unknown> {
     return {
       customer_exists: resolved.customerExists,
-      customer_name:
-        resolved.customer.firstName ?? resolved.customer.fullName ?? null,
+      customer_name: resolved.customer.firstName ?? resolved.customer.fullName ?? null,
       onboarding_completed: resolved.onboardingCompleted,
       onboarding_step: resolved.onboardingStep,
       missing_fields: resolved.missingFields,
       customer_profile: {
         firstName: resolved.customer.firstName,
-        lastName: resolved.customer.lastName,
         email: resolved.customer.email,
-        city: resolved.customer.city,
-        address: resolved.customer.address,
-        profileCompletionPercentage:
-          resolved.customer.profileCompletionPercentage,
+        identificationNumber: resolved.customer.identificationNumber,
       },
       conversation_state: resolved.state?.registrationStep ?? null,
       available_tools: ['GET_PRODUCTS', 'CREATE_CUSTOMER', 'CREATE_ORDER'],
       current_channel: channel,
     };
-  }
-
-  private buildOnboardingReply(input: {
-    customerExists: boolean;
-    firstName: string | null;
-    nextField: string | null;
-    completion: number;
-    greeting: boolean;
-  }): string {
-    const name = input.firstName ? ` ${input.firstName}` : '';
-    if (!input.nextField) {
-      return `Perfecto${name} 🙌 Ya quedó listo tu perfil (${input.completion}%). Ahora sí, puedo ayudarte con productos, pedidos, soporte y más 😊 ¿Qué necesitas hoy?`;
-    }
-
-    if (!input.customerExists || (input.greeting && input.nextField === 'firstName')) {
-      return 'Hola 👋 Bienvenido a AI CRM.\n\nSoy tu asistente virtual y puedo ayudarte con productos, pedidos y soporte 😊\n\nAntes de comenzar, ¿cómo te llamas?';
-    }
-
-    const prompts: Record<string, string> = {
-      firstName:
-        'Antes de continuar, ¿cómo te llamas? Así puedo atenderte de forma más personalizada 😊',
-      lastName: `Perfecto${name} 👋 Para completar tu perfil, ¿me compartes tu apellido?`,
-      email:
-        'Excelente ✨ ¿Me compartes tu correo? Lo usamos para seguimiento y confirmaciones.',
-      identificationNumber:
-        '¿Quieres compartirme tu número de cédula? (Opcional, ayuda en validaciones de pedidos)',
-      city:
-        '¿En qué ciudad te encuentras? Así te doy respuestas más relevantes para tu zona.',
-      address:
-        'Si quieres, también puedo guardar tu dirección para agilizar futuras gestiones 🙌',
-    };
-    return prompts[input.nextField] ?? 'Cuéntame un poco más y seguimos 😊';
   }
 }

@@ -25,6 +25,8 @@ Reglas:
   - do not infer user existence,
   - do not restart onboarding for completed profiles,
   - continue from provided step/context only.
+- State transitions are backend-owned (not model-owned):
+  - WAITING_NAME -> WAITING_EMAIL -> WAITING_DOCUMENT -> COMPLETED.
 
 ## Known Prompt Gaps
 - Prompt quality depends on state freshness from backend.

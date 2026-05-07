@@ -100,8 +100,8 @@ Regla de lifecycle:
 
 Estado real de estabilidad:
 - Funciona: resolucion de identidad y bifurcacion base por estado.
-- Inestable: repeticion ocasional de preguntas y desalineacion de paso actual.
-- Riesgo principal: sincronizacion incompleta estado conversacional <-> contexto IA.
+- Corregido en onboarding base: transicion deterministica de pasos (`WAITING_NAME -> WAITING_EMAIL -> WAITING_DOCUMENT -> COMPLETED`).
+- Riesgo remanente: falta transaccion atomica para endurecer consistencia al 100%.
 
 Extraccion progresiva:
 - Servicio: `OnboardingProfileExtractorService`.

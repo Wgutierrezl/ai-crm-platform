@@ -1,5 +1,11 @@
 export type ConversationLifecycleStatus = 'active' | 'closed';
-export type RegistrationStep = `awaiting_${string}` | 'completed';
+export type RegistrationStep =
+  | 'WAITING_NAME'
+  | 'WAITING_EMAIL'
+  | 'WAITING_DOCUMENT'
+  | 'COMPLETED'
+  | `awaiting_${string}`
+  | 'completed';
 
 export class ConversationState {
   constructor(
