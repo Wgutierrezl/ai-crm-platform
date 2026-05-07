@@ -18,6 +18,7 @@ Reglas:
   - `partials/policies/no-hallucination.md`
   - `partials/style/concise-whatsapp.md`
   - `partials/tools/onboarding-tools.md`
+  - `partials/tools/products-tools.md`
 
 ## Prompt Coverage in This Session
 - Onboarding tone and progressive collection rules were strengthened.

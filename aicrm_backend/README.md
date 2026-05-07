@@ -106,6 +106,8 @@ Respuesta temporal actual:
   - backfill seguro de `company_whatsapp_apps.company_id` solo si existe un unico tenant.
 - `1710000000005-EnhanceCustomerConversationalProfile`
   - amplía `customers` para onboarding conversacional y perfil progresivo.
+- `1710000000007-EnhanceProductsForConversationalTools`
+  - amplía `products` para consultas conversacionales (catálogo, búsqueda, precio, stock).
 
 ## Nota operativa: warning de companyId nulo en app WhatsApp
 

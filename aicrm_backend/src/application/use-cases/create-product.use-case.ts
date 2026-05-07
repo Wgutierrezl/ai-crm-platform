@@ -5,9 +5,16 @@ import { Product } from '../../domain/entities/product.entity';
 
 export interface CreateProductInput {
   name: string;
+  description?: string;
   price: number;
   stock: number;
   companyId: string;
+  isActive?: boolean;
+  sku?: string;
+  brand?: string;
+  currency?: string;
+  minStock?: number;
+  imageUrl?: string;
 }
 
 /**
@@ -21,9 +28,21 @@ export class CreateProductUseCase {
     const product = new Product(
       uuidv4(),
       input.name,
+      input.description ?? null,
       input.price,
       input.stock,
       input.companyId,
+      input.isActive ?? true,
+      input.sku ?? null,
+      input.brand ?? null,
+      null,
+      null,
+      input.imageUrl ?? null,
+      input.currency ?? 'COP',
+      input.minStock ?? 0,
+      null,
+      new Date(),
+      new Date(),
     );
     return this.productRepository.create(product);
   }

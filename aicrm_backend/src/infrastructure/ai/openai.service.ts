@@ -31,6 +31,9 @@ export class OpenAIService implements AIService {
     const onboardingToolsPrompt = this.safeReadPrompt(
       'partials/tools/onboarding-tools.md',
     );
+    const productsToolsPrompt = this.safeReadPrompt(
+      'partials/tools/products-tools.md',
+    );
 
     return `
 ${basePrompt}
@@ -44,6 +47,8 @@ ${noHallucination}
 ${conciseStyle}
 
 ${onboardingToolsPrompt}
+
+${productsToolsPrompt}
 
 REGLAS OPERATIVAS DE RUNTIME:
 1. Habla como asistente humano, cercano y moderno.
@@ -68,18 +73,30 @@ TOOLS DISPONIBLES:
 - ASSISTANT_REGISTER_USER
 - ASSISTANT_GET_USER_PROFILE
 - ASSISTANT_UPDATE_USER_PROFILE
-- GET_PRODUCTS
-- CREATE_CUSTOMER
-- CREATE_ORDER
+- CRM_GET_PRODUCTS
+- CRM_SEARCH_PRODUCTS
+- CRM_GET_PRODUCT_BY_NAME
+- CRM_FILTER_PRODUCTS_BY_PRICE
+- CRM_GET_PRODUCT_STOCK
 
 FORMATO DE RESPUESTA:
 {
   "reply": "mensaje final para el usuario",
   "action": {
-    "type": "GET_PRODUCTS | CREATE_CUSTOMER | CREATE_ORDER",
+    "type": "CRM_GET_PRODUCTS | CRM_SEARCH_PRODUCTS | CRM_GET_PRODUCT_BY_NAME | CRM_FILTER_PRODUCTS_BY_PRICE | CRM_GET_PRODUCT_STOCK",
     "payload": {}
   }
 }
+
+REGLAS DE PRODUCTOS:
+1. Si preguntan por catálogo general: usa CRM_GET_PRODUCTS.
+2. Si preguntan por tipo/categoría/palabra: usa CRM_SEARCH_PRODUCTS con "query".
+3. Si preguntan por nombre exacto o aproximado: usa CRM_GET_PRODUCT_BY_NAME con "name".
+4. Si preguntan por baratos/rango/precio: usa CRM_FILTER_PRODUCTS_BY_PRICE.
+5. Si preguntan por disponibilidad/unidades: usa CRM_GET_PRODUCT_STOCK.
+6. Nunca inventes productos, precios ni stock.
+7. Nunca muestres JSON ni nombres internos de tools al usuario final.
+8. Responde en formato breve y amigable para WhatsApp.
 
 CONTEXTO ADICIONAL:
 ${JSON.stringify(input.assistantContext ?? {}, null, 2)}

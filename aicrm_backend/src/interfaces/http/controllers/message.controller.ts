@@ -45,7 +45,7 @@ export class MessageController {
   @Post('incoming')
   @ApiOperation({
     summary:
-      'Procesar mensaje entrante del cliente con IA y tools (GET_PRODUCTS, CREATE_CUSTOMER, CREATE_ORDER)',
+      'Procesar mensaje entrante del cliente con IA y tools de productos (CRM_GET_PRODUCTS, CRM_SEARCH_PRODUCTS, CRM_FILTER_PRODUCTS_BY_PRICE, CRM_GET_PRODUCT_STOCK)',
   })
   @ApiBody({ type: CreateMessageDto })
   @ApiResponse({

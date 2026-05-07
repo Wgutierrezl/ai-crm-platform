@@ -76,6 +76,17 @@ Flujo completo:
 8. Guarda respuesta del bot en DB.
 9. Devuelve resultado al cliente/API consumer.
 
+### Tools de productos (fase actual)
+- `CRM_GET_PRODUCTS`
+- `CRM_SEARCH_PRODUCTS`
+- `CRM_GET_PRODUCT_BY_NAME`
+- `CRM_FILTER_PRODUCTS_BY_PRICE`
+- `CRM_GET_PRODUCT_STOCK`
+
+Regla:
+- Todas las consultas de productos filtran por `companyId` resuelto desde el flujo de canal.
+- No se habilita creacion de ordenes desde chat en esta fase.
+
 ## Onboarding conversacional (nuevo)
 
 El onboarding ahora es progresivo y humano:
@@ -116,6 +127,13 @@ Extraccion progresiva:
   - `onboardingCompleted`,
   - `onboardingStep`,
   - `profileCompletionPercentage`.
+
+## Producto (extendido)
+- Se amplió `products` para consultas conversacionales:
+  - `description`, `isActive`, `sku`, `brand`,
+  - `features_json`, `tags_json`, `imageUrl`,
+  - `currency`, `minStock`, `metadata_json`,
+  - `createdAt`, `updatedAt`.
 
 ## Politica de borrado para testing
 - Se habilitó cascade delete orientado a pruebas de onboarding por WhatsApp:

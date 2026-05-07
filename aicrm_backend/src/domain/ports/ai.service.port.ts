@@ -1,5 +1,14 @@
 export interface AIAction {
-  type: 'GET_PRODUCTS' | 'CREATE_CUSTOMER' | 'CREATE_ORDER' | string;
+  type:
+    | 'GET_PRODUCTS'
+    | 'CREATE_CUSTOMER'
+    | 'CREATE_ORDER'
+    | 'CRM_GET_PRODUCTS'
+    | 'CRM_SEARCH_PRODUCTS'
+    | 'CRM_GET_PRODUCT_BY_NAME'
+    | 'CRM_FILTER_PRODUCTS_BY_PRICE'
+    | 'CRM_GET_PRODUCT_STOCK'
+    | string;
   payload?: Record<string, any>;
 }
 

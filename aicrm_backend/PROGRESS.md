@@ -379,6 +379,40 @@ Descripcion breve: Se reforzo la capa de interfaces HTTP con documentacion OpenA
 - No se reinicia onboarding para usuario registrado.
 - Usuario registrado recibe saludo con nombre desde BD.
 
+## Entrada 2026-05-07 (tools conversacionales de productos)
+
+### Analisis de viabilidad
+- Viable sin romper arquitectura hexagonal:
+  - webhook sigue como canal,
+  - orquestacion en `application`,
+  - consultas DB por `ProductRepository`.
+
+### Implementado
+- Extension del modelo `Product` (dominio + ORM).
+- Nuevos metodos de `ProductRepository` para:
+  - catalogo activo,
+  - busqueda por texto,
+  - busqueda por nombre aproximado,
+  - filtro por precio.
+- Tools de productos en `ToolExecutionService`:
+  - `CRM_GET_PRODUCTS`
+  - `CRM_SEARCH_PRODUCTS`
+  - `CRM_GET_PRODUCT_BY_NAME`
+  - `CRM_FILTER_PRODUCTS_BY_PRICE`
+  - `CRM_GET_PRODUCT_STOCK`
+- Regla multi-tenant:
+  - todas las tools filtran por `companyId` del contexto.
+- Ordenes por chat:
+  - deshabilitadas por ahora (mensaje de fase futura).
+
+### Migracion agregada
+- `1710000000007-EnhanceProductsForConversationalTools`
+  - agrega campos de catalogo conversacional en `products`.
+
+### Prompting
+- Prompt runtime actualizado para intención de productos y uso obligatorio de tools.
+- Se agregó `prompts/partials/tools/products-tools.md`.
+
 ## Entrada 2026-04-24
 
 ### Funcionalidades implementadas
