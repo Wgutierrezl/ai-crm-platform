@@ -100,6 +100,62 @@ Descripcion breve: Se reforzo la capa de interfaces HTTP con documentacion OpenA
 - Se actualizaron variables de entorno en `.env.example`.
 - Se registraron controllers/providers/entities nuevos en `AppModule`.
 
+## Entrada 2026-05-06
+
+### Integracion WhatsApp Cloud API - estado funcional de canal
+- Se completo la recepcion real de mensajes desde Meta en:
+  - `GET /api/v1/webhooks/whatsapp` (verificacion de webhook).
+  - `POST /api/v1/webhooks/whatsapp` (recepcion de eventos/mensajes).
+- Se valido flujo real con ngrok + callback de Meta.
+- Se confirmo extraccion de payload clave:
+  - `phone_number_id`
+  - `whatsappAppId`
+  - `wa_id` / `from`
+  - `message_id`
+  - `text.body`
+- Se implemento respuesta automatica temporal outbound por WhatsApp usando `MetaWhatsappService.sendTextMessage(...)`.
+- Se valido fin a fin el canal:
+  - usuario escribe por WhatsApp
+  - backend recibe evento
+  - backend responde mensaje predeterminado al usuario.
+
+### Respuesta temporal actual
+- `"Hola 👋 Soy el asistente virtual de AI CRM. Ya recibi tu mensaje. Pronto podre ayudarte a consultar productos, crear pedidos y resolver dudas comerciales."`
+
+### Problemas tecnicos resueltos en esta sesion
+1. JWT / build:
+   - error de tipado en `expiresIn` corregido con tipado compatible de `jsonwebtoken`.
+2. TypeORM + MySQL:
+   - correccion de columnas nullable con `type` explicito para evitar inferencia `Object`.
+3. TypeScript nullability:
+   - normalizacion `null/undefined` en mapeos ORM -> dominio (`?? null`).
+4. Modelo conceptual de integracion:
+   - se reemplazo enfoque inicial acoplado a `companies` por modelo desacoplado:
+     - `company_whatsapp_apps` (identidad de app/numero WhatsApp)
+     - `company_whatsapp_credentials` (secretos/tokens).
+5. Migraciones:
+   - se aplico migracion correctiva para separar app/numero de credenciales y remover dependencia a `companies`.
+
+### Estado actual de la integracion
+- WhatsApp canal: **funcional**.
+- Inbound webhook: **funcional**.
+- Outbound mensaje temporal: **funcional**.
+- Seguridad base:
+  - endpoints internos protegidos con `X-Internal-Api-Key`.
+  - variables de entorno de WhatsApp agregadas.
+
+### Aun no implementado (pendiente inmediato)
+- Integracion completa con:
+  - `Customer`
+  - `Conversation`
+  - `Message`
+  - `ProcessIncomingMessageUseCase`
+  - OpenAI + tools de negocio en flujo webhook
+- Registro conversacional de cliente desconocido.
+- Idempotencia por `message_id`/`wamid`.
+- Validacion de firma `X-Hub-Signature-256`.
+- Cifrado de `accessToken` / `appSecret` en base de datos.
+
 ## Entrada 2026-04-24
 
 ### Funcionalidades implementadas

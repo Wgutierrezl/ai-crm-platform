@@ -25,6 +25,7 @@ import { OrderRepository } from './domain/ports/order.repository.port';
 import { OrderItemRepository } from './domain/ports/order-item.repository.port';
 import { CompanyWhatsappCredentialRepository } from './domain/ports/company-whatsapp-credential.repository.port';
 import { CompanyWhatsappAppRepository } from './domain/ports/company-whatsapp-app.repository.port';
+import { WhatsappMessageSender } from './domain/ports/whatsapp-message-sender.port';
 import { CompanyTypeormRepository } from './infrastructure/repositories/company.typeorm-repository';
 import { UserTypeormRepository } from './infrastructure/repositories/user.typeorm-repository';
 import { CustomerTypeormRepository } from './infrastructure/repositories/customer.typeorm-repository';
@@ -198,6 +199,10 @@ import { MetaWhatsappService } from './infrastructure/whatsapp/meta-whatsapp.ser
     {
       provide: CompanyWhatsappCredentialRepository,
       useClass: CompanyWhatsappCredentialTypeormRepository,
+    },
+    {
+      provide: WhatsappMessageSender,
+      useExisting: MetaWhatsappService,
     },
   ],
 })

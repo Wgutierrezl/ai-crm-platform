@@ -1,8 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { WhatsappMessageSender } from '../../domain/ports/whatsapp-message-sender.port';
 
 @Injectable()
-export class MetaWhatsappService {
+export class MetaWhatsappService implements WhatsappMessageSender {
   private readonly logger = new Logger(MetaWhatsappService.name);
 
   constructor(private readonly configService: ConfigService) {}

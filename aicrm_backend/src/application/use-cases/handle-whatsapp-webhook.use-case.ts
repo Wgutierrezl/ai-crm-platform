@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { CompanyWhatsappAppRepository } from '../../domain/ports/company-whatsapp-app.repository.port';
 import { CompanyWhatsappCredentialRepository } from '../../domain/ports/company-whatsapp-credential.repository.port';
+import { WhatsappMessageSender } from '../../domain/ports/whatsapp-message-sender.port';
 
 interface IncomingWhatsappMessage {
   waId: string | null;
@@ -43,6 +44,7 @@ export class HandleWhatsappWebhookUseCase {
   constructor(
     private readonly appRepository: CompanyWhatsappAppRepository,
     private readonly credentialRepository: CompanyWhatsappCredentialRepository,
+    private readonly whatsappMessageSender: WhatsappMessageSender,
   ) {}
 
   async execute(payload: unknown): Promise<void> {
@@ -88,6 +90,13 @@ export class HandleWhatsappWebhookUseCase {
 
         const messages = Array.isArray(value?.messages) ? value.messages : [];
         for (const message of messages) {
+          if (!message.text?.body) {
+            this.logger.log(
+              'Evento WhatsApp no es mensaje de texto. Se ignora.',
+            );
+            continue;
+          }
+
           const extracted: IncomingWhatsappMessage = {
             waId: message.from ?? null,
             from: message.from ?? null,
@@ -102,10 +111,32 @@ export class HandleWhatsappWebhookUseCase {
             `Contenido mensaje: ${extracted.body ?? '[sin texto]'} `,
           );
 
-          // Punto de extension para siguiente fase:
-          // - resolver/crear cliente por telefono
-          // - resolver/crear conversacion
-          // - invocar ProcessIncomingMessageUseCase y responder por WhatsApp
+          const recipientPhone = extracted.waId ?? extracted.from;
+          if (!recipientPhone) {
+            this.logger.warn(
+              'Mensaje de texto sin wa_id/from. No se puede responder.',
+            );
+            continue;
+          }
+
+          const autoReply =
+            'Hola 👋 Soy el asistente virtual de AI CRM. Ya recibí tu mensaje. Pronto podré ayudarte a consultar productos, crear pedidos y resolver dudas comerciales.';
+
+          try {
+            this.logger.log('Enviando respuesta automática a WhatsApp');
+            await this.whatsappMessageSender.sendTextMessage(
+              app.phoneNumberId,
+              credential.accessToken,
+              recipientPhone,
+              autoReply,
+            );
+            this.logger.log('Respuesta automática enviada correctamente');
+          } catch (error) {
+            this.logger.error(
+              'Error enviando respuesta automática',
+              error instanceof Error ? error.stack : undefined,
+            );
+          }
         }
       }
     }
