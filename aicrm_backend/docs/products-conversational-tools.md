@@ -33,3 +33,19 @@
 - `product_categories` table.
 - `suppliers` table.
 - Order creation from chat (intentionally disabled in this phase).
+
+## Validation Status
+- Backend implementation completed.
+- Full conversational validation is partially pending due to OpenAI API quota limits (`429`).
+- Priority test sequence once quota is available:
+  1. general catalog query,
+  2. text search by category/brand,
+  3. approximate name search,
+  4. price-range filtering,
+  5. stock availability responses.
+
+## Next Backend Steps
+1. Execute full E2E conversational tests once provider quota is available.
+2. Validate strict tenant isolation in every scenario (`companyId` scoped queries only).
+3. Add robust fallback responses when AI provider fails during product intents.
+4. Keep order creation disabled until dedicated order phase is enabled.

@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
 import { useNavigate, Link } from "react-router";
 import { Button } from "../components/ui/button.tsx";
 import { Input } from "../components/ui/input.tsx";
@@ -10,6 +10,7 @@ import { AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { authService } from "../../api/services/auth.service";
 import { logger } from "../../utils/logger/logger";
+import { authStorage } from "../../utils/storage/authStorage";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -23,6 +24,12 @@ export default function Register() {
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (authStorage.hasSession()) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +59,7 @@ export default function Register() {
 
       await authService.login(formData.email, formData.password);
       toast.success("Cuenta creada correctamente");
-      navigate("/");
+      navigate("/dashboard", { replace: true });
     } catch (err: unknown) {
       const maybeAxiosError = err as {
         response?: { data?: { message?: string | string[] } };

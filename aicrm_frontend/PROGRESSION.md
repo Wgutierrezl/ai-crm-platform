@@ -122,3 +122,76 @@ El frontend del AI CRM se encuentra en una fase de prototipo funcional basado en
   - Orders
   - Conversations
 - Mejorar manejo de errores en UI con mensajes consistentes por tipo de fallo.
+
+## Entrada 2026-05-07 (correccion flujo inicial auth/routing)
+
+### Problema detectado
+- La app iniciaba mostrando dashboard directamente, aun sin sesion.
+
+### Causa raiz
+- Ruta raiz (`/`) apuntaba a `Layout` + `Dashboard` sin `ProtectedRoute`.
+- No habia bifurcacion explicita de rutas publicas vs protegidas.
+
+### Correcciones implementadas
+- Se crearon componentes de control de acceso:
+  - `ProtectedRoute`
+  - `PublicRoute`
+  - `RootRedirect`
+- Router actualizado:
+  - `/` decide segun sesion: `/login` o `/dashboard`
+  - `/login` y `/register` son publicas
+  - `dashboard/products/customers/conversations/orders/settings` quedan protegidas
+- Login/Register:
+  - si existe sesion, redirigen a `/dashboard`
+  - despues de auth exitosa redirigen a `/dashboard`
+- Sidebar:
+  - acceso principal actualizado a `/dashboard`
+- Topbar:
+  - logout real via `authService.logout()`
+  - redireccion a `/login`
+  - se elimino uso de usuario fijo para sesion aparente
+
+### Resultado funcional esperado
+1. Usuario sin sesion entra a `/` -> redirige a `/login`.
+2. Usuario autenticado entra a `/` -> redirige a `/dashboard`.
+3. Rutas protegidas sin sesion -> redirigen a `/login`.
+4. Logout limpia sesion y bloquea acceso a rutas protegidas.
+
+### Verificacion tecnica
+- `npx tsc -b` exitoso.
+- `npm run build` no pudo completarse por problema de entorno (`spawn EPERM` de esbuild en este host), no por errores de tipado/rutas.
+
+## Cierre de sesion 2026-05-07 (proximos pasos frontend)
+
+### Lo que quedo funcionando
+- Flujo inicial de autenticacion orientado a login.
+- Redireccion de `/` segun sesion.
+- Rutas protegidas para dashboard y modulos privados.
+- Logout con limpieza de sesion.
+
+### Pendientes prioritarios frontend
+1. Mostrar conversaciones reales desde backend:
+   - conversaciones + mensajes inbound/outbound,
+   - customer asociado,
+   - historial real por conversacion.
+2. Limpiar datos mock/hardcoded en:
+   - dashboard,
+   - conversaciones,
+   - productos,
+   - clientes,
+   - estadisticas.
+3. Consolidar flujo auth completo:
+   - validacion de token/sesion,
+   - expiracion de sesion,
+   - manejo de errores de autenticacion.
+4. Conectar vistas con servicios API reales:
+   - loading states,
+   - empty states,
+   - errores de red/backend.
+
+### Prioridad recomendada siguiente sesion
+1. Retomar frontend.
+2. Completar limpieza de rutas/login.
+3. Integrar conversaciones reales.
+4. Remover mocks principales.
+5. Luego retomar backend multi-provider IA.

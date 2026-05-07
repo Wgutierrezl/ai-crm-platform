@@ -57,6 +57,28 @@ En este momento el frontend se encuentra en fase de prototipo funcional. Eso sig
 - La mayor parte del contenido mostrado todavia usa datos quemados o simulados.
 - Aun no se ha completado la integracion real con los endpoints del backend.
 
+## Flujo de autenticacion (actualizado)
+- La app ya no entra directo al dashboard por defecto.
+- Comportamiento actual:
+  - Si no hay sesion valida: `/` redirige a `/login`.
+  - Si hay sesion valida: `/` redirige a `/dashboard`.
+  - Rutas protegidas (`/dashboard`, `/products`, `/customers`, `/conversations`, `/orders`, `/settings`) requieren sesion activa.
+  - Rutas publicas (`/login`, `/register`) redirigen a `/dashboard` si ya existe sesion.
+
+## Causa raiz corregida
+- El router inicial montaba `Layout` en `/` con `Dashboard` como `index`, sin guard de autenticacion.
+- Eso permitia visualizar pantallas protegidas sin validar JWT/sesion.
+
+## Manejo de sesion/token
+- El login consume backend (`POST /auth/login` sobre base `/api/v1`) y guarda:
+  - `auth_token`
+  - `auth_userId`
+  - `auth_companyId`
+  - `auth_role` (opcional)
+- `apiClient` inyecta `Authorization: Bearer <token>` via interceptor.
+- En `401`, se limpia sesion automaticamente.
+- Logout limpia storage y redirige a `/login`.
+
 ## Integracion esperada con backend
 La siguiente etapa del frontend consiste en conectarse al backend del AI CRM para dejar de depender de mocks locales. Para eso sera necesario:
 
@@ -74,6 +96,14 @@ Las siguientes prioridades del frontend son:
 3. Implementar servicios para autenticacion, productos, conversaciones, mensajes y ordenes.
 4. Crear interfaces TypeScript para representar contratos de entrada y salida.
 5. Conectar formularios y tablas con datos reales del backend.
+
+## Roadmap siguiente sesion (frontend)
+1. Mantener login como entrada principal.
+2. Validar rutas protegidas y redirecciones por sesion.
+3. Integrar vista de conversaciones con datos reales (`Conversation` + `messages`).
+4. Mostrar historial inbound/outbound real del bot y usuario.
+5. Retirar mocks del flujo principal (mantenerlos solo como fixtures opcionales).
+6. Endurecer manejo de errores de API y sesion expirada.
 
 ## Notas
 Este frontend no debe verse como una version final de producto, sino como la base de una implementacion progresiva que parte desde un diseño de Figma ya definido y evoluciona hacia una aplicacion integrada con backend real.

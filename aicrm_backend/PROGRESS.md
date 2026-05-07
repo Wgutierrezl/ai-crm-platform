@@ -437,3 +437,77 @@ Descripcion breve: Se reforzo la capa de interfaces HTTP con documentacion OpenA
   - Orders
   - Conversations
   - Otros endpoints
+
+## Entrada 2026-05-07 (decision arquitectura IA multi-provider)
+
+### Incidente observado
+- Durante pruebas de flujo conversacional se detecto:
+  - `RateLimitError: 429 You exceeded your current quota`.
+
+### Conclusiones
+- La falla no estuvo en:
+  - arquitectura hexagonal,
+  - flujo de onboarding,
+  - webhook de WhatsApp,
+  - tools de productos.
+- La causa fue limite de cuota de OpenAI API en `platform.openai.com`.
+- ChatGPT Plus no cubre consumo de API backend.
+
+### Decision tomada
+- Evolucionar a arquitectura IA multi-provider (documentada en contexto).
+- Objetivos:
+  - fallback entre proveedores,
+  - optimizacion de costo,
+  - menor dependencia de vendor unico,
+  - mayor continuidad operativa.
+
+### Providers considerados
+- OpenAI
+- Groq
+- OpenRouter
+- Anthropic
+- Gemini
+- Providers locales futuros (opcional)
+
+### Estado de tools de productos
+- Las tools de productos quedaron implementadas a nivel backend.
+- Pruebas conversacionales end-to-end con IA quedaron parcialmente bloqueadas por cuota OpenAI API.
+
+### Proximos pasos recomendados (sin implementar aun)
+1. Definir `ai-provider.port.ts` en `domain/ports`.
+2. Crear adapters por proveedor en `infrastructure/ai/providers`.
+3. Implementar `AIProviderResolver` para seleccion por entorno/tenant/canal.
+4. Implementar fallback policy (primary -> secondary).
+5. Reanudar pruebas E2E de tools de productos una vez resuelta cuota API.
+
+## Cierre de sesion 2026-05-07 (siguientes pasos)
+
+### Lo que quedo funcionando
+- Onboarding conversacional por WhatsApp con control de estado.
+- Resolucion de identidad y reutilizacion de customer existente.
+- Flujo para evitar reinicio de onboarding cuando el usuario ya esta registrado.
+- Base de tools de productos en backend.
+- Documentacion de roadmap multi-provider IA.
+
+### Pendientes prioritarios backend
+1. Implementar arquitectura IA multi-provider:
+   - puerto/adaptadores por proveedor,
+   - seleccion por `.env`,
+   - fallback entre proveedores.
+2. Reanudar pruebas E2E de tools de productos:
+   - catalogo general,
+   - busqueda por nombre,
+   - busqueda por palabra clave/categoria,
+   - filtro por precio,
+   - stock,
+   - validacion de aislamiento por `companyId`.
+3. Implementar fallback conversacional cuando falle IA:
+   - cuota excedida,
+   - timeout,
+   - proveedor caido,
+   - error de modelo.
+
+### Incidente operativo registrado
+- `RateLimitError: 429 insufficient_quota` en OpenAI API.
+- Confirmado: ChatGPT Plus no cubre creditos de backend API.
+- Impacto: bloqueo parcial de pruebas conversacionales completas.

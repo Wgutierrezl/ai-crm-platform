@@ -9,47 +9,64 @@ import Conversations from "./app/pages/Conversations";
 import Orders from "./app/pages/Orders";
 import OrderDetail from "./app/pages/OrderDetail";
 import Settings from "./app/pages/Settings";
+import ProtectedRoute from "./app/components/auth/ProtectedRoute";
+import PublicRoute from "./app/components/auth/PublicRoute";
+import RootRedirect from "./app/components/auth/RootRedirect";
 
 export const router = createBrowserRouter([
   {
-    path: "/login",
-    Component: Login,
-  },
-  {
-    path: "/register",
-    Component: Register,
-  },
-  {
     path: "/",
-    Component: Layout,
+    Component: RootRedirect,
+  },
+  {
+    Component: PublicRoute,
     children: [
       {
-        index: true,
-        Component: Dashboard,
+        path: "/login",
+        Component: Login,
       },
       {
-        path: "products",
-        Component: Products,
+        path: "/register",
+        Component: Register,
       },
+    ],
+  },
+  {
+    Component: ProtectedRoute,
+    children: [
       {
-        path: "customers",
-        Component: Customers,
-      },
-      {
-        path: "conversations",
-        Component: Conversations,
-      },
-      {
-        path: "orders",
-        Component: Orders,
-      },
-      {
-        path: "orders/:id",
-        Component: OrderDetail,
-      },
-      {
-        path: "settings",
-        Component: Settings,
+        path: "/",
+        Component: Layout,
+        children: [
+          {
+            path: "dashboard",
+            Component: Dashboard,
+          },
+          {
+            path: "products",
+            Component: Products,
+          },
+          {
+            path: "customers",
+            Component: Customers,
+          },
+          {
+            path: "conversations",
+            Component: Conversations,
+          },
+          {
+            path: "orders",
+            Component: Orders,
+          },
+          {
+            path: "orders/:id",
+            Component: OrderDetail,
+          },
+          {
+            path: "settings",
+            Component: Settings,
+          },
+        ],
       },
     ],
   },

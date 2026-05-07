@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
 import { useNavigate, Link } from "react-router";
 import { Button } from "../components/ui/button.tsx";
 import { Input } from "../components/ui/input.tsx";
@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "../components/ui/alert.tsx";
 import { AlertCircle } from "lucide-react";
 import { authService } from "../../api/services/auth.service";
 import { logger } from "../../utils/logger/logger";
+import { authStorage } from "../../utils/storage/authStorage";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -15,6 +16,12 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (authStorage.hasSession()) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +39,7 @@ export default function Login() {
       await authService.login(email, password);
 
       logger.info("Login exitoso, redirigiendo al dashboard");
-      navigate("/");
+      navigate("/dashboard", { replace: true });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Error al iniciar sesión";
       setError(errorMessage || "Error al iniciar sesión. Intenta nuevamente.");

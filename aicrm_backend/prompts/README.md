@@ -33,3 +33,11 @@ Reglas:
 - Prompt quality depends on state freshness from backend.
 - If backend sends stale `missing_fields` or `onboarding_step`, model can still produce repetitive prompts.
 - Next session should bind prompt behavior to deterministic step machine output.
+- End-to-end prompt validation is currently constrained by OpenAI API quota (`429`).
+
+## Next Validation Pass
+- Resume prompt-intent testing for product tools after provider quota/fallback is available.
+- Verify:
+  - intent-to-tool mapping reliability,
+  - short WhatsApp-friendly responses,
+  - no fabricated product/price/stock outputs.

@@ -38,6 +38,15 @@ Se implementa arquitectura hexagonal estricta (Ports and Adapters):
 - OpenAI API
 - class-validator / class-transformer
 
+## Limitacion actual de IA (operativa)
+- Durante pruebas reales se presento `RateLimitError 429` por cuota de OpenAI API.
+- Aclaracion importante:
+  - ChatGPT Plus NO incluye creditos para uso de OpenAI API en backend.
+  - El backend consume desde `platform.openai.com` y depende de la cuota/billing de API.
+- Conclusión:
+  - la incidencia no se originó en arquitectura, onboarding, WhatsApp ni tools,
+  - fue una limitación de cuota del proveedor OpenAI API.
+
 ## Multi-tenant
 - El companyId se incluye en entidades de negocio y persistencia multi-empresa.
 - El companyId se extrae automaticamente desde JWT en JwtAuthGuard.
@@ -236,6 +245,49 @@ El proyecto puede evolucionar de "CRM con bot" a "plataforma modular de asistent
 - Evitar acoplar:
   - logica CRM dentro del modulo WhatsApp.
   - logica Google dentro del modulo CRM.
+
+### Direccion IA (multi-provider)
+- Se define como decision arquitectonica soportar multiples proveedores de IA para:
+  - reducir dependencia de un unico vendor,
+  - optimizar costo/latencia,
+  - habilitar fallback,
+  - mejorar continuidad operativa en desarrollo y produccion.
+
+Providers objetivo:
+- OpenAI (premium/produccion futura)
+- Groq (rapidez/costo para desarrollo y canal conversacional)
+- OpenRouter
+- Anthropic
+- Gemini
+- Providers locales futuros (opcional)
+
+Arquitectura propuesta (documentada, no implementada aun):
+- `domain/ports/ai-provider.port.ts`
+- `infrastructure/ai/providers/`
+  - `openai/`
+  - `groq/`
+  - `openrouter/`
+  - `anthropic/`
+  - `gemini/`
+- Componentes de orquestacion candidatos:
+  - `AIProviderFactory`
+  - `AIProviderResolver`
+  - `AIOrchestrator`
+
+Estado:
+- Actualmente el proyecto usa OpenAI como provider activo.
+- La base de prompts/tools ya está encaminada para evolucionar a multi-provider.
+
+### Proximos pasos backend (prioridad)
+1. Implementar capa multi-provider (OpenAI, Groq, OpenRouter, Ollama, Gemini, Anthropic).
+2. Habilitar seleccion de proveedor por configuracion y fallback automatico.
+3. Implementar respuesta segura de continuidad cuando IA falle.
+4. Completar pruebas conversacionales de tools de productos cuando exista cuota/provider disponible.
+
+### Tools de productos - estado de validacion
+- Implementacion base disponible.
+- Validacion integral pendiente por limite de cuota OpenAI API.
+- Requisito funcional: todas las consultas deben filtrar por `companyId` resuelto desde canal/app.
 
 ### Modulos futuros sugeridos
 - WhatsApp:

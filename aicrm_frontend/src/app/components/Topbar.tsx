@@ -11,15 +11,23 @@ import {
 } from "./ui/dropdown-menu.tsx";
 import { Avatar, AvatarFallback } from "./ui/avatar.tsx";
 import { useNavigate } from "react-router";
+import { authService } from "../../api/services/auth.service";
+import { authStorage } from "../../utils/storage/authStorage";
 
 export default function Topbar() {
   const navigate = useNavigate();
-  const companyName = "Mi Empresa";
-  const userName = "Juan Pérez";
-  const userRole = "Admin";
+  const session = authStorage.getAuthData();
+  const companyName = session?.companyId
+    ? `Company ${session.companyId.slice(0, 8)}`
+    : "Mi Empresa";
+  const userName = session?.userId
+    ? `Usuario ${session.userId.slice(0, 8)}`
+    : "Usuario";
+  const userRole = session?.role ?? "Agent";
 
   const handleLogout = () => {
-    navigate("/login");
+    authService.logout();
+    navigate("/login", { replace: true });
   };
 
   return (
@@ -36,7 +44,9 @@ export default function Topbar() {
 
       <div className="flex items-center gap-4">
         <div className="text-right mr-2">
-          <p className="text-sm" style={{ fontFamily: 'var(--font-heading)' }}>{companyName}</p>
+          <p className="text-sm" style={{ fontFamily: "var(--font-heading)" }}>
+            {companyName}
+          </p>
         </div>
 
         <Button variant="ghost" size="icon" className="relative">
@@ -49,7 +59,10 @@ export default function Topbar() {
             <Button variant="ghost" className="flex items-center gap-2">
               <Avatar className="w-8 h-8">
                 <AvatarFallback className="bg-primary text-primary-foreground">
-                  {userName.split(" ").map((n) => n[0]).join("")}
+                  {userName
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")}
                 </AvatarFallback>
               </Avatar>
               <div className="text-left">
