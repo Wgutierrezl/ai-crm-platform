@@ -327,3 +327,73 @@ Estado:
 4. Implementar OAuth por tenant/usuario.
 5. Crear sistema dinamico de tools activables por tenant/app.
 6. Crear panel de configuracion de integraciones.
+
+## Actualizacion 2026-05-08 - Multi-provider IA implementado
+
+### Estado confirmado
+- La arquitectura multi-provider de IA ya se implemento en backend.
+- `AIService` se mantiene como contrato estable en dominio.
+- La orquestacion de providers se realiza en infraestructura sin romper capas superiores.
+- Provider principal de pruebas actuales: **Groq**.
+- Provider premium/fallback soportado: **OpenAI**.
+- Provider local futuro aun no activado en esta fase: **Ollama**.
+
+### Objetivo de la mejora
+- Evitar bloqueo por cuota de OpenAI API.
+- Mantener continuidad de pruebas conversacionales (WhatsApp + onboarding + tools CRM).
+- Reducir dependencia de un unico proveedor sin romper arquitectura hexagonal.
+
+### Estado de pruebas IA
+- Fase actual: pruebas activas con Groq.
+- OpenAI: disponible como fallback o provider premium segun configuracion.
+- Ollama: no se configura ni prueba en esta etapa; queda para fase posterior local/offline.
+
+### Alcance de integracion
+- No se modifico la logica de onboarding conversacional.
+- No se altero el flujo principal de WhatsApp.
+- No se cambio la regla de tools por `companyId`.
+- Se mantuvo salida canonica de IA (`reply`, `action?`).
+
+## Prioridades backend siguientes (actualizadas)
+
+1. Mejorar tools de productos.
+2. Evaluar y preparar migracion para categorias de productos.
+3. Agregar entidad/tabla de categorias y asociacion de productos para evitar catalogo sin clasificacion.
+4. Implementar tools de categorias.
+5. Extender tools de productos para:
+   - busqueda por categoria,
+   - listado por categoria,
+   - productos destacados por categoria,
+   - stock por categoria,
+   - filtros combinados por precio/categoria/nombre.
+6. Mantener todas las consultas filtradas por `companyId`.
+
+## Pendiente UX WhatsApp (catalogo)
+
+- Mejorar formato de respuesta de productos para WhatsApp.
+- Evaluar listas interactivas para catalogo y categorias.
+- Entregar respuestas mas ordenadas/usables para usuarios finales.
+- Mantener mensajes cortos, claros y adaptados al canal.
+
+## Pendiente integracion de imagenes
+
+- Integrar proveedor externo de imagenes de productos (ej. Cloudinary).
+- Permitir subida de fotos y asociacion via URL segura.
+- Mantener desacople de almacenamiento como adaptador en `infrastructure/external-services` (o modulo equivalente).
+- Preservar capacidad de cambio de proveedor en el futuro.
+
+## Pendientes frontend sincronizados
+
+1. Ajustar formularios de productos para incluir categoria.
+2. Ajustar vistas/listados para mostrar categoria.
+3. Crear o ajustar vistas de administracion de categorias.
+4. Preparar UI para imagenes de productos.
+5. Sincronizar UI incrementalmente con cambios backend.
+
+## Fase posterior: modulo proveedores
+
+- Implementar modulo de proveedores (suppliers).
+- Crear/editar/listar/consultar proveedores desde frontend.
+- Asociar producto -> proveedor para trazabilidad de inventario.
+- Evaluar migracion futura de tabla de proveedores y relacion producto-proveedor.
+- Mantener soporte multi-tenant por `companyId`.

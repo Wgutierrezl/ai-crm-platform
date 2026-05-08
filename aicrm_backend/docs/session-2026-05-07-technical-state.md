@@ -46,3 +46,11 @@ Provide a practical handoff to resume development without context loss.
    - incomplete profile continuation,
    - multi-field extraction in single message,
    - no repeated question when field already captured.
+
+## Actualizacion de continuidad - 2026-05-08
+
+- Se completo la implementacion de arquitectura IA multi-provider manteniendo limites hexagonales.
+- Groq queda como provider principal de pruebas conversacionales.
+- OpenAI queda como provider premium/fallback.
+- Ollama queda documentado para fase futura local/offline (sin pruebas en esta etapa).
+- El foco de la siguiente iteracion pasa de "estabilizar provider" a "evolucion de catalogo": categorias, tools de categorias, UX WhatsApp de listas e integracion futura de imagenes.

@@ -511,3 +511,51 @@ Descripcion breve: Se reforzo la capa de interfaces HTTP con documentacion OpenA
 - `RateLimitError: 429 insufficient_quota` en OpenAI API.
 - Confirmado: ChatGPT Plus no cubre creditos de backend API.
 - Impacto: bloqueo parcial de pruebas conversacionales completas.
+
+## Entrada 2026-05-08 (multi-provider IA implementado)
+
+### Implementado
+- Se implemento arquitectura multi-provider de IA en `infrastructure/ai` manteniendo arquitectura hexagonal.
+- Se mantuvo el contrato `AIService` para evitar ruptura en `application`.
+- Se integro **Groq** como provider principal de pruebas conversacionales.
+- Se mantuvo **OpenAI** como provider soportado/premium/fallback configurable.
+- Se dejo **Ollama** implementado como opcion local futura (no activado en esta fase).
+- Se incorporo seleccion por configuracion (`primary`, `fallback`, `timeout`, `retries`, `json_strict`).
+- Se incorporo fallback tecnico controlado y normalizacion minima de respuesta JSON (`reply`, `action?`).
+
+### Estado actual de pruebas
+- Pruebas activas con Groq en curso.
+- OpenAI disponible como fallback/alternativa segun entorno.
+- Ollama pendiente para fase posterior local/offline.
+
+### Pendientes backend prioritarios (nueva fase)
+1. Evolucion de productos con categorias.
+2. Evaluar y crear migracion para entidad/tabla de categorias.
+3. Implementar tools de categorias.
+4. Mejorar tools de productos con:
+   - busqueda/listado por categoria,
+   - destacados por categoria,
+   - stock por categoria,
+   - filtros combinados (precio/categoria/nombre).
+5. Mantener aislamiento multi-tenant por `companyId` en todas las consultas.
+
+### Pendiente UX WhatsApp
+- Mejorar visualizacion de productos y categorias en respuestas del bot.
+- Evaluar listas interactivas de WhatsApp para catalogo.
+- Mantener copy corto y claro adaptado al canal.
+
+### Pendiente integracion imagenes
+- Integrar proveedor externo (ej. Cloudinary) para imagenes de productos.
+- Subida y asociacion por URL segura.
+- Mantener adaptador desacoplado para evitar dependencia de vendor unico.
+
+### Pendientes frontend sincronizados
+1. Ajustar formularios y vistas de productos para categoria.
+2. Crear/ajustar vistas para administracion de categorias.
+3. Preparar UI para soporte de imagenes de productos.
+4. Sincronizar cambios backend/frontend por fases.
+
+### Fase posterior documentada
+- Modulo de proveedores (suppliers) con CRUD y asociacion producto-proveedor.
+- Evaluar migracion futura para tabla de proveedores y relacion con productos.
+- Mantener enfoque multi-tenant por `companyId`.

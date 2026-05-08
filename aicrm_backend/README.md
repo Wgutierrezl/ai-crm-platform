@@ -153,3 +153,34 @@ Ejemplos de tools desacopladas:
 - `GOOGLE_DRIVE_UPLOAD`
 - `GOOGLE_CONTACTS_SEARCH`
 - `ASSISTANT_HELP_MENU`
+
+## Actualizacion tecnica (2026-05-08)
+
+### IA multi-provider (estado real)
+- Implementado soporte multi-provider en backend.
+- Provider principal de pruebas: **Groq**.
+- Provider premium/fallback soportado: **OpenAI**.
+- Provider local futuro (no activado en esta fase): **Ollama**.
+- Contrato `AIService` conservado.
+- Salida canonica mantenida: `reply` y `action?`.
+
+### Estado de pruebas
+- Pruebas conversacionales activas con Groq.
+- OpenAI disponible como fallback por configuracion.
+- Ollama se evaluara en una fase posterior local/offline.
+
+### Proximos pasos backend
+1. Evolucionar modulo de productos con categorias.
+2. Implementar tools de categorias y mejorar tools actuales de productos.
+3. Mantener filtro multi-tenant por `companyId` en todas las consultas.
+4. Mejorar respuesta de catalogo para WhatsApp (incluyendo evaluacion de listas interactivas).
+5. Integrar proveedor externo de imagenes de productos (ej. Cloudinary) via adaptador desacoplado.
+
+### Proximos pasos frontend
+1. Ajustar formularios y listados de productos para categoria.
+2. Crear/ajustar vistas de administracion de categorias.
+3. Preparar UI para imagenes de productos.
+4. Sincronizar la UI con los cambios de backend por fases.
+
+### Fase posterior
+- Modulo de proveedores (suppliers) con asociacion producto-proveedor y trazabilidad de inventario.
