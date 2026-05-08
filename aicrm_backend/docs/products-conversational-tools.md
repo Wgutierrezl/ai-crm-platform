@@ -49,3 +49,34 @@
 2. Validate strict tenant isolation in every scenario (`companyId` scoped queries only).
 3. Add robust fallback responses when AI provider fails during product intents.
 4. Keep order creation disabled until dedicated order phase is enabled.
+
+## Estado actualizado (2026-05-08)
+
+### Fase 2 de catalogo (completada)
+- Categorias implementadas en backend.
+- Relacion `products.category_id` activa.
+- Tools de categorias implementadas:
+  - `CRM_GET_CATEGORIES`
+  - `CRM_SEARCH_CATEGORIES`
+  - `CRM_GET_PRODUCTS_BY_CATEGORY`
+  - `CRM_GET_CATEGORY_BY_NAME`
+- Tools de productos extendidas:
+  - `CRM_SEARCH_PRODUCTS_BY_CATEGORY_OR_TEXT`
+  - `CRM_GET_PRODUCTS_BY_CATEGORY_AND_PRICE`
+- Regla de seguridad conversacional vigente:
+  - solo categorias activas,
+  - solo productos activos,
+  - exclusion de productos en categorias inactivas.
+
+### Capacidades conversacionales actuales
+- Resolucion de categoria por intencion (incluyendo sinonimos basicos).
+- Filtro categoria + precio en flujo IA.
+- Listas interactivas iniciales para categorias y productos.
+- Fallback a texto si Meta rechaza lista interactiva.
+
+### Pendiente prioritario (siguiente fase)
+- UX avanzada de catalogo en WhatsApp:
+  - paginacion,
+  - navegacion conversacional,
+  - seleccion y detalle de producto,
+  - estado de navegacion temporal por conversacion.

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -10,7 +10,9 @@ import { CreateCategoryUseCase } from '../../../application/use-cases/create-cat
 import { GetCategoriesByCompanyUseCase } from '../../../application/use-cases/get-categories-by-company.use-case';
 import { GetActiveCategoriesByCompanyUseCase } from '../../../application/use-cases/get-active-categories-by-company.use-case';
 import { GetProductsByCategoryUseCase } from '../../../application/use-cases/get-products-by-category.use-case';
+import { UpdateCategoryStatusUseCase } from '../../../application/use-cases/update-category-status.use-case';
 import { CreateCategoryDto } from '../dtos/create-category.dto';
+import { UpdateCategoryStatusDto } from '../dtos/update-category-status.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { CurrentUser } from '../guards/current-user.decorator';
 import type { CurrentUserPayload } from '../guards/current-user.decorator';
@@ -25,6 +27,7 @@ export class CategoryController {
     private readonly getCategoriesByCompanyUseCase: GetCategoriesByCompanyUseCase,
     private readonly getActiveCategoriesByCompanyUseCase: GetActiveCategoriesByCompanyUseCase,
     private readonly getProductsByCategoryUseCase: GetProductsByCategoryUseCase,
+    private readonly updateCategoryStatusUseCase: UpdateCategoryStatusUseCase,
   ) {}
 
   @Post()
@@ -67,5 +70,23 @@ export class CategoryController {
   ) {
     return this.getProductsByCategoryUseCase.execute(user.companyId, categoryId);
   }
-}
 
+  @Patch(':id/status')
+  @ApiOperation({
+    summary: 'Activar o desactivar categoria de la empresa autenticada',
+  })
+  @ApiBody({ type: UpdateCategoryStatusDto })
+  @ApiResponse({ status: 200, description: 'Estado de categoria actualizado' })
+  @ApiResponse({ status: 404, description: 'Categoria no encontrada' })
+  async updateStatus(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') id: string,
+    @Body() dto: UpdateCategoryStatusDto,
+  ) {
+    return this.updateCategoryStatusUseCase.execute({
+      id,
+      companyId: user.companyId,
+      isActive: dto.isActive,
+    });
+  }
+}

@@ -397,3 +397,109 @@ Estado:
 - Asociar producto -> proveedor para trazabilidad de inventario.
 - Evaluar migracion futura de tabla de proveedores y relacion producto-proveedor.
 - Mantener soporte multi-tenant por `companyId`.
+
+## Actualizacion integral 2026-05-08 (estado real del sistema)
+
+### Backend - progreso consolidado
+- Implementacion completa de categorias con relacion `products.category_id`.
+- Migracion de categorias creada y aplicada a flujo de desarrollo.
+- Endpoints de gestion incorporados:
+  - `PATCH /products/:id`
+  - `PATCH /categories/:id/status`
+- Regla multi-tenant reforzada:
+  - toda actualizacion valida `companyId` del usuario autenticado.
+  - no se permite modificar recursos de otra empresa.
+- Validacion de categoria en update de producto:
+  - solo categorias del mismo tenant,
+  - soporte para `categoryId: null` (quitar categoria).
+
+### Bot/WhatsApp - capacidad actual
+- El bot ya interpreta y usa categorias como parte del catalogo.
+- Soporta tools de categorias y productos mejoradas.
+- Soporta busquedas combinadas categoria + precio.
+- Soporta listas interactivas basicas para categorias/productos.
+- Mantiene fallback seguro a texto si Meta no acepta payload interactivo.
+- Regla activa en consultas publicas del bot:
+  - solo categorias activas,
+  - solo productos activos,
+  - no productos ligados a categoria inactiva.
+
+### Frontend - capacidad actual
+- Modulo categorias funcional en UI:
+  - crear,
+  - listar,
+  - activar/desactivar.
+- Modulo productos sincronizado:
+  - crear con categoria opcional,
+  - editar producto con persistencia backend,
+  - cambiar categoria,
+  - quitar categoria.
+- Filtros combinados en productos:
+  - por categoria,
+  - por texto,
+  - por stock bajo,
+  - con limpieza rapida de filtros.
+- Visualizacion de estado:
+  - categorias activas/inactivas,
+  - productos activos/inactivos,
+  - categoria inactiva marcada en admin.
+- Imagen de producto:
+  - placeholder visual listo,
+  - preview por `imageUrl` existente,
+  - pendiente subida real con Cloudinary.
+
+## Siguiente fase prioritaria - UX avanzada de catalogo en WhatsApp
+
+### Flujo objetivo
+1. Usuario: "Muestrame productos" / "Que venden" / "Quiero ver catalogo".
+2. Bot: responde con lista interactiva de categorias activas.
+3. Usuario selecciona categoria.
+4. Bot: responde lista interactiva paginada de productos de esa categoria.
+5. Usuario selecciona producto.
+6. Bot: responde detalle completo (precio, stock, descripcion, imagen futura, acciones futuras).
+
+### Requisitos tecnicos futuros
+- Paginacion conversacional de resultados.
+- Paginacion de listas interactivas (accion "Ver mas").
+- Navegacion conversacional:
+  - volver,
+  - cambiar categoria,
+  - ver detalle de producto.
+- Estructuras reutilizables de catalogo conversacional.
+- Persistencia temporal de estado de navegacion.
+- Mejor manejo de selections/postbacks.
+
+## Integracion futura Cloudinary (fase proxima)
+- Integracion desacoplada como provider externo.
+- Ubicacion objetivo sugerida:
+  - `infrastructure/external-services/cloudinary`.
+- Alcance esperado:
+  - subida desde frontend,
+  - URL segura persistida en producto,
+  - preview frontend,
+  - uso en respuestas WhatsApp (image + caption / preview enriquecido).
+
+## Testing y calidad (prioridad alta)
+- Definir plan de pruebas unitarias y E2E.
+- Cobertura objetivo inicial:
+  - use cases,
+  - tools,
+  - providers IA,
+  - flujo WhatsApp,
+  - onboarding,
+  - catalogo productos/categorias.
+- Pruebas de integracion objetivo:
+  - IA providers,
+  - WhatsApp,
+  - Cloudinary,
+  - pagos futuros.
+- Definir estrategia de mocks/stubs para proveedores externos.
+
+## Roadmap recomendado actualizado
+1. UX/UI avanzada de catalogo en WhatsApp.
+2. Cloudinary desacoplado + carga real de imagenes.
+3. Catalogo visual enriquecido en bot (imagen + detalle).
+4. Paginacion conversacional y seleccion interactiva.
+5. Testing unitario y E2E integral.
+6. Modulo proveedores/suppliers.
+7. Integracion futura de pagos.

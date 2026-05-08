@@ -107,3 +107,40 @@ Las siguientes prioridades del frontend son:
 
 ## Notas
 Este frontend no debe verse como una version final de producto, sino como la base de una implementacion progresiva que parte desde un diseño de Figma ya definido y evoluciona hacia una aplicacion integrada con backend real.
+
+## Actualizacion 2026-05-08 (fase catalogo + sincronizacion backend)
+
+### Estado actual del frontend
+- Integracion real con categorias de backend completada.
+- Nueva vista de categorias activa en navegacion:
+  - crear,
+  - listar,
+  - activar/desactivar.
+- Vista de productos sincronizada con backend:
+  - crear producto con categoria opcional,
+  - editar producto por endpoint real,
+  - cambiar/quitar categoria,
+  - mostrar categoria activa/inactiva en listado.
+- Filtros en productos:
+  - por categoria,
+  - por texto,
+  - por stock bajo,
+  - combinables + limpieza rapida.
+- Campo de imagen preparado visualmente (placeholder + preview por URL).
+
+### Endpoints backend consumidos por frontend (catalogo)
+- `GET /products`
+- `POST /products`
+- `PATCH /products/:id`
+- `GET /categories`
+- `GET /categories/active`
+- `POST /categories`
+- `PATCH /categories/:id/status`
+- `GET /categories/:id/products`
+
+### Proximos pasos frontend (prioridad)
+1. UX de catalogo mas orientada a operacion comercial.
+2. Integracion de carga real de imagenes (Cloudinary).
+3. Mejor manejo de estados de edicion y validaciones por campo.
+4. Preparar UI para detalle enriquecido de producto (uso futuro en WhatsApp).
+5. Acompanar la fase de pruebas unitarias/E2E.

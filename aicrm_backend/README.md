@@ -184,3 +184,91 @@ Ejemplos de tools desacopladas:
 
 ### Fase posterior
 - Modulo de proveedores (suppliers) con asociacion producto-proveedor y trazabilidad de inventario.
+
+## Actualizacion integral 2026-05-08 (backend + frontend)
+
+### Estado consolidado de la sesion
+- Se completo la fase fullstack de **productos + categorias** con sincronizacion backend/frontend.
+- La arquitectura hexagonal se mantiene intacta.
+- No se altero onboarding ni autenticacion.
+- No se altero multi-provider IA (Groq principal, OpenAI fallback, Ollama pendiente).
+
+### Backend implementado en esta sesion
+- Soporte completo de categorias de producto y relacion `products.category_id`.
+- Endpoint de actualizacion de producto:
+  - `PATCH /api/v1/products/:id`
+  - validacion por `companyId` del usuario autenticado.
+  - validacion de pertenencia tenant para `categoryId`.
+  - soporte para quitar categoria con `categoryId: null`.
+- Endpoint de estado de categoria:
+  - `PATCH /api/v1/categories/:id/status`
+  - activacion/desactivacion sin eliminacion.
+- Capa application/domain/infrastructure extendida con:
+  - `UpdateProductUseCase`
+  - `UpdateCategoryStatusUseCase`
+  - DTOs de update correspondientes.
+- Repositorios actualizados para consultas de catalogo seguro:
+  - solo productos activos,
+  - solo categorias activas,
+  - exclusion de productos asociados a categorias inactivas en consultas conversacionales.
+
+### Bot y tools conversacionales (estado actual)
+- El bot ya puede:
+  - listar categorias activas,
+  - listar productos por categoria,
+  - buscar por categoria + texto,
+  - filtrar por categoria + precio,
+  - responder stock y precio de productos activos.
+- Se reforzo regla de seguridad conversacional:
+  - no exponer categorias inactivas,
+  - no exponer productos inactivos,
+  - no exponer productos ligados a categoria inactiva.
+- Soporte inicial de listas interactivas WhatsApp:
+  - categorias/productos en formato lista,
+  - fallback automatico a texto cuando Meta no acepta lista interactiva.
+
+### Frontend implementado en esta sesion
+- Vista de categorias operativa:
+  - crear categoria,
+  - listar categorias,
+  - activar/desactivar categoria.
+- Vista de productos sincronizada con backend real:
+  - creacion con categoria opcional,
+  - edicion real por `PATCH /products/:id`,
+  - cambio y eliminacion de categoria ("Sin categoria").
+- Filtros visuales de productos:
+  - categoria,
+  - busqueda textual,
+  - stock bajo,
+  - combinacion de filtros + accion "Limpiar filtros".
+- Manejo de categorias inactivas en UI:
+  - visibles para gestion en admin,
+  - no visibles como filtros activos publicos,
+  - indicador visual de categoria inactiva cuando ya esta asociada a un producto.
+- Campo visual de imagen preparado:
+  - placeholder "proximamente",
+  - preview si `imageUrl` ya existe,
+  - base lista para integrar Cloudinary.
+
+### Estado actual de arquitectura
+- Hexagonal: vigente y respetada.
+- IA multi-provider: vigente y estable.
+- Backend y frontend: sincronizados en modelo de categorias/productos.
+- WhatsApp: flujo conversacional activo con soporte interactivo inicial y fallback robusto.
+
+### Proximos pasos prioritarios (siguiente sesion)
+1. UX/UI avanzada de catalogo en WhatsApp.
+2. Navegacion conversacional de catalogo (volver/cambiar categoria/ver detalle).
+3. Paginacion conversacional y listas interactivas paginadas ("Ver mas").
+4. Persistencia temporal de estado de navegacion conversacional.
+5. Integracion Cloudinary desacoplada (`infrastructure/external-services/cloudinary`).
+6. Enriquecimiento de respuestas WhatsApp con imagen + caption cuando aplique.
+7. Estrategia de testing (unit + e2e + integracion) para tools, IA providers, WhatsApp y catalogo.
+8. Modulo de proveedores/suppliers y fase posterior de pagos.
+
+### Riesgos / decisiones pendientes documentadas
+- Definir limite UX de listas interactivas por sesion y estrategia de paginacion.
+- Definir modelo de estado para postbacks/selecciones de WhatsApp a nivel conversacion.
+- Definir politica de cache/contexto para catalogo (evitar respuestas obsoletas).
+- Definir contratos de prueba automatizada por proveedor externo (IA/WhatsApp/Cloudinary).
+- Mantener control de costos/latencia en flujos con alto volumen conversacional.

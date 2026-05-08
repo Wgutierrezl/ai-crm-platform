@@ -54,3 +54,27 @@ Provide a practical handoff to resume development without context loss.
 - OpenAI queda como provider premium/fallback.
 - Ollama queda documentado para fase futura local/offline (sin pruebas en esta etapa).
 - El foco de la siguiente iteracion pasa de "estabilizar provider" a "evolucion de catalogo": categorias, tools de categorias, UX WhatsApp de listas e integracion futura de imagenes.
+
+## Actualizacion 2026-05-08 (cierre de sesion fullstack)
+
+### Entregables cerrados en esta sesion
+- Backend:
+  - update de producto por endpoint protegido,
+  - activacion/desactivacion de categoria,
+  - endurecimiento de filtros de activos en tools/bot.
+- Frontend:
+  - modulo categorias (crear/listar/toggle estado),
+  - edicion real de productos,
+  - filtros visuales por categoria + busqueda + stock,
+  - manejo visual de categorias inactivas.
+
+### Estado de conversacion/catalogo
+- El bot ya opera con catalogo activo por tenant.
+- Interactive lists basicas disponibles con fallback estable.
+
+### Siguiente handoff tecnico recomendado
+1. Implementar UX avanzada de catalogo en WhatsApp (flujo guiado por seleccion).
+2. Implementar paginacion conversacional y "ver mas".
+3. Implementar detalle de producto enriquecido con imagen.
+4. Integrar Cloudinary desacoplado.
+5. Incorporar pruebas unitarias y E2E por capas.

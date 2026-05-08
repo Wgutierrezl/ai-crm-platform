@@ -2,6 +2,7 @@ import { Category } from '../entities/category.entity';
 
 export abstract class CategoryRepository {
   abstract create(category: Category): Promise<Category>;
+  abstract update(category: Category): Promise<Category>;
   abstract findById(id: string, companyId: string): Promise<Category | null>;
   abstract findAllByCompanyId(companyId: string): Promise<Category[]>;
   abstract findActiveByCompanyId(companyId: string): Promise<Category[]>;
@@ -15,4 +16,3 @@ export abstract class CategoryRepository {
     limit?: number,
   ): Promise<Category[]>;
 }
-

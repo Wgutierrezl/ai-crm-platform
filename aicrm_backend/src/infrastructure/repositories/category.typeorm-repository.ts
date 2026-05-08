@@ -41,6 +41,24 @@ export class CategoryTypeormRepository implements CategoryRepository {
     return this.toDomain(saved);
   }
 
+  async update(category: Category): Promise<Category> {
+    const existing = await this.ormRepo.findOne({
+      where: { id: category.id, companyId: category.companyId },
+    });
+    if (!existing) {
+      throw new Error('Categoria no encontrada para actualizar');
+    }
+
+    existing.name = category.name;
+    existing.description = category.description;
+    existing.slug = category.slug;
+    existing.isActive = category.isActive;
+    existing.updatedAt = category.updatedAt;
+
+    const saved = await this.ormRepo.save(existing);
+    return this.toDomain(saved);
+  }
+
   async findById(id: string, companyId: string): Promise<Category | null> {
     const entity = await this.ormRepo.findOne({ where: { id, companyId } });
     return entity ? this.toDomain(entity) : null;
@@ -96,4 +114,3 @@ export class CategoryTypeormRepository implements CategoryRepository {
     return entities.map((entity) => this.toDomain(entity));
   }
 }
-

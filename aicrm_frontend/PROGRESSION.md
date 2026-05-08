@@ -195,3 +195,34 @@ El frontend del AI CRM se encuentra en una fase de prototipo funcional basado en
 3. Integrar conversaciones reales.
 4. Remover mocks principales.
 5. Luego retomar backend multi-provider IA.
+
+## Entrada 2026-05-08 (sincronizacion catalogo categorias/productos)
+
+### Implementado en frontend
+- Modulo Categorias:
+  - vista dedicada,
+  - creacion,
+  - listado,
+  - cambio de estado activo/inactivo.
+- Modulo Productos:
+  - edicion real de producto con endpoint PATCH,
+  - selector de categoria opcional,
+  - soporte para quitar categoria ("Sin categoria"),
+  - visualizacion de categoria inactiva asociada,
+  - filtros combinados (categoria + busqueda + stock bajo),
+  - accion de limpiar filtros.
+- Imagen producto:
+  - placeholder "proximamente",
+  - preview por `imageUrl` existente,
+  - lista la base para integrar Cloudinary despues.
+
+### Estado de calidad tecnica
+- Lint en verde.
+- Typecheck (`tsc -b`) en verde.
+- Build puede fallar por `spawn EPERM` de esbuild en entorno host (no por tipado).
+
+### Pendientes siguientes (frontend)
+1. Integracion de carga real de imagenes (Cloudinary).
+2. Ajustes UX para flujo de catalogo conversacional (alineado con WhatsApp).
+3. Cobertura de tests de componentes y servicios API.
+4. Preparacion de interfaces para fase suppliers/proveedores.

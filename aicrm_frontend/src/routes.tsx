@@ -4,6 +4,7 @@ import Register from "./app/pages/Register";
 import Layout from "./app/components/Layout";
 import Dashboard from "./app/pages/Dashboard";
 import Products from "./app/pages/Products";
+import Categories from "./app/pages/Categories";
 import Customers from "./app/pages/Customers";
 import Conversations from "./app/pages/Conversations";
 import Orders from "./app/pages/Orders";
@@ -45,6 +46,10 @@ export const router = createBrowserRouter([
           {
             path: "products",
             Component: Products,
+          },
+          {
+            path: "categories",
+            Component: Categories,
           },
           {
             path: "customers",

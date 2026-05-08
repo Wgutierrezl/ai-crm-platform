@@ -112,7 +112,7 @@ export class ToolExecutionService {
         ? await this.categoryRepository.findById(categoryId, context.companyId)
         : await this.resolveCategory(context.companyId, categoryName);
 
-      if (!category) {
+      if (!category || !category.isActive) {
         const suggestions = await this.categoryRepository.findActiveByCompanyId(
           context.companyId,
         );
@@ -353,15 +353,22 @@ export class ToolExecutionService {
   private async resolveCategory(
     companyId: string,
     input: string,
-  ): Promise<{ id: string; name: string; description: string | null } | null> {
+  ): Promise<{
+    id: string;
+    name: string;
+    description: string | null;
+    isActive: boolean;
+  } | null> {
     const normalized = this.normalizeCategoryTerm(input);
     if (!normalized) return null;
 
-    const exact = await this.categoryRepository.findByExactName(companyId, normalized);
-    if (exact) return exact;
-
-    const found = await this.categoryRepository.searchByName(companyId, normalized, 1);
-    return found[0] ?? null;
+    const found = await this.categoryRepository.searchByName(
+      companyId,
+      normalized,
+      10,
+    );
+    const exact = found.find((category) => category.name.toLowerCase() === normalized);
+    return exact ?? found[0] ?? null;
   }
 
   private normalizeCategoryTerm(value: string): string {

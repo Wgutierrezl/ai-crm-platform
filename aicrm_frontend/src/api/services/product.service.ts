@@ -9,6 +9,7 @@ import type {
   ProductDto,
   ProductListResponseDto,
   CreateProductRequestDto,
+  UpdateProductRequestDto,
 } from "../dtos/product.dto";
 
 export const productService = {
@@ -37,15 +38,9 @@ export const productService = {
   /**
    * Crear nuevo producto
    */
-  async createProduct(
-    name: string,
-    price: number,
-    stock: number
-  ): Promise<ProductDto> {
+  async createProduct(payload: CreateProductRequestDto): Promise<ProductDto> {
     try {
-      const payload: CreateProductRequestDto = { name, price, stock };
-
-      logger.info("Creando producto...", { name });
+      logger.info("Creando producto...", { name: payload.name });
 
       const response = await apiClient.post<ProductDto>(
         "/products",
@@ -57,6 +52,29 @@ export const productService = {
       return response.data;
     } catch (error) {
       logger.error("Error al crear producto", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Actualizar producto existente
+   */
+  async updateProduct(
+    id: string,
+    payload: UpdateProductRequestDto,
+  ): Promise<ProductDto> {
+    try {
+      logger.info("Actualizando producto...", { id });
+
+      const response = await apiClient.patch<ProductDto>(
+        `/products/${id}`,
+        payload,
+      );
+
+      logger.info("Producto actualizado exitosamente", { id: response.data.id });
+      return response.data;
+    } catch (error) {
+      logger.error("Error al actualizar producto", error);
       throw error;
     }
   },

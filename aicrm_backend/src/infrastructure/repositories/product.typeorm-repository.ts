@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+﻿import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ProductRepository } from '../../domain/ports/product.repository.port';
@@ -65,6 +65,39 @@ export class ProductTypeormRepository implements ProductRepository {
     return entity ? this.toDomain(entity) : null;
   }
 
+  async findByIdAndCompanyId(
+    id: string,
+    companyId: string,
+  ): Promise<Product | null> {
+    const entity = await this.ormRepo.findOne({ where: { id, companyId } });
+    return entity ? this.toDomain(entity) : null;
+  }
+
+  async update(product: Product): Promise<Product> {
+    const existing = await this.ormRepo.findOne({
+      where: { id: product.id, companyId: product.companyId },
+    });
+    if (!existing) {
+      throw new Error('Producto no encontrado para actualizar');
+    }
+
+    existing.name = product.name;
+    existing.description = product.description;
+    existing.price = product.price;
+    existing.stock = product.stock;
+    existing.isActive = product.isActive;
+    existing.sku = product.sku;
+    existing.brand = product.brand;
+    existing.currency = product.currency;
+    existing.minStock = product.minStock;
+    existing.imageUrl = product.imageUrl;
+    existing.categoryId = product.categoryId;
+    existing.updatedAt = product.updatedAt;
+
+    const saved = await this.ormRepo.save(existing);
+    return this.toDomain(saved);
+  }
+
   async findAllByCompanyId(companyId: string): Promise<Product[]> {
     const entities = await this.ormRepo.find({
       where: { companyId },
@@ -77,11 +110,22 @@ export class ProductTypeormRepository implements ProductRepository {
     companyId: string,
     limit = 10,
   ): Promise<Product[]> {
-    const entities = await this.ormRepo.find({
-      where: { companyId, isActive: true },
-      order: { stock: 'DESC', createdAt: 'DESC' },
-      take: limit,
-    });
+    const entities = await this.ormRepo
+      .createQueryBuilder('p')
+      .leftJoin(
+        'categories',
+        'c',
+        'c.id = p.category_id AND c.company_id = p.companyId',
+      )
+      .where('p.companyId = :companyId', { companyId })
+      .andWhere('p.isActive = :isActive', { isActive: true })
+      .andWhere('(p.category_id IS NULL OR c.is_active = :activeCategory)', {
+        activeCategory: true,
+      })
+      .orderBy('p.stock', 'DESC')
+      .addOrderBy('p.createdAt', 'DESC')
+      .limit(limit)
+      .getMany();
     return entities.map((e) => this.toDomain(e));
   }
 
@@ -93,8 +137,16 @@ export class ProductTypeormRepository implements ProductRepository {
     const q = `%${query.toLowerCase()}%`;
     const entities = await this.ormRepo
       .createQueryBuilder('p')
+      .leftJoin(
+        'categories',
+        'c',
+        'c.id = p.category_id AND c.company_id = p.companyId',
+      )
       .where('p.companyId = :companyId', { companyId })
       .andWhere('p.isActive = :isActive', { isActive: true })
+      .andWhere('(p.category_id IS NULL OR c.is_active = :activeCategory)', {
+        activeCategory: true,
+      })
       .andWhere(
         '(LOWER(p.name) LIKE :q OR LOWER(COALESCE(p.description, "")) LIKE :q OR LOWER(COALESCE(p.brand, "")) LIKE :q OR LOWER(COALESCE(p.sku, "")) LIKE :q)',
         { q },
@@ -114,8 +166,16 @@ export class ProductTypeormRepository implements ProductRepository {
     const q = `%${name.toLowerCase()}%`;
     const entities = await this.ormRepo
       .createQueryBuilder('p')
+      .leftJoin(
+        'categories',
+        'c',
+        'c.id = p.category_id AND c.company_id = p.companyId',
+      )
       .where('p.companyId = :companyId', { companyId })
       .andWhere('p.isActive = :isActive', { isActive: true })
+      .andWhere('(p.category_id IS NULL OR c.is_active = :activeCategory)', {
+        activeCategory: true,
+      })
       .andWhere('LOWER(p.name) LIKE :q', { q })
       .orderBy('p.stock', 'DESC')
       .addOrderBy('p.createdAt', 'DESC')
@@ -132,8 +192,16 @@ export class ProductTypeormRepository implements ProductRepository {
   ): Promise<Product[]> {
     const qb = this.ormRepo
       .createQueryBuilder('p')
+      .leftJoin(
+        'categories',
+        'c',
+        'c.id = p.category_id AND c.company_id = p.companyId',
+      )
       .where('p.companyId = :companyId', { companyId })
-      .andWhere('p.isActive = :isActive', { isActive: true });
+      .andWhere('p.isActive = :isActive', { isActive: true })
+      .andWhere('(p.category_id IS NULL OR c.is_active = :activeCategory)', {
+        activeCategory: true,
+      });
 
     if (minPrice !== null) qb.andWhere('p.price >= :minPrice', { minPrice });
     if (maxPrice !== null) qb.andWhere('p.price <= :maxPrice', { maxPrice });
@@ -152,11 +220,21 @@ export class ProductTypeormRepository implements ProductRepository {
     categoryId: string,
     limit = 10,
   ): Promise<Product[]> {
-    const entities = await this.ormRepo.find({
-      where: { companyId, categoryId, isActive: true },
-      order: { stock: 'DESC', createdAt: 'DESC' },
-      take: limit,
-    });
+    const entities = await this.ormRepo
+      .createQueryBuilder('p')
+      .innerJoin(
+        'categories',
+        'c',
+        'c.id = p.category_id AND c.company_id = p.companyId',
+      )
+      .where('p.companyId = :companyId', { companyId })
+      .andWhere('p.category_id = :categoryId', { categoryId })
+      .andWhere('p.isActive = :isActive', { isActive: true })
+      .andWhere('c.is_active = :activeCategory', { activeCategory: true })
+      .orderBy('p.stock', 'DESC')
+      .addOrderBy('p.createdAt', 'DESC')
+      .limit(limit)
+      .getMany();
     return entities.map((e) => this.toDomain(e));
   }
 
@@ -168,9 +246,16 @@ export class ProductTypeormRepository implements ProductRepository {
     const q = `%${query.toLowerCase()}%`;
     const entities = await this.ormRepo
       .createQueryBuilder('p')
-      .leftJoin('categories', 'c', 'c.id = p.category_id AND c.company_id = p.companyId')
+      .leftJoin(
+        'categories',
+        'c',
+        'c.id = p.category_id AND c.company_id = p.companyId',
+      )
       .where('p.companyId = :companyId', { companyId })
       .andWhere('p.isActive = :isActive', { isActive: true })
+      .andWhere('(p.category_id IS NULL OR c.is_active = :activeCategory)', {
+        activeCategory: true,
+      })
       .andWhere(
         '(LOWER(p.name) LIKE :q OR LOWER(COALESCE(p.description, "")) LIKE :q OR LOWER(COALESCE(p.brand, "")) LIKE :q OR LOWER(COALESCE(p.sku, "")) LIKE :q OR LOWER(COALESCE(c.name, "")) LIKE :q)',
         { q },
@@ -191,9 +276,15 @@ export class ProductTypeormRepository implements ProductRepository {
   ): Promise<Product[]> {
     const qb = this.ormRepo
       .createQueryBuilder('p')
+      .innerJoin(
+        'categories',
+        'c',
+        'c.id = p.category_id AND c.company_id = p.companyId',
+      )
       .where('p.companyId = :companyId', { companyId })
       .andWhere('p.category_id = :categoryId', { categoryId })
-      .andWhere('p.isActive = :isActive', { isActive: true });
+      .andWhere('p.isActive = :isActive', { isActive: true })
+      .andWhere('c.is_active = :activeCategory', { activeCategory: true });
 
     if (minPrice !== null) qb.andWhere('p.price >= :minPrice', { minPrice });
     if (maxPrice !== null) qb.andWhere('p.price <= :maxPrice', { maxPrice });

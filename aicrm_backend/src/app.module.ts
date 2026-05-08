@@ -49,11 +49,13 @@ import { RegisterUserUseCase } from './application/use-cases/register-user.use-c
 import { LoginUserUseCase } from './application/use-cases/login-user.use-case';
 import { CreateProductUseCase } from './application/use-cases/create-product.use-case';
 import { GetProductsByCompanyUseCase } from './application/use-cases/get-products-by-company.use-case';
+import { UpdateProductUseCase } from './application/use-cases/update-product.use-case';
 import { CreateCategoryUseCase } from './application/use-cases/create-category.use-case';
 import { GetCategoriesByCompanyUseCase } from './application/use-cases/get-categories-by-company.use-case';
 import { GetActiveCategoriesByCompanyUseCase } from './application/use-cases/get-active-categories-by-company.use-case';
 import { GetProductsByCategoryUseCase } from './application/use-cases/get-products-by-category.use-case';
 import { SearchProductsByCategoryOrTextUseCase } from './application/use-cases/search-products-by-category-or-text.use-case';
+import { UpdateCategoryStatusUseCase } from './application/use-cases/update-category-status.use-case';
 import { CreateConversationUseCase } from './application/use-cases/create-conversation.use-case';
 import { GetConversationsUseCase } from './application/use-cases/get-conversations.use-case';
 import {
@@ -171,11 +173,13 @@ import { MetaWhatsappService } from './infrastructure/whatsapp/meta-whatsapp.ser
     LoginUserUseCase,
     CreateProductUseCase,
     GetProductsByCompanyUseCase,
+    UpdateProductUseCase,
     CreateCategoryUseCase,
     GetCategoriesByCompanyUseCase,
     GetActiveCategoriesByCompanyUseCase,
     GetProductsByCategoryUseCase,
     SearchProductsByCategoryOrTextUseCase,
+    UpdateCategoryStatusUseCase,
     CreateCustomerUseCase,
     GetCustomersByCompanyUseCase,
     GetCustomerByIdUseCase,

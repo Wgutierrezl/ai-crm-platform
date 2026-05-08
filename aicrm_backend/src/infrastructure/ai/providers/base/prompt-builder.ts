@@ -80,8 +80,10 @@ REGLAS DE PRODUCTOS:
 7. Si piden baratos/rango/precio general: usa CRM_FILTER_PRODUCTS_BY_PRICE.
 8. Si preguntan por disponibilidad/unidades: usa CRM_GET_PRODUCT_STOCK.
 9. Nunca inventes productos, precios ni stock.
-10. Nunca muestres JSON ni nombres internos de tools al usuario final.
-11. Responde en formato breve y amigable para WhatsApp.
+10. Usa solo categorias activas y productos activos para catalogo.
+11. No muestres productos ligados a categorias inactivas.
+12. Nunca muestres JSON ni nombres internos de tools al usuario final.
+13. Responde en formato breve y amigable para WhatsApp.
 
 CONTEXTO ADICIONAL:
 ${JSON.stringify(input.assistantContext ?? {}, null, 2)}

@@ -1,9 +1,10 @@
-import { Link, useLocation } from "react-router";
+﻿import { Link, useLocation } from "react-router";
 import {
   LayoutDashboard,
   MessageSquare,
   Users,
   Package,
+  Tags,
   ShoppingCart,
   Settings,
 } from "lucide-react";
@@ -14,8 +15,9 @@ const navItems = [
   { path: "/conversations", label: "Conversaciones", icon: MessageSquare },
   { path: "/customers", label: "Clientes", icon: Users },
   { path: "/products", label: "Productos", icon: Package },
-  { path: "/orders", label: "Órdenes", icon: ShoppingCart },
-  { path: "/settings", label: "Configuración", icon: Settings },
+  { path: "/categories", label: "Categorias", icon: Tags },
+  { path: "/orders", label: "Ordenes", icon: ShoppingCart },
+  { path: "/settings", label: "Configuracion", icon: Settings },
 ];
 
 export default function Sidebar() {
@@ -24,7 +26,7 @@ export default function Sidebar() {
   return (
     <aside className="w-64 bg-card border-r border-border flex flex-col">
       <div className="p-6 border-b border-border">
-        <h1 className="text-2xl text-primary" style={{ fontFamily: 'var(--font-heading)' }}>
+        <h1 className="text-2xl text-primary" style={{ fontFamily: "var(--font-heading)" }}>
           CRM AI
         </h1>
       </div>
@@ -39,7 +41,7 @@ export default function Sidebar() {
                 "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
                 isActive
                   ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
               )}
             >
               <item.icon className="w-5 h-5" />

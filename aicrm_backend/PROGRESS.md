@@ -559,3 +559,61 @@ Descripcion breve: Se reforzo la capa de interfaces HTTP con documentacion OpenA
 - Modulo de proveedores (suppliers) con CRUD y asociacion producto-proveedor.
 - Evaluar migracion futura para tabla de proveedores y relacion con productos.
 - Mantener enfoque multi-tenant por `companyId`.
+
+## Entrada 2026-05-08 (fullstack categorias + update + estado activo)
+
+### Backend implementado
+- Endpoint de actualizacion de producto habilitado:
+  - `PATCH /api/v1/products/:id`
+  - validacion tenant por `companyId` del JWT.
+  - soporte update de:
+    - `name`, `description`, `price`, `stock`, `sku`, `brand`, `currency`, `minStock`, `isActive`, `categoryId`, `imageUrl`.
+  - soporte para quitar categoria con `categoryId: null`.
+- Endpoint de activacion/desactivacion de categoria:
+  - `PATCH /api/v1/categories/:id/status`
+  - sin eliminacion fisica.
+- Repositorios/Tools ajustados para catalogo publico conversacional:
+  - categorias activas unicamente,
+  - productos activos unicamente,
+  - exclusion de productos en categorias inactivas,
+  - mantenimiento de aislamiento por `companyId`.
+- WhatsApp interactive lists (base):
+  - envio de listas para categorias/productos,
+  - fallback automatico a texto si falla payload interactivo.
+
+### Frontend implementado
+- Vista de categorias con operaciones:
+  - crear,
+  - listar,
+  - activar/desactivar.
+- Vista de productos actualizada:
+  - edicion real por API (`PATCH /products/:id`),
+  - cambio/quitar categoria,
+  - estado activo/inactivo,
+  - filtro visual por categoria,
+  - combinacion de filtros (categoria + busqueda + stock),
+  - etiqueta para categorias inactivas asociadas.
+- Campo visual de imagen preparado para Cloudinary (sin carga real aun).
+
+### Estado funcional del bot
+- Ya lista categorias activas.
+- Ya lista productos activos por categoria.
+- Ya evita categorias inactivas en tools publicas.
+- Ya evita productos de categorias inactivas en respuestas de catalogo.
+- Ya responde con fallback conversacional seguro cuando lista interactiva no aplica.
+
+### Verificacion tecnica
+- Backend: `npx tsc -p tsconfig.json --noEmit` en verde.
+- Frontend:
+  - `npm.cmd run lint` en verde.
+  - `./node_modules/.bin/tsc.cmd -b` en verde.
+  - build Vite puede fallar por `spawn EPERM` del entorno (limitacion externa al codigo).
+
+### Siguiente fase prioritaria
+1. UX/UI avanzada de catalogo en WhatsApp (listas paginadas + detalle de producto).
+2. Integracion Cloudinary desacoplada.
+3. Imagenes en respuestas del bot cuando el canal lo permita.
+4. Paginacion conversacional y navegacion (volver/cambiar categoria/ver mas).
+5. Plan de pruebas unitarias y E2E integral.
+6. Modulo suppliers/proveedores.
+7. Integracion futura de pagos.
