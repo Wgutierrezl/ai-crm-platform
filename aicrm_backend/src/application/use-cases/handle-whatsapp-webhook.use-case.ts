@@ -114,11 +114,39 @@ export class HandleWhatsappWebhookUseCase {
             });
 
             if (result.shouldReply && result.reply) {
-              await this.whatsappMessageSender.sendTextMessage(
+              if (result.interactiveList) {
+                try {
+                  await this.whatsappMessageSender.sendInteractiveList(
+                    app.phoneNumberId,
+                    credential.accessToken,
+                    recipientPhone,
+                    result.interactiveList,
+                  );
+                } catch (interactiveError) {
+                  this.logger.warn(
+                    `Fallo envio de lista interactiva, se usa fallback texto. detalle=${interactiveError instanceof Error ? interactiveError.message : 'unknown'}`,
+                  );
+                  await this.whatsappMessageSender.sendTextMessage(
+                    app.phoneNumberId,
+                    credential.accessToken,
+                    recipientPhone,
+                    result.reply,
+                  );
+                }
+              } else {
+                await this.whatsappMessageSender.sendTextMessage(
+                  app.phoneNumberId,
+                  credential.accessToken,
+                  recipientPhone,
+                  result.reply,
+                );
+              }
+            } else if (result.shouldReply && result.interactiveList) {
+              await this.whatsappMessageSender.sendInteractiveList(
                 app.phoneNumberId,
                 credential.accessToken,
                 recipientPhone,
-                result.reply,
+                result.interactiveList,
               );
             }
           } catch (error) {

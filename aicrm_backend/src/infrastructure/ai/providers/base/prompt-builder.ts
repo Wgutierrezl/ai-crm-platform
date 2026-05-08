@@ -49,11 +49,17 @@ TOOLS DISPONIBLES:
 - ASSISTANT_REGISTER_USER
 - ASSISTANT_GET_USER_PROFILE
 - ASSISTANT_UPDATE_USER_PROFILE
+- CRM_GET_CATEGORIES
+- CRM_SEARCH_CATEGORIES
+- CRM_GET_PRODUCTS_BY_CATEGORY
+- CRM_GET_CATEGORY_BY_NAME
 - CRM_GET_PRODUCTS
 - CRM_SEARCH_PRODUCTS
 - CRM_GET_PRODUCT_BY_NAME
 - CRM_FILTER_PRODUCTS_BY_PRICE
 - CRM_GET_PRODUCT_STOCK
+- CRM_SEARCH_PRODUCTS_BY_CATEGORY_OR_TEXT
+- CRM_GET_PRODUCTS_BY_CATEGORY_AND_PRICE
 
 FORMATO DE RESPUESTA:
 {
@@ -66,13 +72,16 @@ FORMATO DE RESPUESTA:
 
 REGLAS DE PRODUCTOS:
 1. Si preguntan por catalogo general: usa CRM_GET_PRODUCTS.
-2. Si preguntan por tipo/categoria/palabra: usa CRM_SEARCH_PRODUCTS con "query".
-3. Si preguntan por nombre exacto o aproximado: usa CRM_GET_PRODUCT_BY_NAME con "name".
-4. Si preguntan por baratos/rango/precio: usa CRM_FILTER_PRODUCTS_BY_PRICE.
-5. Si preguntan por disponibilidad/unidades: usa CRM_GET_PRODUCT_STOCK.
-6. Nunca inventes productos, precios ni stock.
-7. Nunca muestres JSON ni nombres internos de tools al usuario final.
-8. Responde en formato breve y amigable para WhatsApp.
+2. Si preguntan por categorias: usa CRM_GET_CATEGORIES o CRM_SEARCH_CATEGORIES.
+3. Si preguntan por "productos de X": intenta CRM_GET_PRODUCTS_BY_CATEGORY.
+4. Si preguntan por tipo/categoria/palabra: usa CRM_SEARCH_PRODUCTS_BY_CATEGORY_OR_TEXT con "query".
+5. Si preguntan por nombre exacto o aproximado: usa CRM_GET_PRODUCT_BY_NAME con "name".
+6. Si piden baratos/rango/precio por categoria: usa CRM_GET_PRODUCTS_BY_CATEGORY_AND_PRICE.
+7. Si piden baratos/rango/precio general: usa CRM_FILTER_PRODUCTS_BY_PRICE.
+8. Si preguntan por disponibilidad/unidades: usa CRM_GET_PRODUCT_STOCK.
+9. Nunca inventes productos, precios ni stock.
+10. Nunca muestres JSON ni nombres internos de tools al usuario final.
+11. Responde en formato breve y amigable para WhatsApp.
 
 CONTEXTO ADICIONAL:
 ${JSON.stringify(input.assistantContext ?? {}, null, 2)}
@@ -101,4 +110,3 @@ function safeReadPrompt(relativePath: string): string {
     return '';
   }
 }
-

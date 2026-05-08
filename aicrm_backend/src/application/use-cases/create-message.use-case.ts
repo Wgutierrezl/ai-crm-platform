@@ -99,6 +99,7 @@ export class ProcessIncomingMessageUseCase {
 
     let botReply = `${input.botReplyPrefix ?? ''}${aiResponse.reply}`;
     let actionExecuted: string | undefined;
+    let botMetadata: Record<string, unknown> | null = null;
 
     if (aiResponse.action) {
       const toolResult = await this.toolExecutionService.execute(
@@ -109,6 +110,9 @@ export class ProcessIncomingMessageUseCase {
       actionExecuted = toolResult.actionExecuted;
       if (toolResult.replySuffix) {
         botReply = `${botReply}${toolResult.replySuffix}`;
+      }
+      if (toolResult.botMetadata) {
+        botMetadata = toolResult.botMetadata;
       }
     }
 
@@ -121,6 +125,8 @@ export class ProcessIncomingMessageUseCase {
         'bot',
         new Date(),
         input.outputChannel ?? 'api',
+        null,
+        botMetadata,
       ),
     );
 

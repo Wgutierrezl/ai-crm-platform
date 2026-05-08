@@ -24,4 +24,21 @@ export abstract class ProductRepository {
     maxPrice: number | null,
     limit?: number,
   ): Promise<Product[]>;
+  abstract findActiveByCategory(
+    companyId: string,
+    categoryId: string,
+    limit?: number,
+  ): Promise<Product[]>;
+  abstract searchByCategoryOrText(
+    companyId: string,
+    query: string,
+    limit?: number,
+  ): Promise<Product[]>;
+  abstract filterByCategoryAndPrice(
+    companyId: string,
+    categoryId: string,
+    minPrice: number | null,
+    maxPrice: number | null,
+    limit?: number,
+  ): Promise<Product[]>;
 }

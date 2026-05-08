@@ -3,6 +3,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUUID,
   Length,
   Min,
 } from 'class-validator';
@@ -59,4 +60,12 @@ export class CreateProductDto {
   @IsOptional()
   @IsString()
   imageUrl?: string;
+
+  @ApiPropertyOptional({
+    example: '0d8e9965-ecbc-4d86-9038-7487c35a613b',
+    description: 'Categoria opcional del producto',
+  })
+  @IsOptional()
+  @IsUUID()
+  categoryId?: string;
 }

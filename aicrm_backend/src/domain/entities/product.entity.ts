@@ -15,6 +15,7 @@ export class Product {
     public readonly currency: string = 'COP',
     public readonly minStock: number = 0,
     public readonly metadata: Record<string, unknown> | null = null,
+    public readonly categoryId: string | null = null,
     public readonly createdAt: Date = new Date(),
     public readonly updatedAt: Date = new Date(),
   ) {}

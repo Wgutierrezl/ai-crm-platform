@@ -4,9 +4,11 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
 
 @Entity('products')
+@Index('IDX_products_company_category', ['companyId', 'categoryId'])
 export class ProductOrmEntity {
   @PrimaryColumn('varchar', { length: 36 })
   id: string;
@@ -52,6 +54,9 @@ export class ProductOrmEntity {
 
   @Column({ name: 'metadata_json', type: 'json', nullable: true })
   metadataJson: Record<string, unknown> | null;
+
+  @Column({ name: 'category_id', type: 'varchar', length: 36, nullable: true })
+  categoryId: string | null;
 
   @CreateDateColumn({ type: 'datetime' })
   createdAt: Date;

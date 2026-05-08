@@ -15,6 +15,7 @@ export interface CreateProductInput {
   currency?: string;
   minStock?: number;
   imageUrl?: string;
+  categoryId?: string;
 }
 
 /**
@@ -41,6 +42,7 @@ export class CreateProductUseCase {
       input.currency ?? 'COP',
       input.minStock ?? 0,
       null,
+      input.categoryId ?? null,
       new Date(),
       new Date(),
     );

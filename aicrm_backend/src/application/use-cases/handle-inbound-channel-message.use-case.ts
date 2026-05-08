@@ -7,6 +7,7 @@ import {
   AssistantOnboardingToolsService,
   OnboardingStep,
 } from '../services/assistant-onboarding-tools.service';
+import { WhatsappInteractiveListPayload } from '../../domain/ports/whatsapp-message-sender.port';
 
 export interface HandleInboundChannelMessageInput {
   companyId: string;
@@ -22,6 +23,7 @@ export interface HandleInboundChannelMessageOutput {
   shouldReply: boolean;
   reply: string | null;
   recipientExternalUserId: string;
+  interactiveList?: WhatsappInteractiveListPayload | null;
 }
 
 @Injectable()
@@ -46,6 +48,7 @@ export class HandleInboundChannelMessageUseCase {
           shouldReply: false,
           reply: null,
           recipientExternalUserId: input.externalUserId,
+          interactiveList: null,
         };
       }
     }
@@ -75,7 +78,12 @@ export class HandleInboundChannelMessageUseCase {
       if (this.onboardingTools.isGreetingMessage(input.text)) {
         const welcome = `Hola ${resolved.customer.firstName ?? resolved.customer.fullName ?? 'de nuevo'} 👋 Qué gusto verte nuevamente.\n\nPuedo ayudarte con:\n- consultar productos,\n- crear pedidos,\n- resolver dudas,\n- revisar tu perfil,\n- y mucho más 😊\n\n¿Qué te gustaría hacer?`;
         await this.persistBot(input.companyId, resolved.conversation.id, input.channel, welcome);
-        return { shouldReply: true, reply: welcome, recipientExternalUserId: input.externalUserId };
+        return {
+          shouldReply: true,
+          reply: welcome,
+          recipientExternalUserId: input.externalUserId,
+          interactiveList: null,
+        };
       }
 
       const aiResult = await this.processIncomingMessageUseCase.execute({
@@ -91,6 +99,9 @@ export class HandleInboundChannelMessageUseCase {
         shouldReply: true,
         reply: aiResult.botMessage.content,
         recipientExternalUserId: input.externalUserId,
+        interactiveList:
+          (aiResult.botMessage.metadata?.whatsapp_interactive_list as WhatsappInteractiveListPayload) ??
+          null,
       };
     }
 
@@ -118,7 +129,12 @@ export class HandleInboundChannelMessageUseCase {
     });
 
     await this.persistBot(input.companyId, resolved.conversation.id, input.channel, reply);
-    return { shouldReply: true, reply, recipientExternalUserId: input.externalUserId };
+    return {
+      shouldReply: true,
+      reply,
+      recipientExternalUserId: input.externalUserId,
+      interactiveList: null,
+    };
   }
 
   private async persistBot(
@@ -190,7 +206,19 @@ export class HandleInboundChannelMessageUseCase {
         identificationNumber: resolved.customer.identificationNumber,
       },
       conversation_state: resolved.state?.registrationStep ?? null,
-      available_tools: ['GET_PRODUCTS', 'CREATE_CUSTOMER', 'CREATE_ORDER'],
+      available_tools: [
+        'CRM_GET_CATEGORIES',
+        'CRM_SEARCH_CATEGORIES',
+        'CRM_GET_PRODUCTS_BY_CATEGORY',
+        'CRM_GET_CATEGORY_BY_NAME',
+        'CRM_GET_PRODUCTS',
+        'CRM_SEARCH_PRODUCTS',
+        'CRM_GET_PRODUCT_BY_NAME',
+        'CRM_FILTER_PRODUCTS_BY_PRICE',
+        'CRM_GET_PRODUCT_STOCK',
+        'CRM_SEARCH_PRODUCTS_BY_CATEGORY_OR_TEXT',
+        'CRM_GET_PRODUCTS_BY_CATEGORY_AND_PRICE',
+      ],
       current_channel: channel,
     };
   }
