@@ -95,6 +95,11 @@ export class HandleWhatsappWebhookUseCase {
             message.interactive?.list_reply?.title ??
             message.interactive?.button_reply?.title ??
             null;
+          if (interactiveReplyId) {
+            this.logger.log(
+              `[WhatsAppWebhook] interactiveReplyId=${interactiveReplyId} title=${interactiveReplyTitle ?? ''}`,
+            );
+          }
           const inboundBody = message.text?.body ?? interactiveReplyId ?? interactiveReplyTitle;
 
           if (!inboundBody) {
@@ -137,8 +142,31 @@ export class HandleWhatsappWebhookUseCase {
             });
 
             if (result.shouldReply && result.reply) {
+              if (result.image) {
+                try {
+                  await this.whatsappMessageSender.sendImageMessage(
+                    app.phoneNumberId,
+                    credential.accessToken,
+                    recipientPhone,
+                    result.image,
+                  );
+                } catch (imageError) {
+                  this.logger.warn(
+                    `Fallo envio de imagen, se continua con fallback textual. detalle=${imageError instanceof Error ? imageError.message : 'unknown'}`,
+                  );
+                }
+              }
+
               if (result.interactiveList) {
                 try {
+                  if (!result.image && result.reply) {
+                    await this.whatsappMessageSender.sendTextMessage(
+                      app.phoneNumberId,
+                      credential.accessToken,
+                      recipientPhone,
+                      result.reply,
+                    );
+                  }
                   await this.whatsappMessageSender.sendInteractiveList(
                     app.phoneNumberId,
                     credential.accessToken,

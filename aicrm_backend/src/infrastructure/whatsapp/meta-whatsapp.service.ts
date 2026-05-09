@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
+  WhatsappImagePayload,
   WhatsappInteractiveListPayload,
   WhatsappMessageSender,
 } from '../../domain/ports/whatsapp-message-sender.port';
@@ -17,9 +18,7 @@ export class MetaWhatsappService implements WhatsappMessageSender {
     to: string,
     message: string,
   ): Promise<void> {
-    this.logger.log(
-      `Enviando mensaje WhatsApp via Meta API a to=${to}, phoneNumberId=${phoneNumberId}`,
-    );
+    this.logger.log(`[WhatsAppSender] Sending text message to=${to} phoneNumberId=${phoneNumberId}`);
 
     const response = await this.sendMessage(phoneNumberId, accessToken, {
       messaging_product: 'whatsapp',
@@ -30,11 +29,10 @@ export class MetaWhatsappService implements WhatsappMessageSender {
 
     if (!response.ok) {
       const body = await response.text();
-      this.logger.error(
-        `Error enviando mensaje a Meta status=${response.status} body=${body}`,
-      );
+      this.logger.error(`[WhatsAppSender] Meta API error status=${response.status} body=${body}`);
       throw new Error('No fue posible enviar mensaje a Meta WhatsApp API');
     }
+    this.logger.log(`[WhatsAppSender] Text message delivered status=${response.status}`);
   }
 
   async sendInteractiveList(
@@ -43,9 +41,22 @@ export class MetaWhatsappService implements WhatsappMessageSender {
     to: string,
     payload: WhatsappInteractiveListPayload,
   ): Promise<void> {
-    this.logger.log(
-      `Enviando lista interactiva WhatsApp a to=${to}, phoneNumberId=${phoneNumberId}, sections=${payload.sections.length}`,
+    const rows = payload.sections.reduce((acc, section) => acc + section.rows.length, 0);
+    this.logger.log(`[WhatsAppSender] Preparing interactive list rows=${rows}`);
+    const safePayload =
+      rows > 10
+        ? this.applyRowsLimit(payload, 10)
+        : payload;
+    const safeRows = safePayload.sections.reduce(
+      (acc, section) => acc + section.rows.length,
+      0,
     );
+    if (rows > 10) {
+      this.logger.warn(
+        `[WhatsAppSender] Rows exceed Meta limit. rows=${rows}. Applying safe truncation/fallback.`,
+      );
+    }
+    this.logger.log(`[WhatsAppSender] Sending interactive list to=${to} rows=${rows}`);
 
     const response = await this.sendMessage(phoneNumberId, accessToken, {
       messaging_product: 'whatsapp',
@@ -53,11 +64,11 @@ export class MetaWhatsappService implements WhatsappMessageSender {
       type: 'interactive',
       interactive: {
         type: 'list',
-        header: payload.header ? { type: 'text', text: payload.header } : undefined,
-        body: { text: payload.body },
+        header: safePayload.header ? { type: 'text', text: safePayload.header } : undefined,
+        body: { text: safePayload.body },
         action: {
-          button: payload.buttonText,
-          sections: payload.sections.map((section) => ({
+          button: safePayload.buttonText,
+          sections: safePayload.sections.map((section) => ({
             title: section.title,
             rows: section.rows.map((row) => ({
               id: row.id,
@@ -71,11 +82,36 @@ export class MetaWhatsappService implements WhatsappMessageSender {
 
     if (!response.ok) {
       const body = await response.text();
-      this.logger.error(
-        `Error enviando lista interactiva a Meta status=${response.status} body=${body}`,
-      );
+      this.logger.error(`[WhatsAppSender] Meta API error status=${response.status} body=${body}`);
       throw new Error('No fue posible enviar lista interactiva a Meta WhatsApp API');
     }
+    this.logger.log(`[WhatsAppSender] Interactive list delivered status=${response.status} rows=${safeRows}`);
+  }
+
+  async sendImageMessage(
+    phoneNumberId: string,
+    accessToken: string,
+    to: string,
+    payload: WhatsappImagePayload,
+  ): Promise<void> {
+    this.logger.log(`[WhatsAppSender] Sending image message to=${to} imageUrl=${payload.imageUrl}`);
+
+    const response = await this.sendMessage(phoneNumberId, accessToken, {
+      messaging_product: 'whatsapp',
+      to,
+      type: 'image',
+      image: {
+        link: payload.imageUrl,
+        caption: payload.caption,
+      },
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      this.logger.error(`[WhatsAppSender] Meta API error status=${response.status} body=${body}`);
+      throw new Error('No fue posible enviar imagen a Meta WhatsApp API');
+    }
+    this.logger.log(`[WhatsAppSender] Image message delivered status=${response.status}`);
   }
 
   private sendMessage(
@@ -97,5 +133,27 @@ export class MetaWhatsappService implements WhatsappMessageSender {
       },
       body: JSON.stringify(body),
     });
+  }
+
+  private applyRowsLimit(
+    payload: WhatsappInteractiveListPayload,
+    maxRows: number,
+  ): WhatsappInteractiveListPayload {
+    const sections: WhatsappInteractiveListPayload['sections'] = [];
+    let remaining = maxRows;
+    for (const section of payload.sections) {
+      if (remaining <= 0) break;
+      const rows = section.rows.slice(0, remaining);
+      if (rows.length > 0) {
+        sections.push({ title: section.title, rows });
+        remaining -= rows.length;
+      }
+    }
+    return {
+      header: payload.header,
+      body: payload.body,
+      buttonText: payload.buttonText,
+      sections,
+    };
   }
 }

@@ -16,6 +16,11 @@ export interface WhatsappInteractiveListPayload {
   sections: WhatsappInteractiveListSection[];
 }
 
+export interface WhatsappImagePayload {
+  imageUrl: string;
+  caption?: string;
+}
+
 export abstract class WhatsappMessageSender {
   abstract sendTextMessage(
     phoneNumberId: string,
@@ -29,5 +34,12 @@ export abstract class WhatsappMessageSender {
     accessToken: string,
     to: string,
     payload: WhatsappInteractiveListPayload,
+  ): Promise<void>;
+
+  abstract sendImageMessage(
+    phoneNumberId: string,
+    accessToken: string,
+    to: string,
+    payload: WhatsappImagePayload,
   ): Promise<void>;
 }

@@ -17,15 +17,32 @@ export class CompanyTypeormRepository implements CompanyRepository {
       id: company.id,
       name: company.name,
       createdAt: company.createdAt,
+      assistantName: company.assistantName,
+      assistantContext: company.assistantContext,
+      assistantWelcomeMessage: company.assistantWelcomeMessage,
     });
     const saved = await this.ormRepo.save(entity);
-    return new Company(saved.id, saved.name, saved.createdAt);
+    return new Company(
+      saved.id,
+      saved.name,
+      saved.createdAt,
+      saved.assistantName ?? null,
+      saved.assistantContext ?? null,
+      saved.assistantWelcomeMessage ?? null,
+    );
   }
 
   async findById(id: string): Promise<Company | null> {
     const entity = await this.ormRepo.findOneBy({ id });
     if (!entity) return null;
-    return new Company(entity.id, entity.name, entity.createdAt);
+    return new Company(
+      entity.id,
+      entity.name,
+      entity.createdAt,
+      entity.assistantName ?? null,
+      entity.assistantContext ?? null,
+      entity.assistantWelcomeMessage ?? null,
+    );
   }
 
   async findAllByCompanyId(_companyId: string): Promise<Company[]> {

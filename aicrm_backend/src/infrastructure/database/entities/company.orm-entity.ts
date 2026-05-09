@@ -8,6 +8,15 @@ export class CompanyOrmEntity {
   @Column({ length: 255 })
   name!: string;
 
+  @Column({ name: 'assistant_name', type: 'varchar', length: 100, nullable: true })
+  assistantName!: string | null;
+
+  @Column({ name: 'assistant_context', type: 'text', nullable: true })
+  assistantContext!: string | null;
+
+  @Column({ name: 'assistant_welcome_message', type: 'text', nullable: true })
+  assistantWelcomeMessage!: string | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 }

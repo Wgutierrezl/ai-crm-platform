@@ -688,3 +688,106 @@ Descripcion breve: Se reforzo la capa de interfaces HTTP con documentacion OpenA
 6. Checkout mock y generacion de orden trazable (fase siguiente).
 7. Endurecer pruebas unitarias/E2E de flujo conversacional.
 
+
+## Entrada 2026-05-09 (hardcodeos productivos eliminados + base de asistente por tenant)
+
+### 1) Implementado hoy (backend)
+
+#### A. Eliminacion de hardcodeos productivos
+- Se removio dependencia de categorias quemadas en flujo productivo.
+- Resolucion textual de categorias ahora dinamica por tenant (`companyId`) contra categorias activas de BD.
+- Eliminado diccionario fijo de sinonimos de categorias en `ToolExecutionService`.
+- Eliminado branding hardcodeado del saludo (`ALbot`).
+- Se introdujo configuracion de asistente por empresa:
+  - `assistant_name`
+  - `assistant_context`
+  - `assistant_welcome_message`
+- Bienvenida configurable con placeholders:
+  - `{{customerName}}`
+  - `{{assistantName}}`
+  - `{{companyName}}`
+- Contexto IA configurable por tenant:
+  - `tenant_assistant_context` se inyecta al contexto de IA cuando existe.
+
+#### B. Contexto conversacional
+- Se mantiene uso de contexto temporal en `conversation_states.context`:
+  - `lastSelectedProductId`
+  - `lastSelectedCategoryId`
+- Se reforzo limpieza de contexto temporal para no contaminar flujos de catalogo/carrito.
+- Se confirma separacion de responsabilidades:
+  - contexto temporal en `conversation_states`
+  - persistencia real de carrito en `cart_sessions` + `cart_items`.
+
+#### C. UX conversacional WhatsApp
+- Se mantiene flujo de listas interactivas con fallback texto seguro.
+- Se mantiene control de limite Meta (max 10 rows) en listas interactivas.
+- Se conserva flujo contextual:
+  - categoria -> productos
+  - producto seleccionado -> detalle + acciones
+  - carrito -> resumen + lista de gestion
+- Categoria con 1 producto:
+  - abre detalle del producto (imagen+caption si existe, texto completo si no).
+- Categoria con multiples productos:
+  - muestra lista de productos sin autoseleccionar.
+
+#### D. Logs y observabilidad
+- Trazabilidad agregada/mejorada en:
+  - resolucion dinamica de categoria (`CategoryResolver`)
+  - enrutamiento deterministico (`InboundRouter`)
+  - contexto de conversacion (`ConversationContext`)
+  - config de asistente por empresa (`CompanyAssistantConfig`)
+  - UX carrito/producto (`CartUX`, `ProductUX`)
+  - envio Meta/fallback (`WhatsAppSender` + webhook).
+
+### 2) Problemas encontrados y solucion aplicada
+
+1. Categorias hardcodeadas
+- Sintoma: intenciones textuales dependian de listas fijas.
+- Causa raiz: diccionarios/regex productivos con categorias quemadas.
+- Solucion: resolver dinamicamente desde categorias activas de BD por tenant.
+- Aprendizaje: intenciones generales pueden ser deterministicas; categorias especificas deben venir de datos tenant.
+
+2. Branding fijo de asistente
+- Sintoma: saludo fijo con nombre no configurable.
+- Causa raiz: copy hardcodeado en use case.
+- Solucion: campos de config por empresa + plantilla de bienvenida.
+- Aprendizaje: branding y tono son configuracion de tenant, no logica de negocio.
+
+3. Dependencia parcial de IA para intents simples
+- Sintoma: variabilidad en respuestas de catalogo/carrito.
+- Causa raiz: falta de ruteo deterministico previo.
+- Solucion: se mantiene ruteo deterministico para intents generales y seleccion interactiva.
+- Aprendizaje: separar intenciones deterministicas de consultas abiertas mejora UX y costo.
+
+### 3) Pendiente inmediato (siguiente fase)
+- Checkout mock controlado desde carrito persistente.
+- Generacion de orden mock (`orders` + `order_items`) con snapshots.
+- Confirmacion final previa a crear orden.
+- Estados esperados de sesion/checkout:
+  - `active`
+  - `checkout_pending`
+  - `completed`
+  - `canceled`
+- Limite recomendado: maximo 8 productos distintos por carrito.
+- Validaciones pendientes:
+  - stock final en checkout
+  - expiracion de carrito
+  - consistencia de totales
+  - trazabilidad de transicion cart -> order.
+
+### 4) Roadmap tecnico documentado (sin implementar aun)
+- Checkout mock + orden mock + factura mock.
+- Integracion futura de pagos multi-tenant.
+- Facturacion electronica futura.
+- Plan de testing unitario/E2E ampliado.
+- Mejoras futuras de UX conversacional.
+
+Referencia: ver `docs/checkout-payments-roadmap.md`.
+
+### 5) Arquitectura y principios reforzados
+- Arquitectura hexagonal mantenida.
+- WhatsApp como adapter de canal.
+- Logica de negocio en application/use-cases/services.
+- Datos comerciales desde BD (tenant-scoped) y no hardcodeados.
+- Separacion entre flujo deterministico y delegacion IA.
+

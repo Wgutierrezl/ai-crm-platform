@@ -1,4 +1,4 @@
-﻿import { Injectable } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import { CategoryRepository } from '../../domain/ports/category.repository.port';
 import { ProductRepository } from '../../domain/ports/product.repository.port';
 import { WhatsappInteractiveListPayload } from '../../domain/ports/whatsapp-message-sender.port';
@@ -25,6 +25,7 @@ export interface ToolExecutionResult {
 
 @Injectable()
 export class ToolExecutionService {
+  private readonly logger = new Logger(ToolExecutionService.name);
   constructor(
     private readonly productRepository: ProductRepository,
     private readonly categoryRepository: CategoryRepository,
@@ -42,6 +43,8 @@ export class ToolExecutionService {
     payload: Record<string, any> | undefined,
     context: ToolExecutionContext,
   ): Promise<ToolExecutionResult> {
+    this.logger.log(`[ToolExecution] tool=${type} companyId=${context.companyId} customerId=${context.customerId ?? 'n/a'} channel=${context.channel ?? 'n/a'}`);
+    this.logger.debug(`[ToolExecution] payload=${JSON.stringify(payload ?? {})}`);
     if (type === 'CRM_GET_CATEGORIES') {
       const categories = await this.categoryRepository.findActiveByCompanyId(
         context.companyId,
@@ -467,6 +470,71 @@ export class ToolExecutionService {
       };
     }
 
+    if (type === 'CART_INCREMENT_ITEM_QUANTITY') {
+      const cartContext = this.requireCartContext(context);
+      const itemId = String(payload?.itemId ?? '').trim();
+      if (!itemId) return this.empty('No recibi el item del carrito a incrementar.');
+      const cart = await this.viewCartUseCase.execute({
+        companyId: context.companyId,
+        customerId: cartContext.customerId,
+        conversationId: cartContext.conversationId,
+        channel: cartContext.channel,
+      });
+      const item = cart.items.find((it) => it.id === itemId);
+      if (!item) return this.empty('No encontre ese item en el carrito.');
+      const updated = await this.updateCartItemQuantityUseCase.execute({
+        companyId: context.companyId,
+        customerId: cartContext.customerId,
+        conversationId: cartContext.conversationId,
+        channel: cartContext.channel,
+        itemId,
+        quantity: item.quantity + 1,
+      });
+      return {
+        actionExecuted: 'CART_INCREMENT_ITEM_QUANTITY',
+        replySuffix: `\n\nAumente "${updated.productNameSnapshot}" a ${updated.quantity}.`,
+      };
+    }
+
+    if (type === 'CART_DECREMENT_ITEM_QUANTITY') {
+      const cartContext = this.requireCartContext(context);
+      const itemId = String(payload?.itemId ?? '').trim();
+      if (!itemId) return this.empty('No recibi el item del carrito a reducir.');
+      const cart = await this.viewCartUseCase.execute({
+        companyId: context.companyId,
+        customerId: cartContext.customerId,
+        conversationId: cartContext.conversationId,
+        channel: cartContext.channel,
+      });
+      const item = cart.items.find((it) => it.id === itemId);
+      if (!item) return this.empty('No encontre ese item en el carrito.');
+      if (item.quantity <= 1) {
+        await this.removeCartItemUseCase.execute({
+          companyId: context.companyId,
+          customerId: cartContext.customerId,
+          conversationId: cartContext.conversationId,
+          channel: cartContext.channel,
+          itemId,
+        });
+        return {
+          actionExecuted: 'CART_DECREMENT_ITEM_QUANTITY',
+          replySuffix: '\n\nLa cantidad llego a cero y elimine el item del carrito.',
+        };
+      }
+      const updated = await this.updateCartItemQuantityUseCase.execute({
+        companyId: context.companyId,
+        customerId: cartContext.customerId,
+        conversationId: cartContext.conversationId,
+        channel: cartContext.channel,
+        itemId,
+        quantity: item.quantity - 1,
+      });
+      return {
+        actionExecuted: 'CART_DECREMENT_ITEM_QUANTITY',
+        replySuffix: `\n\nReduje "${updated.productNameSnapshot}" a ${updated.quantity}.`,
+      };
+    }
+
     if (type === 'CART_REMOVE_ITEM') {
       const cartContext = this.requireCartContext(context);
       const itemId = String(payload?.itemId ?? '').trim();
@@ -533,29 +601,20 @@ export class ToolExecutionService {
       normalized,
       10,
     );
-    const exact = found.find((category) => category.name.toLowerCase() === normalized);
+    const exact = found.find(
+      (category) => this.normalizeCategoryTerm(category.name) === normalized,
+    );
     return exact ?? found[0] ?? null;
   }
 
   private normalizeCategoryTerm(value: string): string {
-    const raw = value.toLowerCase().trim();
-    if (!raw) return raw;
-
-    const synonyms: Record<string, string> = {
-      portatiles: 'portatiles',
-      laptop: 'portatiles',
-      laptops: 'portatiles',
-      computador: 'portatiles',
-      computadores: 'portatiles',
-      celulares: 'celulares',
-      celular: 'celulares',
-      moviles: 'celulares',
-      belleza: 'belleza',
-      cosmeticos: 'belleza',
-      maquillaje: 'belleza',
-    };
-
-    return synonyms[raw] ?? raw;
+    return String(value ?? '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   private renderCategories(

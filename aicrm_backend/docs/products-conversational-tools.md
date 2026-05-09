@@ -181,3 +181,7 @@
 - checkout mock (fase siguiente)
 - persistencia conversacional de contexto
 - idempotencia de eventos WhatsApp/interacciones repetidas
+
+## Roadmap siguiente fase
+- Checkout mock, orden mock, pagos futuros y facturacion: ver `docs/checkout-payments-roadmap.md`.
+- Este documento mantiene foco en tools/UX de catalogo y carrito conversacional.

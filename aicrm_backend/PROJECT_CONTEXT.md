@@ -556,3 +556,42 @@ Estado:
 5. Seleccion amigable de cantidad (+1/+5/reducir).
 6. Checkout mock controlado y trazabilidad hacia orden.
 7. Pruebas unitarias/E2E de flujo conversacional completo e idempotencia.
+
+## Actualizacion 2026-05-09 - hardcodeos productivos y asistente por tenant
+
+### Causa raiz corregida en esta fase
+- Existian hardcodeos productivos en resolucion de categorias y branding del asistente.
+- Esto reducia escalabilidad multi-tenant y obligaba cambios de codigo para nuevas categorias.
+
+### Ajuste arquitectonico aplicado
+- Resolucion de categoria basada en categorias activas de BD por `companyId`.
+- Intenciones generales mantenidas como deterministicas (catalogo/categorias/carrito).
+- Categoria especifica resuelta de forma dinamica (sin diccionarios fijos de nombres).
+- Bienvenida y contexto del asistente parametrizados por empresa.
+
+### Configuracion de asistente por empresa
+- Nuevos campos en `companies` (opcionales):
+  - `assistant_name`
+  - `assistant_context`
+  - `assistant_welcome_message`
+- Politica de bienvenida:
+  1. `assistant_welcome_message` (si existe)
+  2. fallback a plantilla por defecto
+  3. `assistant_name` o fallback generico `tu asistente virtual`
+- Contexto IA por tenant:
+  - `assistant_context` se propaga como `tenant_assistant_context`.
+
+### Beneficio multi-tenant
+- Cada empresa puede definir tono/nombre/bienvenida sin tocar codigo.
+- Nuevas categorias creadas desde frontend se resuelven en texto conversacional sin deploy.
+
+### Alcance no tocado en esta fase
+- No se corrigio aun fallback de moneda `COP`.
+- No se ajustaron aun repositorios de `message`/`conversation_state` para hardening adicional de tenant.
+- No se implemento checkout real/pagos.
+
+### Siguiente fase
+- Checkout mock trazable (carrito -> orden -> factura mock).
+- Roadmap de pagos multi-tenant.
+- Ver detalle en `docs/checkout-payments-roadmap.md`.
+
