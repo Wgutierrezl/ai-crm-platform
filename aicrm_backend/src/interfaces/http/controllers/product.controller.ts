@@ -1,11 +1,24 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseFilePipeBuilder,
+  Patch,
+  Post,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
+  ApiConsumes,
   ApiOperation,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { CreateProductUseCase } from '../../../application/use-cases/create-product.use-case';
 import { GetProductsByCompanyUseCase } from '../../../application/use-cases/get-products-by-company.use-case';
 import { UpdateProductUseCase } from '../../../application/use-cases/update-product.use-case';
@@ -14,6 +27,7 @@ import { UpdateProductDto } from '../dtos/update-product.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { CurrentUser } from '../guards/current-user.decorator';
 import type { CurrentUserPayload } from '../guards/current-user.decorator';
+import { ImageStoragePort } from '../../../domain/ports/image-storage.port';
 
 @ApiTags('Products')
 @ApiBearerAuth('JWT-auth')
@@ -24,6 +38,7 @@ export class ProductController {
     private readonly createProductUseCase: CreateProductUseCase,
     private readonly getProductsByCompanyUseCase: GetProductsByCompanyUseCase,
     private readonly updateProductUseCase: UpdateProductUseCase,
+    private readonly imageStorage: ImageStoragePort,
   ) {}
 
   @Post()
@@ -47,6 +62,32 @@ export class ProductController {
   @ApiResponse({ status: 401, description: 'No autenticado' })
   async findAll(@CurrentUser() user: CurrentUserPayload) {
     return this.getProductsByCompanyUseCase.execute(user.companyId);
+  }
+
+  @Post('with-image')
+  @UseInterceptors(FileInterceptor('image', { limits: { fileSize: 5 * 1024 * 1024 } }))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: CreateProductDto })
+  @ApiOperation({ summary: 'Crear producto con imagen opcional (multipart/form-data)' })
+  @ApiResponse({ status: 201, description: 'Producto creado correctamente' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  async createWithImage(
+    @CurrentUser() user: CurrentUserPayload,
+    @Body() dto: CreateProductDto,
+    @UploadedFile(
+      new ParseFilePipeBuilder()
+        .addFileTypeValidator({ fileType: /image\/(jpeg|jpg|png|webp|gif|avif)/ })
+        .addMaxSizeValidator({ maxSize: 5 * 1024 * 1024 })
+        .build({ fileIsRequired: false }),
+    )
+    image?: Express.Multer.File,
+  ) {
+    const imageUrl = image ? await this.uploadProductImage(user.companyId, image) : dto.imageUrl;
+    return this.createProductUseCase.execute({
+      ...this.normalizeCreateDto(dto),
+      imageUrl,
+      companyId: user.companyId,
+    });
   }
 
   @Patch(':id')
@@ -75,5 +116,83 @@ export class ProductController {
       imageUrl: dto.imageUrl,
       categoryId: dto.categoryId,
     });
+  }
+
+  @Patch(':id/with-image')
+  @UseInterceptors(FileInterceptor('image', { limits: { fileSize: 5 * 1024 * 1024 } }))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: UpdateProductDto })
+  @ApiOperation({
+    summary: 'Actualizar producto con imagen opcional (multipart/form-data)',
+  })
+  @ApiResponse({ status: 200, description: 'Producto actualizado correctamente' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 404, description: 'Producto no encontrado' })
+  async updateWithImage(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') id: string,
+    @Body() dto: UpdateProductDto,
+    @UploadedFile(
+      new ParseFilePipeBuilder()
+        .addFileTypeValidator({ fileType: /image\/(jpeg|jpg|png|webp|gif|avif)/ })
+        .addMaxSizeValidator({ maxSize: 5 * 1024 * 1024 })
+        .build({ fileIsRequired: false }),
+    )
+    image?: Express.Multer.File,
+  ) {
+    const normalized = this.normalizeUpdateDto(dto);
+    const imageUrl = image
+      ? await this.uploadProductImage(user.companyId, image)
+      : normalized.imageUrl;
+
+    return this.updateProductUseCase.execute({
+      id,
+      companyId: user.companyId,
+      ...normalized,
+      imageUrl,
+    });
+  }
+
+  private async uploadProductImage(
+    companyId: string,
+    image: Express.Multer.File,
+  ): Promise<string> {
+    const uploaded = await this.imageStorage.uploadImage({
+      fileBuffer: image.buffer,
+      fileName: image.originalname,
+      mimeType: image.mimetype,
+      folder: `${companyId}/products`,
+    });
+    return uploaded.secureUrl;
+  }
+
+  private normalizeCreateDto(dto: CreateProductDto): CreateProductDto {
+    return {
+      ...dto,
+      price: Number(dto.price),
+      stock: Number(dto.stock),
+      minStock:
+        dto.minStock !== undefined ? Number(dto.minStock) : dto.minStock,
+      isActive: this.parseOptionalBoolean(dto.isActive),
+    };
+  }
+
+  private normalizeUpdateDto(dto: UpdateProductDto): UpdateProductDto {
+    return {
+      ...dto,
+      price: dto.price !== undefined ? Number(dto.price) : dto.price,
+      stock: dto.stock !== undefined ? Number(dto.stock) : dto.stock,
+      minStock:
+        dto.minStock !== undefined ? Number(dto.minStock) : dto.minStock,
+      isActive: this.parseOptionalBoolean(dto.isActive),
+    };
+  }
+
+  private parseOptionalBoolean(value: unknown): boolean | undefined {
+    if (value === undefined || value === null || typeof value === 'boolean') {
+      return value as boolean | undefined;
+    }
+    if (typeof value === 'string') return value.toLowerCase() === 'true';
+    return undefined;
   }
 }

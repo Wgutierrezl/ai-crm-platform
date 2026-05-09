@@ -8,6 +8,7 @@ import {
   Min,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform, Type } from 'class-transformer';
 
 export class CreateProductDto {
   @ApiProperty({ example: 'Laptop Pro 14', description: 'Nombre del producto' })
@@ -20,16 +21,21 @@ export class CreateProductDto {
   description?: string;
 
   @ApiProperty({ example: 4999.99, description: 'Precio del producto' })
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   price!: number;
 
   @ApiProperty({ example: 50, description: 'Stock disponible' })
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   stock!: number;
 
   @ApiPropertyOptional({ example: true })
+  @Transform(({ value }) =>
+    value === 'true' ? true : value === 'false' ? false : value,
+  )
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
@@ -51,6 +57,7 @@ export class CreateProductDto {
   currency?: string;
 
   @ApiPropertyOptional({ example: 3 })
+  @Type(() => Number)
   @IsOptional()
   @IsNumber()
   @Min(0)

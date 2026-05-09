@@ -617,3 +617,74 @@ Descripcion breve: Se reforzo la capa de interfaces HTTP con documentacion OpenA
 5. Plan de pruebas unitarias y E2E integral.
 6. Modulo suppliers/proveedores.
 7. Integracion futura de pagos.
+
+## Entrada 2026-05-08 (Cloudinary productos + frontend imagen)
+
+### Backend
+- Se implemento puerto hexagonal ImageStoragePort.
+- Se implemento adaptador CloudinaryImageStorageService.
+- Se agregaron endpoints multipart sin romper JSON existente:
+  - POST /products/with-image`n  - PATCH /products/:id/with-image`n- Se aplicaron validaciones:
+  - tipo de archivo imagen,
+  - tamano maximo 5MB.
+- Se mantiene seguridad por JWT y aislamiento por companyId.
+
+### Frontend
+- Formulario de productos actualizado con:
+  - selector de archivo real,
+  - preview local antes de guardar,
+  - persistencia via multipart.
+- Edicion de producto:
+  - conserva imagen si no se cambia,
+  - permite reemplazar imagen.
+- Listado:
+  - muestra thumbnail si existe,
+  - fallback visual si no existe.
+
+### WhatsApp/catalogo
+- CRM_GET_PRODUCTS ahora prioriza lista interactiva de categorias activas.
+- Fallback a productos si no hay categorias activas.
+- Respuestas de productos incluyen URL de imagen cuando existe imageUrl.
+
+## Entrada 2026-05-09 (estado conversacional + carrito virtual base)
+
+### Catalogo conversacional - implementado y estable
+- Categorias activas y productos activos filtrados en backend.
+- Listas interactivas para categorias y productos con fallback seguro a texto.
+- Seleccion interactiva con ids:
+  - category:<id>`n  - product:<id>`n- Resolucion deterministica desde backend para categoria/producto seleccionado.
+- Respuesta individual del producto seleccionado (no mezcla catalogo general).
+- Integracion Cloudinary funcional con imageUrl en detalle conversacional.
+- Aislamiento multi-tenant por companyId en consultas de catalogo.
+
+### Carrito virtual - Fase A/B implementada
+- Migracion aplicada para:
+  - cart_sessions`n  - cart_items`n- Expiracion de sesion a 3 dias por expires_at.
+- Regla activa:
+  - un carrito activo por companyId + customerId + channel.
+- Snapshots persistidos por item:
+  - nombre
+  - precio unitario
+  - imagen
+  - moneda
+- Tools habilitadas:
+  - CART_GET_ACTIVE_SESSION`n  - CART_ADD_ITEM`n  - CART_VIEW`n  - CART_UPDATE_ITEM_QUANTITY`n  - CART_REMOVE_ITEM`n  - CART_CLEAR`n  - CART_EXPIRE_OLD_SESSIONS`n- Validaciones de negocio:
+  - producto activo
+  - categoria activa (si aplica)
+  - stock suficiente
+
+### Ajustes UX/UI conversacional pendientes
+1. Consistencia UX cuando una categoria tiene un solo producto.
+2. Mostrar solo acciones contextuales al producto seleccionado.
+3. Mejorar reconocimiento de frases naturales tipo "agrega este producto".
+4. Evolucionar carrito de texto/fallback a experiencia interactiva completa.
+
+### Proxima fase prioritaria recomendada
+1. Refinar UX conversacional de productos.
+2. Refinar UX conversacional de carrito.
+3. Navegacion persistente (volver/cambiar categoria/ver mas/continuar compra).
+4. Paginacion conversacional para catalogos extensos.
+5. Seleccion amigable de cantidades.
+6. Checkout mock y generacion de orden trazable (fase siguiente).
+7. Endurecer pruebas unitarias/E2E de flujo conversacional.
+

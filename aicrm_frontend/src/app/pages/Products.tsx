@@ -68,6 +68,8 @@ export default function Products() {
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<ProductFormState>(initialFormState);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string>("");
 
   const categoriesById = useMemo(() => {
     const map = new Map<string, CategoryDto>();
@@ -168,9 +170,13 @@ export default function Products() {
         imageUrl: product.imageUrl ?? "",
         isActive: product.isActive,
       });
+      setSelectedImageFile(null);
+      setImagePreviewUrl(product.imageUrl ?? "");
     } else {
       setEditingProduct(null);
       setFormData(initialFormState);
+      setSelectedImageFile(null);
+      setImagePreviewUrl("");
     }
     setIsDialogOpen(true);
   }
@@ -209,7 +215,10 @@ export default function Products() {
       };
 
       if (editingProduct) {
-        const updated = await productService.updateProduct(editingProduct.id, payload);
+        const updated = await productService.updateProductWithImage(
+          editingProduct.id,
+          buildProductFormData(payload, selectedImageFile),
+        );
         setProducts((prev) =>
           prev.map((product) =>
             product.id === updated.id
@@ -219,20 +228,17 @@ export default function Products() {
         );
         toast.success("Producto actualizado exitosamente");
       } else {
-        const created = await productService.createProduct({
-          ...payload,
-          categoryId: payload.categoryId ?? undefined,
-          description: payload.description ?? undefined,
-          brand: payload.brand ?? undefined,
-          sku: payload.sku ?? undefined,
-          imageUrl: payload.imageUrl ?? undefined,
-        });
+        const created = await productService.createProductWithImage(
+          buildProductFormData(payload, selectedImageFile),
+        );
 
         setProducts((prev) => [{ ...created, available: created.stock > 0 }, ...prev]);
         toast.success("Producto creado exitosamente");
       }
 
       setIsDialogOpen(false);
+      setSelectedImageFile(null);
+      setImagePreviewUrl("");
       await loadCategories();
     } catch (error) {
       logger.error("Error al guardar producto", error);
@@ -240,6 +246,51 @@ export default function Products() {
     } finally {
       setSaving(false);
     }
+  }
+
+  function handleImageInputChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    setSelectedImageFile(file);
+
+    if (!file) {
+      setImagePreviewUrl(editingProduct?.imageUrl ?? "");
+      return;
+    }
+
+    const localPreview = URL.createObjectURL(file);
+    setImagePreviewUrl(localPreview);
+  }
+
+  function buildProductFormData(
+    payload: {
+      name: string;
+      description: string | null;
+      price: number;
+      stock: number;
+      categoryId: string | null;
+      brand: string | null;
+      sku: string | null;
+      currency: string;
+      minStock: number;
+      imageUrl: string | null;
+      isActive: boolean;
+    },
+    imageFile: File | null,
+  ): FormData {
+    const form = new FormData();
+    form.append("name", payload.name);
+    if (payload.description !== null) form.append("description", payload.description);
+    form.append("price", String(payload.price));
+    form.append("stock", String(payload.stock));
+    if (payload.categoryId !== null) form.append("categoryId", payload.categoryId);
+    if (payload.brand !== null) form.append("brand", payload.brand);
+    if (payload.sku !== null) form.append("sku", payload.sku);
+    form.append("currency", payload.currency);
+    form.append("minStock", String(payload.minStock));
+    form.append("isActive", String(payload.isActive));
+    if (!imageFile && payload.imageUrl) form.append("imageUrl", payload.imageUrl);
+    if (imageFile) form.append("image", imageFile);
+    return form;
   }
 
   return (
@@ -388,7 +439,7 @@ export default function Products() {
                         {product.imageUrl ? (
                           <span className="text-xs text-muted-foreground">Preview disponible</span>
                         ) : (
-                          <span className="text-xs text-muted-foreground">Proximamente</span>
+                          <span className="text-xs text-muted-foreground">Sin imagen</span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -593,21 +644,19 @@ export default function Products() {
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="image-url">Imagen del producto (proximamente)</Label>
+                <Label htmlFor="image-file">Imagen del producto</Label>
                 <Input
-                  id="image-url"
-                  value={formData.imageUrl}
-                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                    setFormData((prev) => ({ ...prev, imageUrl: event.target.value }))
-                  }
-                  placeholder="Carga de imagenes en implementacion"
+                  id="image-file"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageInputChange}
                 />
                 <div className="h-24 border rounded-md flex items-center justify-center bg-muted/30 overflow-hidden">
-                  {formData.imageUrl ? (
-                    <img src={formData.imageUrl} alt="Preview producto" className="w-full h-full object-cover" />
+                  {imagePreviewUrl ? (
+                    <img src={imagePreviewUrl} alt="Preview producto" className="w-full h-full object-cover" />
                   ) : (
                     <div className="text-xs text-muted-foreground text-center">
-                      Imagen del producto - proximamente
+                      Sin imagen seleccionada
                     </div>
                   )}
                 </div>

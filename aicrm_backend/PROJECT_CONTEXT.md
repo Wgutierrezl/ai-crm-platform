@@ -503,3 +503,56 @@ Estado:
 5. Testing unitario y E2E integral.
 6. Modulo proveedores/suppliers.
 7. Integracion futura de pagos.
+
+## Estado conversacional actual (2026-05-09)
+
+### Catalogo conversacional operativo
+- Categorias activas y productos activos filtrados en backend.
+- Listas interactivas de categorias y productos con fallback a texto.
+- Seleccion `category:<id>` y `product:<id>` con ruteo deterministico (sin depender de interpretacion libre de IA).
+- Detalle individual de producto seleccionado (nombre, descripcion, precio, stock, categoria e imagen por `imageUrl` si existe).
+- Integracion Cloudinary activa para persistir `imageUrl` segura.
+- Aislamiento multi-tenant por `companyId` en todo el flujo.
+
+### Carrito virtual operativo (base persistente)
+- Tablas:
+  - `cart_sessions`
+  - `cart_items`
+- Expiracion de sesion a 3 dias por `expires_at`.
+- Snapshots de item:
+  - `productNameSnapshot`
+  - `unitPriceSnapshot`
+  - `imageUrlSnapshot`
+  - `currencySnapshot`
+- Tools disponibles:
+  - `CART_GET_ACTIVE_SESSION`
+  - `CART_ADD_ITEM`
+  - `CART_VIEW`
+  - `CART_UPDATE_ITEM_QUANTITY`
+  - `CART_REMOVE_ITEM`
+  - `CART_CLEAR`
+  - `CART_EXPIRE_OLD_SESSIONS`
+- Validaciones activas:
+  - producto activo
+  - categoria activa cuando aplica
+  - stock suficiente
+- Integracion WhatsApp funcional en modo base (texto + interactive cuando disponible).
+
+### Brechas actuales de UX/UI conversacional
+1. Categoria con un solo producto:
+   - la experiencia puede volverse texto directo y perder consistencia interactiva.
+2. Acciones de producto:
+   - se requiere separar mejor acciones contextuales del producto vs acciones globales de carrito.
+3. Intencion natural "agrega este producto":
+   - falta reforzar memoria contextual para agregar implicito con menos ambiguedad.
+4. Carrito interactivo:
+   - funcionalmente listo en backend, pero UX aun depende mucho de comandos/fallback texto.
+
+### Proxima fase recomendada (alta prioridad)
+1. Refinar UX de seleccion de producto.
+2. Refinar UX de carrito con listas interactivas contextuales.
+3. Navegacion conversacional persistente (categoria/producto/carrito).
+4. Paginacion conversacional para catalogos grandes.
+5. Seleccion amigable de cantidad (+1/+5/reducir).
+6. Checkout mock controlado y trazabilidad hacia orden.
+7. Pruebas unitarias/E2E de flujo conversacional completo e idempotencia.

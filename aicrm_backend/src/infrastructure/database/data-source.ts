@@ -13,6 +13,8 @@ import { CompanyWhatsappAppOrmEntity } from './entities/company-whatsapp-app.orm
 import { ExternalIdentityOrmEntity } from './entities/external-identity.orm-entity';
 import { ConversationStateOrmEntity } from './entities/conversation-state.orm-entity';
 import { CategoryOrmEntity } from './entities/category.orm-entity';
+import { CartSessionOrmEntity } from './entities/cart-session.orm-entity';
+import { CartItemOrmEntity } from './entities/cart-item.orm-entity';
 
 dotenv.config();
 
@@ -37,6 +39,8 @@ export const AppDataSource = new DataSource({
     ExternalIdentityOrmEntity,
     ConversationStateOrmEntity,
     CategoryOrmEntity,
+    CartSessionOrmEntity,
+    CartItemOrmEntity,
   ],
   migrations: ['src/infrastructure/database/migrations/*.ts'],
   synchronize: false,

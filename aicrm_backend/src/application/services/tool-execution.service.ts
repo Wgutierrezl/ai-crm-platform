@@ -2,9 +2,19 @@
 import { CategoryRepository } from '../../domain/ports/category.repository.port';
 import { ProductRepository } from '../../domain/ports/product.repository.port';
 import { WhatsappInteractiveListPayload } from '../../domain/ports/whatsapp-message-sender.port';
+import { AddItemToCartUseCase } from '../use-cases/add-item-to-cart.use-case';
+import { ClearCartUseCase } from '../use-cases/clear-cart.use-case';
+import { ExpireOldCartSessionsUseCase } from '../use-cases/expire-old-cart-sessions.use-case';
+import { GetOrCreateActiveCartSessionUseCase } from '../use-cases/get-or-create-active-cart-session.use-case';
+import { RemoveCartItemUseCase } from '../use-cases/remove-cart-item.use-case';
+import { UpdateCartItemQuantityUseCase } from '../use-cases/update-cart-item-quantity.use-case';
+import { ViewCartUseCase } from '../use-cases/view-cart.use-case';
 
 export interface ToolExecutionContext {
   companyId: string;
+  customerId?: string;
+  conversationId?: string;
+  channel?: string;
 }
 
 export interface ToolExecutionResult {
@@ -18,6 +28,13 @@ export class ToolExecutionService {
   constructor(
     private readonly productRepository: ProductRepository,
     private readonly categoryRepository: CategoryRepository,
+    private readonly getOrCreateActiveCartSessionUseCase: GetOrCreateActiveCartSessionUseCase,
+    private readonly addItemToCartUseCase: AddItemToCartUseCase,
+    private readonly viewCartUseCase: ViewCartUseCase,
+    private readonly updateCartItemQuantityUseCase: UpdateCartItemQuantityUseCase,
+    private readonly removeCartItemUseCase: RemoveCartItemUseCase,
+    private readonly clearCartUseCase: ClearCartUseCase,
+    private readonly expireOldCartSessionsUseCase: ExpireOldCartSessionsUseCase,
   ) {}
 
   async execute(
@@ -162,11 +179,39 @@ export class ToolExecutionService {
     }
 
     if (type === 'CRM_GET_PRODUCTS' || type === 'GET_PRODUCTS') {
-      const limit = this.toLimit(payload?.limit, 10);
-      const products = await this.productRepository.findActiveByCompanyId(
+      const categories = await this.categoryRepository.findActiveByCompanyId(
         context.companyId,
-        limit,
       );
+      if (categories.length > 0) {
+        return {
+          actionExecuted: 'CRM_GET_PRODUCTS',
+          replySuffix: this.renderCategories(
+            categories,
+            'Primero elige una categoria y te muestro productos:',
+          ),
+          botMetadata: this.buildInteractiveMetadata({
+            header: 'Catalogo',
+            body: 'Selecciona una categoria para ver productos disponibles:',
+            buttonText: 'Ver categorias',
+            sections: [
+              {
+                title: 'Categorias',
+                rows: categories.slice(0, 10).map((c) => ({
+                  id: `category:${c.id}`,
+                  title: this.truncate(c.name, 24),
+                  description: this.truncate(
+                    c.description ?? 'Ver productos de esta categoria',
+                    72,
+                  ),
+                })),
+              },
+            ],
+          }),
+        };
+      }
+
+      const limit = this.toLimit(payload?.limit, 10);
+      const products = await this.productRepository.findActiveByCompanyId(context.companyId, limit);
       return {
         actionExecuted: 'CRM_GET_PRODUCTS',
         replySuffix: this.renderProducts(products, 'Estos son algunos productos disponibles:'),
@@ -347,7 +392,128 @@ export class ToolExecutionService {
       };
     }
 
+    if (type === 'CART_EXPIRE_OLD_SESSIONS') {
+      const affected = await this.expireOldCartSessionsUseCase.execute();
+      return {
+        actionExecuted: 'CART_EXPIRE_OLD_SESSIONS',
+        replySuffix: `\n\nSe actualizaron ${affected} carritos expirados.`,
+      };
+    }
+
+    if (type === 'CART_GET_ACTIVE_SESSION') {
+      const cartContext = this.requireCartContext(context);
+      const session = await this.getOrCreateActiveCartSessionUseCase.execute({
+        companyId: context.companyId,
+        customerId: cartContext.customerId,
+        channel: cartContext.channel,
+        conversationId: cartContext.conversationId,
+      });
+      return {
+        actionExecuted: 'CART_GET_ACTIVE_SESSION',
+        replySuffix: `\n\nTu carrito esta listo (sesion activa: ${session.id.slice(0, 8)}...).`,
+      };
+    }
+
+    if (type === 'CART_ADD_ITEM') {
+      const cartContext = this.requireCartContext(context);
+      const productId = String(payload?.productId ?? '').trim();
+      const quantity = Number(payload?.quantity ?? 1);
+      if (!productId) return this.empty('No recibi el producto para agregar al carrito.');
+
+      const added = await this.addItemToCartUseCase.execute({
+        companyId: context.companyId,
+        customerId: cartContext.customerId,
+        conversationId: cartContext.conversationId,
+        channel: cartContext.channel,
+        productId,
+        quantity,
+      });
+      return {
+        actionExecuted: 'CART_ADD_ITEM',
+        replySuffix: `\n\nListo. Agregue "${added.item.productNameSnapshot}" al carrito (cantidad actual: ${added.quantityMerged}).`,
+      };
+    }
+
+    if (type === 'CART_VIEW') {
+      const cartContext = this.requireCartContext(context);
+      const cart = await this.viewCartUseCase.execute({
+        companyId: context.companyId,
+        customerId: cartContext.customerId,
+        conversationId: cartContext.conversationId,
+        channel: cartContext.channel,
+      });
+      return {
+        actionExecuted: 'CART_VIEW',
+        replySuffix: this.renderCart(cart.items, cart.totals.subtotal, cart.totals.currency),
+      };
+    }
+
+    if (type === 'CART_UPDATE_ITEM_QUANTITY') {
+      const cartContext = this.requireCartContext(context);
+      const itemId = String(payload?.itemId ?? '').trim();
+      const quantity = Number(payload?.quantity ?? 0);
+      if (!itemId) return this.empty('No recibi el item del carrito a actualizar.');
+      const updated = await this.updateCartItemQuantityUseCase.execute({
+        companyId: context.companyId,
+        customerId: cartContext.customerId,
+        conversationId: cartContext.conversationId,
+        channel: cartContext.channel,
+        itemId,
+        quantity,
+      });
+      return {
+        actionExecuted: 'CART_UPDATE_ITEM_QUANTITY',
+        replySuffix: `\n\nActualice "${updated.productNameSnapshot}" a cantidad ${updated.quantity}.`,
+      };
+    }
+
+    if (type === 'CART_REMOVE_ITEM') {
+      const cartContext = this.requireCartContext(context);
+      const itemId = String(payload?.itemId ?? '').trim();
+      if (!itemId) return this.empty('No recibi el item del carrito a eliminar.');
+      await this.removeCartItemUseCase.execute({
+        companyId: context.companyId,
+        customerId: cartContext.customerId,
+        conversationId: cartContext.conversationId,
+        channel: cartContext.channel,
+        itemId,
+      });
+      return {
+        actionExecuted: 'CART_REMOVE_ITEM',
+        replySuffix: '\n\nElimine el item del carrito.',
+      };
+    }
+
+    if (type === 'CART_CLEAR') {
+      const cartContext = this.requireCartContext(context);
+      await this.clearCartUseCase.execute({
+        companyId: context.companyId,
+        customerId: cartContext.customerId,
+        conversationId: cartContext.conversationId,
+        channel: cartContext.channel,
+      });
+      return {
+        actionExecuted: 'CART_CLEAR',
+        replySuffix: '\n\nListo. Tu carrito quedo vacio.',
+      };
+    }
+
     return {};
+  }
+
+  private requireCartContext(context: ToolExecutionContext): {
+    customerId: string;
+    conversationId: string | null;
+    channel: string;
+  } {
+    if (!context.customerId || !context.channel) {
+      throw new Error('Contexto incompleto para operar carrito');
+    }
+    return {
+      customerId: context.customerId,
+      conversationId: context.conversationId ?? null,
+      channel: context.channel,
+    };
   }
 
   private async resolveCategory(
@@ -409,13 +575,15 @@ export class ToolExecutionService {
       stock: number;
       currency?: string;
       brand?: string | null;
+      imageUrl?: string | null;
     }>,
     title: string,
   ): string {
     const lines = products.map((p, i) => {
       const currency = p.currency ?? 'COP';
       const brand = p.brand ? ` (${p.brand})` : '';
-      return `${i + 1}. ${p.name}${brand}\nPrecio: ${currency} ${p.price}\nStock: ${p.stock}`;
+      const imageLine = p.imageUrl ? `\nImagen: ${p.imageUrl}` : '';
+      return `${i + 1}. ${p.name}${brand}\nPrecio: ${currency} ${p.price}\nStock: ${p.stock}${imageLine}`;
     });
     return `\n\n${title}\n\n${lines.join('\n\n')}\n\nQuieres que te filtre por precio, categoria o marca?`;
   }
@@ -433,6 +601,27 @@ export class ToolExecutionService {
         `- ${p.name}: ${p.stock} unidades | ${p.currency ?? 'COP'} ${p.price}`,
     );
     return `\n\nDisponibilidad actual:\n${lines.join('\n')}`;
+  }
+
+  private renderCart(
+    items: Array<{
+      id: string;
+      productNameSnapshot: string;
+      quantity: number;
+      unitPriceSnapshot: number;
+      currencySnapshot: string;
+    }>,
+    subtotal: number,
+    currency: string,
+  ): string {
+    if (items.length === 0) {
+      return '\n\nTu carrito esta vacio.\nPuedes agregar productos desde el catalogo.';
+    }
+    const lines = items.map(
+      (item, i) =>
+        `${i + 1}. ${item.productNameSnapshot}\nCantidad: ${item.quantity}\nPrecio unidad: ${item.currencySnapshot} ${item.unitPriceSnapshot}\nItemId: ${item.id}`,
+    );
+    return `\n\nCarrito actual:\n\n${lines.join('\n\n')}\n\nSubtotal: ${currency} ${subtotal}\n\nPuedes decirme: actualizar cantidad, eliminar item o limpiar carrito.`;
   }
 
   private renderPriceLabel(min: number | null, max: number | null): string {

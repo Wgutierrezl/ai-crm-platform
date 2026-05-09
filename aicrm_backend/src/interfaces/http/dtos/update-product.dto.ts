@@ -8,6 +8,7 @@ import {
   Length,
   Min,
 } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
 
 export class UpdateProductDto {
   @ApiPropertyOptional({ example: 'Laptop Lenovo ThinkPad X1' })
@@ -21,12 +22,14 @@ export class UpdateProductDto {
   description?: string | null;
 
   @ApiPropertyOptional({ example: 5200000 })
+  @Type(() => Number)
   @IsOptional()
   @IsNumber()
   @Min(0)
   price?: number;
 
   @ApiPropertyOptional({ example: 15 })
+  @Type(() => Number)
   @IsOptional()
   @IsNumber()
   @Min(0)
@@ -49,12 +52,16 @@ export class UpdateProductDto {
   currency?: string;
 
   @ApiPropertyOptional({ example: 2 })
+  @Type(() => Number)
   @IsOptional()
   @IsNumber()
   @Min(0)
   minStock?: number;
 
   @ApiPropertyOptional({ example: true })
+  @Transform(({ value }) =>
+    value === 'true' ? true : value === 'false' ? false : value,
+  )
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
@@ -72,4 +79,3 @@ export class UpdateProductDto {
   @IsUUID()
   categoryId?: string | null;
 }
-

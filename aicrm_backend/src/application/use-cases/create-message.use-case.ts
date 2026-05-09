@@ -105,7 +105,14 @@ export class ProcessIncomingMessageUseCase {
       const toolResult = await this.toolExecutionService.execute(
         aiResponse.action.type,
         aiResponse.action.payload,
-        { companyId: input.companyId },
+        {
+          companyId: input.companyId,
+          customerId: String(input.assistantContext?.customer_id ?? ''),
+          conversationId: input.conversationId,
+          channel: String(
+            input.assistantContext?.current_channel ?? input.outputChannel ?? '',
+          ),
+        },
       );
       actionExecuted = toolResult.actionExecuted;
       if (toolResult.replySuffix) {

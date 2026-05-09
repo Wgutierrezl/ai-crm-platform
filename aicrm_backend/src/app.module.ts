@@ -18,6 +18,8 @@ import { CompanyWhatsappAppOrmEntity } from './infrastructure/database/entities/
 import { ExternalIdentityOrmEntity } from './infrastructure/database/entities/external-identity.orm-entity';
 import { ConversationStateOrmEntity } from './infrastructure/database/entities/conversation-state.orm-entity';
 import { CategoryOrmEntity } from './infrastructure/database/entities/category.orm-entity';
+import { CartSessionOrmEntity } from './infrastructure/database/entities/cart-session.orm-entity';
+import { CartItemOrmEntity } from './infrastructure/database/entities/cart-item.orm-entity';
 import { CompanyRepository } from './domain/ports/company.repository.port';
 import { UserRepository } from './domain/ports/user.repository.port';
 import { CustomerRepository } from './domain/ports/customer.repository.port';
@@ -27,6 +29,9 @@ import { MessageRepository } from './domain/ports/message.repository.port';
 import { OrderRepository } from './domain/ports/order.repository.port';
 import { OrderItemRepository } from './domain/ports/order-item.repository.port';
 import { CategoryRepository } from './domain/ports/category.repository.port';
+import { ImageStoragePort } from './domain/ports/image-storage.port';
+import { CartSessionRepository } from './domain/ports/cart-session.repository.port';
+import { CartItemRepository } from './domain/ports/cart-item.repository.port';
 import { CompanyWhatsappCredentialRepository } from './domain/ports/company-whatsapp-credential.repository.port';
 import { CompanyWhatsappAppRepository } from './domain/ports/company-whatsapp-app.repository.port';
 import { WhatsappMessageSender } from './domain/ports/whatsapp-message-sender.port';
@@ -45,6 +50,8 @@ import { CompanyWhatsappCredentialTypeormRepository } from './infrastructure/rep
 import { CompanyWhatsappAppTypeormRepository } from './infrastructure/repositories/company-whatsapp-app.typeorm-repository';
 import { ExternalIdentityTypeormRepository } from './infrastructure/repositories/external-identity.typeorm-repository';
 import { ConversationStateTypeormRepository } from './infrastructure/repositories/conversation-state.typeorm-repository';
+import { CartSessionTypeormRepository } from './infrastructure/repositories/cart-session.typeorm-repository';
+import { CartItemTypeormRepository } from './infrastructure/repositories/cart-item.typeorm-repository';
 import { RegisterUserUseCase } from './application/use-cases/register-user.use-case';
 import { LoginUserUseCase } from './application/use-cases/login-user.use-case';
 import { CreateProductUseCase } from './application/use-cases/create-product.use-case';
@@ -73,6 +80,13 @@ import { UpsertCompanyWhatsappAppUseCase } from './application/use-cases/upsert-
 import { VerifyWhatsappWebhookUseCase } from './application/use-cases/verify-whatsapp-webhook.use-case';
 import { HandleWhatsappWebhookUseCase } from './application/use-cases/handle-whatsapp-webhook.use-case';
 import { HandleInboundChannelMessageUseCase } from './application/use-cases/handle-inbound-channel-message.use-case';
+import { GetOrCreateActiveCartSessionUseCase } from './application/use-cases/get-or-create-active-cart-session.use-case';
+import { AddItemToCartUseCase } from './application/use-cases/add-item-to-cart.use-case';
+import { ViewCartUseCase } from './application/use-cases/view-cart.use-case';
+import { UpdateCartItemQuantityUseCase } from './application/use-cases/update-cart-item-quantity.use-case';
+import { RemoveCartItemUseCase } from './application/use-cases/remove-cart-item.use-case';
+import { ClearCartUseCase } from './application/use-cases/clear-cart.use-case';
+import { ExpireOldCartSessionsUseCase } from './application/use-cases/expire-old-cart-sessions.use-case';
 import { ToolExecutionService } from './application/services/tool-execution.service';
 import { OnboardingProfileExtractorService } from './application/services/onboarding-profile-extractor.service';
 import { AssistantOnboardingToolsService } from './application/services/assistant-onboarding-tools.service';
@@ -89,6 +103,7 @@ import { WhatsappWebhookController } from './interfaces/http/controllers/whatsap
 import { JwtAuthGuard } from './interfaces/http/guards/jwt-auth.guard';
 import { AiModule } from './infrastructure/ai/ai.module';
 import { MetaWhatsappService } from './infrastructure/whatsapp/meta-whatsapp.service';
+import { CloudinaryImageStorageService } from './infrastructure/external-services/cloudinary/cloudinary-image-storage.service';
 
 @Module({
   imports: [
@@ -116,6 +131,8 @@ import { MetaWhatsappService } from './infrastructure/whatsapp/meta-whatsapp.ser
           ExternalIdentityOrmEntity,
           ConversationStateOrmEntity,
           CategoryOrmEntity,
+          CartSessionOrmEntity,
+          CartItemOrmEntity,
         ],
         synchronize: false,
       }),
@@ -134,6 +151,8 @@ import { MetaWhatsappService } from './infrastructure/whatsapp/meta-whatsapp.ser
       ExternalIdentityOrmEntity,
       ConversationStateOrmEntity,
       CategoryOrmEntity,
+      CartSessionOrmEntity,
+      CartItemOrmEntity,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -192,7 +211,15 @@ import { MetaWhatsappService } from './infrastructure/whatsapp/meta-whatsapp.ser
     ToolExecutionService,
     OnboardingProfileExtractorService,
     AssistantOnboardingToolsService,
+    GetOrCreateActiveCartSessionUseCase,
+    AddItemToCartUseCase,
+    ViewCartUseCase,
+    UpdateCartItemQuantityUseCase,
+    RemoveCartItemUseCase,
+    ClearCartUseCase,
+    ExpireOldCartSessionsUseCase,
     MetaWhatsappService,
+    CloudinaryImageStorageService,
     CreateConversationUseCase,
     GetConversationsUseCase,
     CreateMessageUseCase,
@@ -252,8 +279,20 @@ import { MetaWhatsappService } from './infrastructure/whatsapp/meta-whatsapp.ser
       useClass: ConversationStateTypeormRepository,
     },
     {
+      provide: CartSessionRepository,
+      useClass: CartSessionTypeormRepository,
+    },
+    {
+      provide: CartItemRepository,
+      useClass: CartItemTypeormRepository,
+    },
+    {
       provide: WhatsappMessageSender,
       useExisting: MetaWhatsappService,
+    },
+    {
+      provide: ImageStoragePort,
+      useExisting: CloudinaryImageStorageService,
     },
   ],
 })

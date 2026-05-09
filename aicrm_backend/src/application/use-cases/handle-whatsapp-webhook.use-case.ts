@@ -17,6 +17,17 @@ interface WhatsappWebhookMessageValue {
   text?: {
     body?: string;
   };
+  interactive?: {
+    list_reply?: {
+      id?: string;
+      title?: string;
+      description?: string;
+    };
+    button_reply?: {
+      id?: string;
+      title?: string;
+    };
+  };
 }
 
 interface WhatsappWebhookValue {
@@ -76,14 +87,24 @@ export class HandleWhatsappWebhookUseCase {
 
         const messages = Array.isArray(value?.messages) ? value.messages : [];
         for (const message of messages) {
-          if (!message.text?.body) {
+          const interactiveReplyId =
+            message.interactive?.list_reply?.id ??
+            message.interactive?.button_reply?.id ??
+            null;
+          const interactiveReplyTitle =
+            message.interactive?.list_reply?.title ??
+            message.interactive?.button_reply?.title ??
+            null;
+          const inboundBody = message.text?.body ?? interactiveReplyId ?? interactiveReplyTitle;
+
+          if (!inboundBody) {
             continue;
           }
 
           const extracted: IncomingWhatsappMessage = {
             waId: message.from ?? null,
             from: message.from ?? null,
-            body: message.text?.body ?? null,
+            body: inboundBody,
             messageId: message.id ?? null,
           };
 
@@ -110,6 +131,8 @@ export class HandleWhatsappWebhookUseCase {
               metadata: {
                 whatsappAppId: app.id,
                 phoneNumberId: app.phoneNumberId,
+                interactiveReplyId,
+                interactiveReplyTitle,
               },
             });
 
