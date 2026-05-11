@@ -64,9 +64,26 @@
 - Sintoma: matching incompleto para texto libre.
 - Solucion: normalizacion + matching dinamico por nombre/slug/alias derivado.
 
-## 3) Pendiente inmediato - Checkout mock / orden mock
+## 3) Checkout mock / orden mock (implementado)
+## Estado actualizado (2026-05-10)
+- `ConfirmCartCheckoutUseCase` implementado.
+- `MockPaymentProvider` implementado con escenarios:
+  - `approved`
+  - `rejected`
+  - `pending`
+  - `error`
+- Tabla nueva `payment_transactions` implementada via migracion:
+  - `1710000000011-AddPaymentTransactions`
+- Integracion en WhatsApp:
+  - trigger deterministico por texto para checkout.
+  - confirmacion final por texto antes de crear orden.
+  - cancelacion de checkout manteniendo carrito.
 
-## Flujo objetivo
+### Seguridad de datos
+- No se guardan datos sensibles de tarjeta.
+- Solo se persisten metadatos mock seguros (`method_type`, `last4`, `brand`, `provider`).
+
+## Flujo implementado
 1. Usuario agrega productos al carrito.
 2. Usuario solicita confirmar compra.
 3. Backend abre `checkout_mock`.
@@ -76,21 +93,23 @@
 7. Generacion de factura mock (estructura inicial).
 8. Confirmacion final por WhatsApp.
 
-## Estados propuestos
-- `active`
-- `checkout_pending`
-- `completed`
-- `canceled`
+## Estados usados actualmente
+- Conversacion (`conversation_states.context.checkoutState`):
+  - `CHECKOUT_WAITING_CONFIRMATION`
+  - `CHECKOUT_COMPLETED`
+  - `CHECKOUT_FAILED`
+- Carrito (`cart_sessions.status`):
+  - `active`
+  - `checked_out`
+  - `expired`
+  - `abandoned`
 
-## Requerimientos pendientes
-- Maximo 8 productos distintos por carrito.
-- Validacion de stock al confirmar checkout.
-- Manejo de expiracion de carrito y revalidacion.
-- Confirmacion final antes de crear orden.
-- Snapshots obligatorios:
-  - producto
-  - precio
-  - moneda
+## Validaciones aplicadas antes de crear orden
+- carrito activo
+- carrito no vacio
+- producto activo
+- categoria activa
+- stock suficiente
 
 ## Tablas involucradas
 - `cart_sessions`
@@ -102,7 +121,7 @@
 `cart -> checkout -> order -> invoice`
 
 ## 4) Integracion futura de pasarela de pagos (roadmap)
-- No implementado en esta fase.
+- No implementado en esta fase (solo mock).
 
 ## Providers posibles
 - Stripe
@@ -142,6 +161,27 @@ Cada empresa debe poder configurar:
 - Cumplir PCI delegando datos sensibles al provider.
 - Guardar solo referencias/token/payment intent cuando aplique.
 
+## Tabla implementada en fase mock
+`payment_transactions`
+- `id`
+- `company_id`
+- `customer_id`
+- `order_id` (nullable)
+- `provider`
+- `status`
+- `amount`
+- `currency`
+- `mock_reference`
+- `method_type`
+- `last4`
+- `brand`
+- `metadata_json`
+- `created_at`
+- `updated_at`
+
+Migracion:
+- `1710000000011-AddPaymentTransactions`
+
 ## 5) Facturacion electronica futura
 - Factura mock inicial.
 - PDF futuro.
@@ -150,18 +190,18 @@ Cada empresa debe poder configurar:
 - Integracion futura DIAN/servicio fiscal.
 - Envio por email/WhatsApp.
 
-## 6) Testing futuro
+## 6) Testing (estado actual y pendientes)
 
-## Unit tests pendientes
-- carrito
-- checkout
-- generacion de orden
-- order items
-- calculo de totales
-- validacion de stock
-- expiracion de carrito
-- limites de carrito
-- handlers de webhooks de pago
+## Unit tests implementados
+- `MockPaymentProvider` (approved/rejected/pending/error).
+- `ConfirmCartCheckoutUseCase` (positivos y negativos base).
+- Handler WhatsApp para checkout mock (inicio/confirmacion/cancelacion/no interferencia base).
+
+## Pendiente de validacion
+- rerun completo de tests antes de merge.
+- pruebas manuales reales por WhatsApp.
+- validar anti-duplicado de ordenes ante mensajes repetidos.
+- validar escenarios de cancelacion y errores de negocio en ambiente integrado.
 
 ## E2E tests pendientes
 - `WhatsApp -> carrito -> checkout -> orden mock`

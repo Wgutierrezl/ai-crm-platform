@@ -23,6 +23,7 @@ import { ConversationStateRepository } from '../../domain/ports/conversation-sta
 import { ConversationState } from '../../domain/entities/conversation-state.entity';
 import { CompanyRepository } from '../../domain/ports/company.repository.port';
 import { Company } from '../../domain/entities/company.entity';
+import { ConfirmCartCheckoutUseCase } from './confirm-cart-checkout.use-case';
 
 export interface HandleInboundChannelMessageInput {
   companyId: string;
@@ -52,7 +53,14 @@ type SelectionResult =
   | { kind: 'cart_decrement_product' | 'cart_remove_product'; productId: string }
   | null;
 
-type DeterministicIntent = 'catalog' | 'categories' | 'cart_view' | null;
+type DeterministicIntent =
+  | 'catalog'
+  | 'categories'
+  | 'cart_view'
+  | 'checkout_start'
+  | 'checkout_confirm'
+  | 'checkout_cancel'
+  | null;
 
 @Injectable()
 export class HandleInboundChannelMessageUseCase {
@@ -72,6 +80,7 @@ export class HandleInboundChannelMessageUseCase {
     private readonly clearCartUseCase: ClearCartUseCase,
     private readonly conversationStateRepository: ConversationStateRepository,
     private readonly companyRepository: CompanyRepository,
+    private readonly confirmCartCheckoutUseCase: ConfirmCartCheckoutUseCase,
   ) {}
 
   async execute(
@@ -155,6 +164,17 @@ export class HandleInboundChannelMessageUseCase {
 
     const deterministicIntent = this.detectDeterministicIntent(input.text);
     this.logger.log(`[InboundRouter] deterministicIntent=${deterministicIntent ?? 'none'}`);
+
+    if (deterministicIntent === 'checkout_start') {
+      return this.startMockCheckout(input, resolved);
+    }
+    if (deterministicIntent === 'checkout_cancel') {
+      const cancelResult = await this.cancelMockCheckout(input, resolved);
+      if (cancelResult.shouldReply) return cancelResult;
+    }
+    if (deterministicIntent === 'checkout_confirm') {
+      return this.confirmMockCheckout(input, resolved);
+    }
 
     if (deterministicIntent === 'catalog' || deterministicIntent === 'categories') {
       await this.clearSelectedProductContext(
@@ -310,7 +330,7 @@ export class HandleInboundChannelMessageUseCase {
   }
 
   private detectDeterministicIntent(text: string): DeterministicIntent {
-    const normalized = String(text ?? '').toLowerCase().trim();
+    const normalized = this.normalizeText(String(text ?? ''));
     const catalogPhrases = [
       'muestrame productos',
       'muéstrame productos',
@@ -334,6 +354,24 @@ export class HandleInboundChannelMessageUseCase {
     ];
     const showProductsPhrases = ['mostrar productos', 'muéstrame productos'];
     const cartPhrases = ['ver carrito', 'mi carrito'];
+    const checkoutStartPhrases = [
+      'confirmar compra',
+      'finalizar compra',
+      'comprar carrito',
+      'pagar pedido',
+      'simular pago',
+      'checkout',
+      'pagar',
+    ];
+    const checkoutConfirmPhrases = [
+      'si confirmar',
+      'sí confirmar',
+      'confirmo',
+      'confirmar',
+      'si',
+      'sí',
+    ];
+    const checkoutCancelPhrases = ['cancelar checkout', 'cancelar compra', 'cancelar'];
 
     if (
       catalogPhrases.some((p) => normalized.includes(p)) ||
@@ -343,6 +381,10 @@ export class HandleInboundChannelMessageUseCase {
     }
     if (categoryPhrases.some((p) => normalized.includes(p))) return 'categories';
     if (cartPhrases.some((p) => normalized.includes(p))) return 'cart_view';
+    if (checkoutStartPhrases.some((p) => normalized.includes(p))) return 'checkout_start';
+    if (checkoutCancelPhrases.some((p) => normalized.includes(p))) return 'checkout_cancel';
+    if (checkoutConfirmPhrases.some((p) => normalized === p || normalized.includes(p)))
+      return 'checkout_confirm';
     return null;
   }
 
@@ -525,9 +567,7 @@ export class HandleInboundChannelMessageUseCase {
     }
 
     if (directSelection.kind === 'cart_checkout_mock') {
-      const reply = 'Checkout mock listo. En la siguiente fase conectamos generacion de orden y pago real.';
-      await this.persistBot(input.companyId, resolved.conversation.id, input.channel, reply);
-      return { shouldReply: true, reply, recipientExternalUserId: input.externalUserId, image: null, interactiveList: null };
+      return this.startMockCheckout(input, resolved);
     }
 
     if (directSelection.kind === 'nav_categories') {
@@ -890,6 +930,142 @@ export class HandleInboundChannelMessageUseCase {
         {
           ...(state.context ?? {}),
           lastSelectedCategoryId: categoryId,
+        },
+        state.createdAt,
+        new Date(),
+      ),
+    );
+  }
+
+  private getCheckoutState(state: ConversationState | null): string | null {
+    return String(state?.context?.checkoutState ?? '').trim() || null;
+  }
+
+  private async startMockCheckout(
+    input: HandleInboundChannelMessageInput,
+    resolved: Awaited<
+      ReturnType<AssistantOnboardingToolsService['ASSISTANT_RESOLVE_USER_IDENTITY']>
+    >,
+  ): Promise<HandleInboundChannelMessageOutput> {
+    const cart = await this.viewCartUseCase.execute({
+      companyId: input.companyId,
+      customerId: resolved.customer.id,
+      conversationId: resolved.conversation.id,
+      channel: input.channel,
+    });
+    if (cart.items.length === 0) {
+      const reply = 'No hay productos en tu carrito para comprar.';
+      await this.persistBot(input.companyId, resolved.conversation.id, input.channel, reply);
+      return { shouldReply: true, reply, recipientExternalUserId: input.externalUserId, image: null, interactiveList: null };
+    }
+
+    const lines = cart.items.map(
+      (item, idx) =>
+        `${idx + 1}. ${item.productNameSnapshot} x${item.quantity} = ${item.currencySnapshot} ${item.quantity * item.unitPriceSnapshot}`,
+    );
+    const reply = [
+      'Resumen de tu compra (checkout mock):',
+      '',
+      ...lines,
+      '',
+      `Subtotal/Total: ${cart.totals.currency} ${cart.totals.subtotal}`,
+      `Moneda: ${cart.totals.currency}`,
+      '',
+      'Escribe "si confirmar" para simular pago o "cancelar" para detener.',
+    ].join('\n');
+    await this.persistCheckoutState(
+      resolved.state,
+      input.companyId,
+      resolved.conversation.id,
+      'CHECKOUT_WAITING_CONFIRMATION',
+    );
+    await this.persistBot(input.companyId, resolved.conversation.id, input.channel, reply);
+    return { shouldReply: true, reply, recipientExternalUserId: input.externalUserId, image: null, interactiveList: null };
+  }
+
+  private async confirmMockCheckout(
+    input: HandleInboundChannelMessageInput,
+    resolved: Awaited<
+      ReturnType<AssistantOnboardingToolsService['ASSISTANT_RESOLVE_USER_IDENTITY']>
+    >,
+  ): Promise<HandleInboundChannelMessageOutput> {
+    if (this.getCheckoutState(resolved.state) !== 'CHECKOUT_WAITING_CONFIRMATION') {
+      const reply = 'Primero revisemos tu carrito. Escribe "confirmar compra" para iniciar checkout.';
+      await this.persistBot(input.companyId, resolved.conversation.id, input.channel, reply);
+      return { shouldReply: true, reply, recipientExternalUserId: input.externalUserId, image: null, interactiveList: null };
+    }
+
+    const result = await this.confirmCartCheckoutUseCase.execute({
+      companyId: input.companyId,
+      customerId: resolved.customer.id,
+      conversationId: resolved.conversation.id,
+      channel: input.channel,
+      paymentScenario: 'approved',
+    });
+    if (result.paymentStatus === 'approved' && result.order) {
+      await this.persistCheckoutState(
+        resolved.state,
+        input.companyId,
+        resolved.conversation.id,
+        'CHECKOUT_COMPLETED',
+      );
+      const reply = `Pago mock aprobado. Tu orden ${result.order.id.slice(0, 8)} fue creada por ${result.order.total}.`;
+      await this.persistBot(input.companyId, resolved.conversation.id, input.channel, reply);
+      return { shouldReply: true, reply, recipientExternalUserId: input.externalUserId, image: null, interactiveList: null };
+    }
+
+    await this.persistCheckoutState(
+      resolved.state,
+      input.companyId,
+      resolved.conversation.id,
+      'CHECKOUT_FAILED',
+    );
+    const reply =
+      result.paymentStatus === 'pending'
+        ? 'Tu pago mock quedo pendiente. El carrito sigue activo para reintentar.'
+        : 'El pago mock fue rechazado o fallo. Tu carrito sigue activo para reintentar.';
+    await this.persistBot(input.companyId, resolved.conversation.id, input.channel, reply);
+    return { shouldReply: true, reply, recipientExternalUserId: input.externalUserId, image: null, interactiveList: null };
+  }
+
+  private async cancelMockCheckout(
+    input: HandleInboundChannelMessageInput,
+    resolved: Awaited<
+      ReturnType<AssistantOnboardingToolsService['ASSISTANT_RESOLVE_USER_IDENTITY']>
+    >,
+  ): Promise<HandleInboundChannelMessageOutput> {
+    const checkoutState = this.getCheckoutState(resolved.state);
+    if (!checkoutState || !checkoutState.startsWith('CHECKOUT_')) {
+      return { shouldReply: false, reply: null, recipientExternalUserId: input.externalUserId, image: null, interactiveList: null };
+    }
+    await this.persistCheckoutState(
+      resolved.state,
+      input.companyId,
+      resolved.conversation.id,
+      'CHECKOUT_FAILED',
+    );
+    const reply = 'Checkout cancelado. Tu carrito permanece activo.';
+    await this.persistBot(input.companyId, resolved.conversation.id, input.channel, reply);
+    return { shouldReply: true, reply, recipientExternalUserId: input.externalUserId, image: null, interactiveList: null };
+  }
+
+  private async persistCheckoutState(
+    state: ConversationState | null,
+    companyId: string,
+    conversationId: string,
+    checkoutState: string,
+  ): Promise<void> {
+    if (!state) return;
+    await this.conversationStateRepository.update(
+      new ConversationState(
+        state.id,
+        conversationId,
+        companyId,
+        state.status,
+        state.registrationStep,
+        {
+          ...(state.context ?? {}),
+          checkoutState,
         },
         state.createdAt,
         new Date(),

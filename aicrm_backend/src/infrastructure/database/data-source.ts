@@ -15,6 +15,7 @@ import { ConversationStateOrmEntity } from './entities/conversation-state.orm-en
 import { CategoryOrmEntity } from './entities/category.orm-entity';
 import { CartSessionOrmEntity } from './entities/cart-session.orm-entity';
 import { CartItemOrmEntity } from './entities/cart-item.orm-entity';
+import { PaymentTransactionOrmEntity } from './entities/payment-transaction.orm-entity';
 
 dotenv.config();
 
@@ -41,6 +42,7 @@ export const AppDataSource = new DataSource({
     CategoryOrmEntity,
     CartSessionOrmEntity,
     CartItemOrmEntity,
+    PaymentTransactionOrmEntity,
   ],
   migrations: ['src/infrastructure/database/migrations/*.ts'],
   synchronize: false,

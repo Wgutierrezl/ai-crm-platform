@@ -20,6 +20,7 @@ import { ConversationStateOrmEntity } from './infrastructure/database/entities/c
 import { CategoryOrmEntity } from './infrastructure/database/entities/category.orm-entity';
 import { CartSessionOrmEntity } from './infrastructure/database/entities/cart-session.orm-entity';
 import { CartItemOrmEntity } from './infrastructure/database/entities/cart-item.orm-entity';
+import { PaymentTransactionOrmEntity } from './infrastructure/database/entities/payment-transaction.orm-entity';
 import { CompanyRepository } from './domain/ports/company.repository.port';
 import { UserRepository } from './domain/ports/user.repository.port';
 import { CustomerRepository } from './domain/ports/customer.repository.port';
@@ -34,6 +35,8 @@ import { CartSessionRepository } from './domain/ports/cart-session.repository.po
 import { CartItemRepository } from './domain/ports/cart-item.repository.port';
 import { CompanyWhatsappCredentialRepository } from './domain/ports/company-whatsapp-credential.repository.port';
 import { CompanyWhatsappAppRepository } from './domain/ports/company-whatsapp-app.repository.port';
+import { PaymentProviderPort } from './domain/ports/payment-provider.port';
+import { PaymentTransactionRepository } from './domain/ports/payment-transaction.repository.port';
 import { WhatsappMessageSender } from './domain/ports/whatsapp-message-sender.port';
 import { ExternalIdentityRepository } from './domain/ports/external-identity.repository.port';
 import { ConversationStateRepository } from './domain/ports/conversation-state.repository.port';
@@ -52,6 +55,7 @@ import { ExternalIdentityTypeormRepository } from './infrastructure/repositories
 import { ConversationStateTypeormRepository } from './infrastructure/repositories/conversation-state.typeorm-repository';
 import { CartSessionTypeormRepository } from './infrastructure/repositories/cart-session.typeorm-repository';
 import { CartItemTypeormRepository } from './infrastructure/repositories/cart-item.typeorm-repository';
+import { PaymentTransactionTypeormRepository } from './infrastructure/repositories/payment-transaction.typeorm-repository';
 import { RegisterUserUseCase } from './application/use-cases/register-user.use-case';
 import { LoginUserUseCase } from './application/use-cases/login-user.use-case';
 import { CreateProductUseCase } from './application/use-cases/create-product.use-case';
@@ -87,6 +91,7 @@ import { UpdateCartItemQuantityUseCase } from './application/use-cases/update-ca
 import { RemoveCartItemUseCase } from './application/use-cases/remove-cart-item.use-case';
 import { ClearCartUseCase } from './application/use-cases/clear-cart.use-case';
 import { ExpireOldCartSessionsUseCase } from './application/use-cases/expire-old-cart-sessions.use-case';
+import { ConfirmCartCheckoutUseCase } from './application/use-cases/confirm-cart-checkout.use-case';
 import { ToolExecutionService } from './application/services/tool-execution.service';
 import { OnboardingProfileExtractorService } from './application/services/onboarding-profile-extractor.service';
 import { AssistantOnboardingToolsService } from './application/services/assistant-onboarding-tools.service';
@@ -104,6 +109,7 @@ import { JwtAuthGuard } from './interfaces/http/guards/jwt-auth.guard';
 import { AiModule } from './infrastructure/ai/ai.module';
 import { MetaWhatsappService } from './infrastructure/whatsapp/meta-whatsapp.service';
 import { CloudinaryImageStorageService } from './infrastructure/external-services/cloudinary/cloudinary-image-storage.service';
+import { MockPaymentProvider } from './infrastructure/payments/mock-payment.provider';
 
 @Module({
   imports: [
@@ -133,6 +139,7 @@ import { CloudinaryImageStorageService } from './infrastructure/external-service
           CategoryOrmEntity,
           CartSessionOrmEntity,
           CartItemOrmEntity,
+          PaymentTransactionOrmEntity,
         ],
         synchronize: false,
       }),
@@ -153,6 +160,7 @@ import { CloudinaryImageStorageService } from './infrastructure/external-service
       CategoryOrmEntity,
       CartSessionOrmEntity,
       CartItemOrmEntity,
+      PaymentTransactionOrmEntity,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -218,7 +226,9 @@ import { CloudinaryImageStorageService } from './infrastructure/external-service
     RemoveCartItemUseCase,
     ClearCartUseCase,
     ExpireOldCartSessionsUseCase,
+    ConfirmCartCheckoutUseCase,
     MetaWhatsappService,
+    MockPaymentProvider,
     CloudinaryImageStorageService,
     CreateConversationUseCase,
     GetConversationsUseCase,
@@ -285,6 +295,14 @@ import { CloudinaryImageStorageService } from './infrastructure/external-service
     {
       provide: CartItemRepository,
       useClass: CartItemTypeormRepository,
+    },
+    {
+      provide: PaymentTransactionRepository,
+      useClass: PaymentTransactionTypeormRepository,
+    },
+    {
+      provide: PaymentProviderPort,
+      useExisting: MockPaymentProvider,
     },
     {
       provide: WhatsappMessageSender,

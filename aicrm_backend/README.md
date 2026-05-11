@@ -20,6 +20,20 @@ Backend NestJS para CRM multi-tenant con arquitectura hexagonal e integracion de
 - Registro interno de credenciales WhatsApp: `POST /api/v1/company-whatsapp-credentials`
 - Respuesta automatica temporal outbound ya funcional
 
+### WhatsApp checkout mock (estado actual)
+- Checkout mock conversacional implementado desde bot WhatsApp.
+- Inicio deterministico por texto (`confirmar compra`, `checkout`, `pagar`, etc.).
+- Confirmacion deterministica (`si confirmar` / `sí confirmar`).
+- Cancelacion deterministica (`cancelar`) cuando checkout esta activo.
+- Simulacion de pago mock con estados:
+  - `approved`
+  - `rejected`
+  - `pending`
+  - `error`
+- Si `approved`: crea orden + items, registra transaccion mock y cierra carrito.
+- Si `rejected|pending|error`: mantiene carrito activo y no confirma orden pagada.
+- Persistencia de transacciones mock en `payment_transactions`.
+
 ## Arquitectura
 
 Estructura hexagonal:
@@ -77,6 +91,8 @@ Respuesta temporal actual:
 3. Introducir registro de ejecucion de tools (`tool_executions`) con auditoria.
 4. Integrar estrategia de prompts por capas en `OpenAIService` (base/canal/asistente/tenant).
 5. Pruebas unitarias y e2e del flujo WhatsApp onboarding + IA.
+6. Probar manualmente checkout mock desde WhatsApp y validar escenarios negativos.
+7. Verificar/aplicar migracion `payment_transactions` si no esta aplicada en entorno local.
 
 ## Estado nuevo: flujo conversacional WhatsApp (implementado)
 

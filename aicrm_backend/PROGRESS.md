@@ -1,5 +1,100 @@
 # PROGRESS - AI CRM Backend
 
+## Entrada 2026-05-10 (checkout mock WhatsApp + pagos mock)
+
+### Estado implementado en esta sesion
+- Se implemento flujo mock de checkout desde WhatsApp en `HandleInboundChannelMessageUseCase`.
+- Se agrego deteccion deterministica de inicio de checkout por texto:
+  - `confirmar compra`
+  - `finalizar compra`
+  - `comprar carrito`
+  - `pagar pedido`
+  - `simular pago`
+  - `checkout`
+  - `pagar`
+- Se agrego confirmacion deterministica:
+  - `si confirmar`
+  - `sí confirmar`
+- Se agrego cancelacion deterministica:
+  - `cancelar`
+- Se reutilizo seleccion interactiva existente:
+  - `cart:checkout_mock`
+
+### Estados conversacionales usados
+- Persistidos en `conversation_states.context.checkoutState`:
+  - `CHECKOUT_WAITING_CONFIRMATION`
+  - `CHECKOUT_COMPLETED`
+  - `CHECKOUT_FAILED`
+
+### Caso de uso y validaciones de checkout
+- Nuevo caso de uso:
+  - `ConfirmCartCheckoutUseCase`
+- Validaciones previas a crear orden:
+  - carrito activo
+  - carrito no vacio
+  - producto activo
+  - categoria activa
+  - stock suficiente
+
+### Simulacion de pagos mock
+- Se implemento puerto:
+  - `PaymentProviderPort`
+- Se implemento proveedor:
+  - `MockPaymentProvider`
+- Escenarios soportados:
+  - `approved`
+  - `rejected`
+  - `pending`
+  - `error`
+
+### Resultado por estado de pago mock
+- Si `approved`:
+  - crea `Order`
+  - crea `OrderItems`
+  - registra `PaymentTransaction` mock
+  - limpia carrito
+  - marca sesion de carrito como `checked_out`
+- Si `rejected`, `pending` o `error`:
+  - no confirma orden pagada
+  - mantiene carrito activo
+  - registra transaccion mock para trazabilidad
+
+### Persistencia de pagos mock
+- Nueva entidad/repositorio:
+  - `PaymentTransaction`
+- Nueva tabla via migracion:
+  - `payment_transactions`
+- Migracion creada:
+  - `1710000000011-AddPaymentTransactions`
+
+### Seguridad de datos de pago
+- No se almacenan datos sensibles de tarjeta:
+  - no PAN
+  - no CVV
+  - no fecha de expiracion
+- Solo datos mock seguros (ejemplo):
+  - `method_type`
+  - `last4`
+  - `brand`
+  - `provider`
+  - `mock_reference`
+  - `metadata_json`
+
+### Testing implementado en esta sesion
+- Pruebas unitarias agregadas para:
+  - `MockPaymentProvider`
+  - `ConfirmCartCheckoutUseCase`
+  - flujo de checkout en `HandleInboundChannelMessageUseCase`
+
+### Pendientes inmediatos (siguiente sesion)
+1. Probar manualmente el flujo mock real extremo a extremo desde WhatsApp.
+2. Volver a correr tests unitarios antes de merge.
+3. Verificar/aplicar migracion `payment_transactions` en entorno local si aun no esta aplicada.
+4. Validar que no se dupliquen ordenes ante mensajes repetidos.
+5. Validar comportamiento de cancelacion de checkout.
+6. Validar escenarios: carrito vacio, producto inactivo, categoria inactiva y stock insuficiente.
+7. Planificar pasarela real y webhooks/reconciliacion de pagos para fase futura.
+
 ## Funcionalidades implementadas
 - Arquitectura hexagonal base creada (domain/application/infrastructure/interfaces).
 - Entidades de dominio implementadas: Company, User, Customer, Product, Conversation, Message, Order, OrderItem.
