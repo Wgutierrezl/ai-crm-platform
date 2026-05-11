@@ -12,5 +12,13 @@ export abstract class CartSessionRepository {
     id: string,
     companyId: string,
   ): Promise<CartSession | null>;
+  abstract transitionStatus(
+    input: {
+      id: string;
+      companyId: string;
+      fromStatus: CartSession['status'];
+      toStatus: CartSession['status'];
+    },
+  ): Promise<boolean>;
   abstract expireOldSessions(referenceDate: Date): Promise<number>;
 }

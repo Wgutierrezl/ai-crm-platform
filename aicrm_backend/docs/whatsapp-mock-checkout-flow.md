@@ -23,6 +23,27 @@ Se guardan en `conversation_states.context.checkoutState`:
 - `CHECKOUT_COMPLETED`
 - `CHECKOUT_FAILED`
 
+## Idempotencia fuerte implementada (2026-05-11)
+- Inbound WhatsApp:
+  - `messages` ahora tiene indice unico:
+    - `UQ_messages_company_channel_message_notnull (companyId, source_channel, channel_message_id)`.
+  - Se mantiene compatible con mensajes internos:
+    - `channel_message_id` puede ser `NULL` y no bloquea inserts internos.
+- Checkout confirm:
+  - Se agrega `idempotencyKey` por confirmacion de mensaje:
+    - formato actual: `whatsapp:<channel>:<channelMessageId>`.
+  - Reintento del mismo mensaje no crea orden duplicada.
+- Concurrencia carrito:
+  - `cart_sessions.status` ahora usa transicion atomica:
+    - `active -> checkout_pending -> checked_out|active`.
+  - Si otro proceso intenta confirmar al mismo tiempo, no crea segunda orden.
+- Transacciones mock:
+  - `payment_transactions` ahora guarda:
+    - `cart_session_id`
+    - `idempotency_key`
+  - Constraint unico:
+    - `UQ_payment_transactions_company_idempotency (company_id, idempotency_key)`.
+
 ## Flujo
 1. Usuario navega catalogo y agrega productos.
 2. Usuario pide checkout.
@@ -46,6 +67,26 @@ Se guardan en `conversation_states.context.checkoutState`:
    - guarda transaccion mock
    - responde para reintentar
 
+## Validacion de sesion actual (2026-05-11)
+- El flujo fue probado en WhatsApp.
+- Confirmado:
+  - `checkout_confirm` detectado,
+  - orden creada,
+  - items creados,
+  - `payment_transactions` registrada,
+  - respuesta enviada al usuario.
+- Correo:
+  - confirmacion de compra por SMTP Gmail probada en OK tras corregir `.env`.
+- Pendiente:
+  - probar correo de bienvenida al completar onboarding.
+
+## Incidencia de limpieza de datos de prueba
+- Al borrar customers de prueba con historial de checkout, se observo:
+  - `Error Code: 1451 ... FK_payment_transactions_order ...`
+- Requiere:
+  - revisar politica de FK para testing vs produccion,
+  - definir estrategia de limpieza segura en dev/test.
+
 ## Limites del mock
 - No hay pasarela real.
 - No se cobra dinero real.
@@ -63,6 +104,16 @@ Se guardan en `conversation_states.context.checkoutState`:
 - Webhooks de conciliacion.
 - Estados asincronos de autorizacion/captura/reembolso.
 - Idempotencia de pagos por `provider_reference` y `checkout_intent_id`.
+
+## Como probar duplicados (checklist rapido)
+1. Enviar confirmacion `si confirmar` con un `channel_message_id` dado.
+2. Reenviar el mismo evento webhook con el mismo `channel_message_id`.
+3. Verificar:
+   - no se crea segunda orden,
+   - no se crean `order_items` duplicados,
+   - no se crea segunda `payment_transaction` con misma `idempotency_key`.
+4. Enviar una nueva confirmacion con `channel_message_id` diferente:
+   - debe comportarse como intento nuevo (si el carrito sigue `active`).
 
 ## Pendientes de validacion de la fase mock
 1. Probar manualmente el flujo completo real desde WhatsApp.

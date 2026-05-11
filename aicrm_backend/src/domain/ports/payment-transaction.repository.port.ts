@@ -4,4 +4,15 @@ export abstract class PaymentTransactionRepository {
   abstract create(
     transaction: PaymentTransaction,
   ): Promise<PaymentTransaction>;
+  abstract update(
+    transaction: PaymentTransaction,
+  ): Promise<PaymentTransaction>;
+  abstract findByIdempotencyKey(
+    companyId: string,
+    idempotencyKey: string,
+  ): Promise<PaymentTransaction | null>;
+  abstract findLatestByCartSessionId(
+    companyId: string,
+    cartSessionId: string,
+  ): Promise<PaymentTransaction | null>;
 }

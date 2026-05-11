@@ -37,6 +37,36 @@ class InMemoryCartSessionRepo extends CartSessionRepository {
   async findByIdAndCompanyId(id: string, companyId: string): Promise<CartSession | null> {
     return this.sessions.find((it) => it.id === id && it.companyId === companyId) ?? null;
   }
+  async transitionStatus(input: {
+    id: string;
+    companyId: string;
+    fromStatus: CartSession['status'];
+    toStatus: CartSession['status'];
+  }): Promise<boolean> {
+    const found = this.sessions.find(
+      (it) =>
+        it.id === input.id &&
+        it.companyId === input.companyId &&
+        it.status === input.fromStatus,
+    );
+    if (!found) return false;
+    this.sessions = this.sessions.map((it) =>
+      it.id === found.id
+        ? new CartSession(
+            it.id,
+            it.companyId,
+            it.customerId,
+            it.conversationId,
+            it.channel,
+            input.toStatus,
+            it.expiresAt,
+            it.createdAt,
+            new Date(),
+          )
+        : it,
+    );
+    return true;
+  }
   async expireOldSessions(referenceDate: Date): Promise<number> {
     let affected = 0;
     this.sessions = this.sessions.map((it) => {

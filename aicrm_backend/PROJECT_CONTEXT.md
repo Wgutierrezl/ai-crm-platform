@@ -1,5 +1,57 @@
 # PROJECT CONTEXT - AI CRM Backend
 
+## Actualizacion 2026-05-11 - Checkout mock validado + SMTP Gmail operativo
+
+### Estado validado de checkout mock en canal WhatsApp
+- Flujo validado en canal:
+  - inicio checkout desde carrito,
+  - confirmacion de compra,
+  - creacion de `Order`,
+  - creacion de `OrderItems`,
+  - registro de `PaymentTransaction`,
+  - respuesta final al usuario por WhatsApp.
+- Aclaracion:
+  - pago: simulado (mock),
+  - orden + trazabilidad en MySQL: reales.
+
+### SMTP Gmail transaccional (HTML)
+- Integracion activa por arquitectura hexagonal:
+  - puerto: `EmailSenderPort`,
+  - adapter: `GmailSmtpEmailSender`,
+  - servicio: `TransactionalEmailService`.
+- Evento probado:
+  - confirmacion de compra por email HTML: **OK**.
+- Nota operativa:
+  - el error SMTP inicial fue por configuracion incorrecta en `.env`.
+  - tras corregir `.env`, envio exitoso.
+- Comportamiento de resiliencia:
+  - si SMTP falla, no revierte orden ni rompe flujo WhatsApp.
+- Pendiente de validacion manual:
+  - correo de bienvenida al completar onboarding.
+
+### Incidente de integridad referencial en limpieza de testing
+- Error observado al borrar customer de prueba:
+  - `Error Code: 1451 ... FK_payment_transactions_order ...`
+- Diagnostico:
+  - la limpieza por cascade no cubre de forma segura `customers -> orders -> payment_transactions`.
+- Decision pendiente:
+  - definir politica de borrado por entorno:
+    - `dev/test`: limpieza controlada (script/migracion correctiva),
+    - `prod`: politica conservadora para preservar trazabilidad.
+
+### Siguiente paso funcional priorizado
+- Implementar **PDF real** de recibo de compra (no factura legal, no mock PDF).
+- Enviar adjunto automaticamente en correo de confirmacion de compra.
+- Evaluar:
+  - Puppeteer (preferido para HTML->PDF),
+  - pdfkit (alternativa liviana).
+
+### Fase futura (no implementar aun)
+- OAuth Google para registro/completitud de perfil:
+  - obtener email verificado,
+  - mejorar UX onboarding,
+  - habilitar futuras integraciones Google.
+
 ## Descripcion del proyecto
 Backend de CRM multi-tenant orientado a ventas, con IA conversacional para asistir a clientes y automatizar acciones de negocio como consulta de productos, creacion de clientes y creacion de pedidos.
 

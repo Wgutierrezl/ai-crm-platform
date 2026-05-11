@@ -1,5 +1,6 @@
 export type CartSessionStatus =
   | 'active'
+  | 'checkout_pending'
   | 'checked_out'
   | 'expired'
   | 'abandoned';

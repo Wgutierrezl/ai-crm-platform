@@ -32,7 +32,7 @@ export class CartSessionOrmEntity {
   channel: string;
 
   @Column({ type: 'varchar', length: 30, default: 'active' })
-  status: 'active' | 'checked_out' | 'expired' | 'abandoned';
+  status: 'active' | 'checkout_pending' | 'checked_out' | 'expired' | 'abandoned';
 
   @Column({ name: 'expires_at', type: 'datetime' })
   expiresAt: Date;

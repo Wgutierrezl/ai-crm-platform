@@ -24,6 +24,7 @@ import { ConversationState } from '../../domain/entities/conversation-state.enti
 import { CompanyRepository } from '../../domain/ports/company.repository.port';
 import { Company } from '../../domain/entities/company.entity';
 import { ConfirmCartCheckoutUseCase } from './confirm-cart-checkout.use-case';
+import { TransactionalEmailService } from '../services/transactional-email.service';
 
 export interface HandleInboundChannelMessageInput {
   companyId: string;
@@ -81,6 +82,7 @@ export class HandleInboundChannelMessageUseCase {
     private readonly conversationStateRepository: ConversationStateRepository,
     private readonly companyRepository: CompanyRepository,
     private readonly confirmCartCheckoutUseCase: ConfirmCartCheckoutUseCase,
+    private readonly transactionalEmailService: TransactionalEmailService,
   ) {}
 
   async execute(
@@ -152,6 +154,12 @@ export class HandleInboundChannelMessageUseCase {
         firstName: collected.customer.firstName,
         isNew: !resolved.customerExists,
       });
+      if (collected.completed) {
+        await this.transactionalEmailService.sendWelcomeOnOnboardingCompleted({
+          companyId: input.companyId,
+          customer: collected.customer,
+        });
+      }
       await this.persistBot(input.companyId, resolved.conversation.id, input.channel, reply);
       return { shouldReply: true, reply, recipientExternalUserId: input.externalUserId, image: null, interactiveList: null };
     }
@@ -1001,6 +1009,9 @@ export class HandleInboundChannelMessageUseCase {
       conversationId: resolved.conversation.id,
       channel: input.channel,
       paymentScenario: 'approved',
+      idempotencyKey: input.channelMessageId
+        ? `whatsapp:${input.channel}:${input.channelMessageId}`
+        : undefined,
     });
     if (result.paymentStatus === 'approved' && result.order) {
       await this.persistCheckoutState(

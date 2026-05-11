@@ -196,6 +196,9 @@ Migracion:
 - `MockPaymentProvider` (approved/rejected/pending/error).
 - `ConfirmCartCheckoutUseCase` (positivos y negativos base).
 - Handler WhatsApp para checkout mock (inicio/confirmacion/cancelacion/no interferencia base).
+- Idempotencia checkout:
+  - misma `idempotencyKey` no crea doble orden.
+  - mensaje inbound duplicado no reprocesa checkout.
 
 ## Pendiente de validacion
 - rerun completo de tests antes de merge.
@@ -205,6 +208,62 @@ Migracion:
 
 ## E2E tests pendientes
 - `WhatsApp -> carrito -> checkout -> orden mock`
+
+## Endurecimiento de idempotencia aplicado (2026-05-11)
+- Migracion: `1710000000012-HardenCheckoutIdempotency`.
+- Mensajes:
+  - indice unico `UQ_messages_company_channel_message_notnull`.
+- Pagos mock:
+  - columnas nuevas `cart_session_id` + `idempotency_key`.
+  - indice unico `UQ_payment_transactions_company_idempotency`.
+- Checkout:
+  - lock ligero por estado (`active -> checkout_pending`) para evitar doble confirmacion concurrente.
+
+## Correos transaccionales SMTP (2026-05-11)
+- Se agrega confirmacion de compra por correo HTML via SMTP Gmail.
+- Trigger de envio:
+  - solo cuando checkout mock queda `approved` y la orden ya fue creada.
+- Si SMTP falla:
+  - se loguea error,
+  - no se revierte la orden,
+  - no se rompe el flujo de canal.
+- Ver detalle tecnico y configuracion en:
+  - `docs/smtp-transactional-emails.md`
+
+## Validacion real de flujo (2026-05-11)
+- Flujo checkout mock probado en WhatsApp:
+  - se confirma compra,
+  - se crea orden,
+  - se crean items,
+  - se registra transaccion mock,
+  - se responde al usuario.
+- Pago sigue siendo mock; orden/trazabilidad son reales en BD.
+
+## Incidente de limpieza de testing (FK)
+- SQL:
+  - `DELETE FROM customers WHERE id = 'a3ea08eb-3bc9-4e9b-bfd0-d5d5fe38eb3d';`
+- Error:
+  - `Error Code: 1451 ... FK_payment_transactions_order ...`
+- Impacto:
+  - bloquea limpieza de customers de prueba con historial de checkout.
+- Pendiente:
+  - revisar FK `payment_transactions.order_id`,
+  - decidir politica:
+    - `ON DELETE CASCADE`,
+    - `ON DELETE SET NULL`,
+    - o bloqueo intencional en produccion + script controlado para dev/test.
+
+## Proxima entrega prioritaria: PDF real de recibo
+- No implementar PDF mock.
+- Generar PDF real con datos reales de orden:
+  - id orden, fecha, cliente, email, telefono/WhatsApp,
+  - productos, cantidades, precios unitarios, subtotales, total, moneda,
+  - estado de pago mock, referencia `PaymentTransaction`,
+  - nota de entorno de prueba.
+- Adjuntar PDF automaticamente al correo SMTP de confirmacion.
+- Evaluacion tecnica:
+  - preferido: Puppeteer (si entorno lo soporta),
+  - alternativa: pdfkit.
 
 ## 7) Mejoras futuras UX conversacional
 - respuestas mas naturales/humanas

@@ -87,6 +87,22 @@ export class CartSessionTypeormRepository implements CartSessionRepository {
     return found ? this.toDomain(found) : null;
   }
 
+  async transitionStatus(input: {
+    id: string;
+    companyId: string;
+    fromStatus: CartSession['status'];
+    toStatus: CartSession['status'];
+  }): Promise<boolean> {
+    const result = await this.ormRepo.update(
+      { id: input.id, companyId: input.companyId, status: input.fromStatus },
+      {
+        status: input.toStatus,
+        updatedAt: new Date(),
+      },
+    );
+    return (result.affected ?? 0) > 0;
+  }
+
   async expireOldSessions(referenceDate: Date): Promise<number> {
     const result = await this.ormRepo
       .createQueryBuilder()

@@ -41,6 +41,25 @@
 - Existing users can skip full onboarding path.
 - External identity and customer reuse are active.
 - Profile extraction captures multiple fields in one message.
+- Correo de bienvenida HTML al completar onboarding (si email valido).
+
+## Welcome Email Trigger
+- Se dispara cuando `ASSISTANT_COLLECT_PROFILE_DATA` retorna `completed=true`.
+- Condiciones:
+  - customer con email valido por formato,
+  - configuracion SMTP disponible.
+- Si SMTP falla:
+  - se registra error,
+  - no se rompe el flujo de onboarding/WhatsApp.
+
+## Estado de validacion de correo onboarding (2026-05-11)
+- Implementacion: lista en backend.
+- Prueba manual pendiente:
+  - completar onboarding real de usuario nuevo con email valido,
+  - confirmar recepcion de correo de bienvenida.
+- Nota:
+  - en la sesion actual se valido en productivo local el correo de compra,
+  - el correo onboarding queda en cola de validacion funcional manual.
 
 ## Current Instabilities (Observed)
 - Resueltas en esta iteracion para flujo NAME -> EMAIL -> DOCUMENT.

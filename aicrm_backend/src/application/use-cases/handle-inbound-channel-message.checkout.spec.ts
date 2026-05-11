@@ -13,9 +13,11 @@ describe('HandleInboundChannelMessageUseCase checkout flow', () => {
     new Date(),
   );
 
-  const build = () => {
+  const build = (options?: { duplicatedInbound?: boolean }) => {
     const messageRepository = {
-      findByChannelMessageId: jest.fn().mockResolvedValue(null),
+      findByChannelMessageId: jest
+        .fn()
+        .mockResolvedValue(options?.duplicatedInbound ? { id: 'existing-msg' } : null),
       create: jest.fn().mockResolvedValue(undefined),
     };
     const processIncomingMessageUseCase = {
@@ -57,6 +59,10 @@ describe('HandleInboundChannelMessageUseCase checkout flow', () => {
         paymentTransaction: null,
       }),
     };
+    const transactionalEmailService = {
+      sendWelcomeOnOnboardingCompleted: jest.fn().mockResolvedValue(undefined),
+      sendOrderConfirmation: jest.fn().mockResolvedValue(undefined),
+    };
     const categoryRepository = { findActiveByCompanyId: jest.fn().mockResolvedValue([]), findById: jest.fn() };
     const productRepository = { findByIdAndCompanyId: jest.fn(), findById: jest.fn() };
 
@@ -75,8 +81,16 @@ describe('HandleInboundChannelMessageUseCase checkout flow', () => {
       conversationStateRepository as any,
       companyRepository as any,
       confirmCartCheckoutUseCase as any,
+      transactionalEmailService as any,
     );
-    return { uc, confirmCartCheckoutUseCase, conversationStateRepository, onboardingTools, toolExecutionService };
+    return {
+      uc,
+      confirmCartCheckoutUseCase,
+      conversationStateRepository,
+      onboardingTools,
+      toolExecutionService,
+      messageRepository,
+    };
   };
 
   it('starts checkout when user writes confirmar compra', async () => {
@@ -117,6 +131,11 @@ describe('HandleInboundChannelMessageUseCase checkout flow', () => {
     });
     expect(result.reply).toContain('Pago mock aprobado');
     expect(confirmCartCheckoutUseCase.execute).toHaveBeenCalled();
+    expect(confirmCartCheckoutUseCase.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        idempotencyKey: 'whatsapp:whatsapp:m-2',
+      }),
+    );
   });
 
   it('cancelar keeps flow isolated and responds when checkout is active', async () => {
@@ -159,6 +178,24 @@ describe('HandleInboundChannelMessageUseCase checkout flow', () => {
       metadata: { interactiveReplyId: 'category:cat-1' },
     });
     expect(result.shouldReply).toBe(true);
+    expect(confirmCartCheckoutUseCase.execute).not.toHaveBeenCalled();
+  });
+
+  it('does not process duplicated channel message id', async () => {
+    const { uc, confirmCartCheckoutUseCase, messageRepository } = build({
+      duplicatedInbound: true,
+    });
+    const duplicatedResult = await uc.execute({
+      companyId: 'company-1',
+      channel: 'whatsapp',
+      externalUserId: 'wa-1',
+      phone: '300',
+      text: 'si confirmar',
+      channelMessageId: 'm-dup',
+    });
+
+    expect(duplicatedResult.shouldReply).toBe(false);
+    expect(messageRepository.create).not.toHaveBeenCalled();
     expect(confirmCartCheckoutUseCase.execute).not.toHaveBeenCalled();
   });
 });

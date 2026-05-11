@@ -1,5 +1,104 @@
 # PROGRESS - AI CRM Backend
 
+## Entrada 2026-05-11 (checkout mock validado + SMTP Gmail + incidencia FK delete)
+
+### 1) Checkout mock probado en flujo real de WhatsApp
+- Se probo el flujo de checkout mock desde WhatsApp.
+- El usuario inicia checkout desde el carrito (`cart:checkout_mock` o texto).
+- Se detecta correctamente `deterministicIntent=checkout_confirm`.
+- Resultado validado en backend:
+  - se crea `Order`,
+  - se crean `OrderItems`,
+  - se registra `PaymentTransaction`,
+  - se responde al usuario por WhatsApp.
+- Aclaracion funcional:
+  - el pago sigue siendo **simulado**,
+  - la orden y la trazabilidad en BD son **reales**.
+
+### 2) SMTP Gmail integrado y probado
+- Se integro envio de correos transaccionales HTML por SMTP Gmail.
+- Configuracion via variables:
+  - `SMTP_HOST=smtp.gmail.com`
+  - `SMTP_PORT=587`
+  - `SMTP_SECURE=false`
+  - `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`
+- Se detecto que el error SMTP inicial fue por copia/configuracion incorrecta en `.env`.
+- Tras corregir `.env`, el correo de confirmacion de compra se envio correctamente.
+- Politica confirmada:
+  - si falla correo, **no se revierte** la orden.
+- Estado de pruebas:
+  - correo de compra: **probado OK**.
+  - correo de bienvenida onboarding: **pendiente de prueba manual integrada**.
+
+### 3) Incidencia al borrar customer de prueba (FK)
+- SQL ejecutado:
+  - `DELETE FROM customers WHERE id = 'a3ea08eb-3bc9-4e9b-bfd0-d5d5fe38eb3d';`
+- Error observado:
+  - `Error Code: 1451. Cannot delete or update a parent row: a foreign key constraint fails (ai_crm.payment_transactions, CONSTRAINT FK_payment_transactions_order FOREIGN KEY (order_id) REFERENCES orders (id))`
+- Interpretacion:
+  - el cascade previo no cubre completamente la cadena:
+    - `customers -> orders -> payment_transactions`.
+  - MySQL bloquea borrado cuando existen `payment_transactions` referenciando `orders`.
+- Pendiente tecnico:
+  - revisar FK `payment_transactions.order_id`,
+  - definir politica por entorno:
+    - testing/dev: limpieza controlada,
+    - produccion: bloqueo o politica conservadora.
+  - preparar migracion correctiva o script seguro de limpieza local.
+
+### 4) Siguiente fase: PDF real de recibo (no mock)
+- El siguiente paso no es PDF mock.
+- Checkout/pago continuan simulados, pero el PDF debe ser **real** sobre datos reales de orden.
+- Campos requeridos del PDF:
+  - id/numero de orden,
+  - fecha,
+  - cliente,
+  - email,
+  - telefono/WhatsApp si existe,
+  - productos,
+  - cantidades,
+  - precios unitarios,
+  - subtotales,
+  - total,
+  - moneda,
+  - estado del pago mock,
+  - referencia de `PaymentTransaction`,
+  - nota de entorno de prueba.
+- Envio objetivo:
+  - adjuntar PDF automaticamente al correo de confirmacion de compra (SMTP Gmail).
+- Evaluacion tecnica:
+  - opcion recomendada inicial: Puppeteer (si el entorno lo soporta),
+  - alternativa: pdfkit.
+
+### 5) Futuro propuesto: OAuth Google para registro
+- Fase futura, no implementar aun.
+- Objetivo:
+  - obtener email verificado,
+  - reducir errores de sintaxis,
+  - mejorar UX onboarding,
+  - preparar integraciones Google futuras.
+- Backend futuro:
+  - Google OAuth Client ID/Secret,
+  - callback endpoint,
+  - validacion token/profile,
+  - asociacion con `Customer/User`.
+- Frontend futuro:
+  - boton `Continuar con Google`,
+  - flujo OAuth,
+  - manejo sesion/token.
+- WhatsApp futuro:
+  - evaluar link seguro para completar registro con Google y vincular identidad.
+
+### 6) Pendientes inmediatos
+1. Probar correo de bienvenida al completar onboarding.
+2. Revisar/corregir cascades FKs para limpiar customers de prueba.
+3. Crear script seguro de limpieza para entorno local/test.
+4. Reforzar idempotencia checkout + `payment_transactions` en escenarios de reintentos reales.
+5. Mejorar visual/UX de plantillas HTML de correo.
+6. Implementar PDF real de recibo y adjuntarlo al correo.
+7. Evaluar OAuth Google para registro.
+8. Evaluar checkout visual mock o sandbox Stripe/MercadoPago en fase posterior.
+
 ## Entrada 2026-05-10 (checkout mock WhatsApp + pagos mock)
 
 ### Estado implementado en esta sesion

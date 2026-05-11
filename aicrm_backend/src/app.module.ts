@@ -31,6 +31,7 @@ import { OrderRepository } from './domain/ports/order.repository.port';
 import { OrderItemRepository } from './domain/ports/order-item.repository.port';
 import { CategoryRepository } from './domain/ports/category.repository.port';
 import { ImageStoragePort } from './domain/ports/image-storage.port';
+import { EmailSenderPort } from './domain/ports/email-sender.port';
 import { CartSessionRepository } from './domain/ports/cart-session.repository.port';
 import { CartItemRepository } from './domain/ports/cart-item.repository.port';
 import { CompanyWhatsappCredentialRepository } from './domain/ports/company-whatsapp-credential.repository.port';
@@ -95,6 +96,7 @@ import { ConfirmCartCheckoutUseCase } from './application/use-cases/confirm-cart
 import { ToolExecutionService } from './application/services/tool-execution.service';
 import { OnboardingProfileExtractorService } from './application/services/onboarding-profile-extractor.service';
 import { AssistantOnboardingToolsService } from './application/services/assistant-onboarding-tools.service';
+import { TransactionalEmailService } from './application/services/transactional-email.service';
 import { AuthController } from './interfaces/http/controllers/auth.controller';
 import { ProductController } from './interfaces/http/controllers/product.controller';
 import { CategoryController } from './interfaces/http/controllers/category.controller';
@@ -110,6 +112,7 @@ import { AiModule } from './infrastructure/ai/ai.module';
 import { MetaWhatsappService } from './infrastructure/whatsapp/meta-whatsapp.service';
 import { CloudinaryImageStorageService } from './infrastructure/external-services/cloudinary/cloudinary-image-storage.service';
 import { MockPaymentProvider } from './infrastructure/payments/mock-payment.provider';
+import { GmailSmtpEmailSender } from './infrastructure/email/gmail-smtp-email-sender';
 
 @Module({
   imports: [
@@ -219,6 +222,7 @@ import { MockPaymentProvider } from './infrastructure/payments/mock-payment.prov
     ToolExecutionService,
     OnboardingProfileExtractorService,
     AssistantOnboardingToolsService,
+    TransactionalEmailService,
     GetOrCreateActiveCartSessionUseCase,
     AddItemToCartUseCase,
     ViewCartUseCase,
@@ -230,6 +234,7 @@ import { MockPaymentProvider } from './infrastructure/payments/mock-payment.prov
     MetaWhatsappService,
     MockPaymentProvider,
     CloudinaryImageStorageService,
+    GmailSmtpEmailSender,
     CreateConversationUseCase,
     GetConversationsUseCase,
     CreateMessageUseCase,
@@ -311,6 +316,10 @@ import { MockPaymentProvider } from './infrastructure/payments/mock-payment.prov
     {
       provide: ImageStoragePort,
       useExisting: CloudinaryImageStorageService,
+    },
+    {
+      provide: EmailSenderPort,
+      useExisting: GmailSmtpEmailSender,
     },
   ],
 })

@@ -1,11 +1,13 @@
 import { Entity, PrimaryColumn, Column, CreateDateColumn, Index } from 'typeorm';
 
 @Entity('messages')
-@Index('IDX_messages_company_channel_message', [
+@Index('UQ_messages_company_channel_message_notnull', [
   'companyId',
   'sourceChannel',
   'channelMessageId',
-])
+], {
+  unique: true,
+})
 export class MessageOrmEntity {
   @PrimaryColumn('varchar', { length: 36 })
   id!: string;
