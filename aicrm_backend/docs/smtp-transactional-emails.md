@@ -66,7 +66,16 @@ Para Gmail/Google Workspace no usar password normal de cuenta.
 - Validacion de email es de formato (no verifica existencia real del inbox).
 
 ## Pendiente futuro
-- Generar recibo/PDF real.
-- Adjuntar PDF en confirmacion de compra.
+- Recibo PDF real integrado como adjunto en confirmacion de compra.
 - Outbox/queue para reintentos robustos.
 - Evaluar OAuth Google para reducir errores de email en onboarding (fase futura).
+
+## Update 2026-05-11 - Adjuntos PDF en confirmacion de compra
+- Se extiende `EmailSenderPort` con `attachments` opcionales.
+- `GmailSmtpEmailSender` ahora soporta `multipart/mixed` + adjuntos base64.
+- Se mantiene compatibilidad completa:
+  - welcome onboarding sin adjuntos,
+  - confirmacion de compra con adjunto PDF cuando se genera correctamente.
+- Resiliencia:
+  - si falla generacion de PDF, se loguea error y se envia correo sin adjunto.
+  - si falla SMTP, no revierte orden ni rompe flujo WhatsApp.

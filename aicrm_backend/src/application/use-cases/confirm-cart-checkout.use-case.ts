@@ -263,8 +263,11 @@ export class ConfirmCartCheckoutUseCase {
           companyId: input.companyId,
           customer,
           orderId: createdOrder.id,
+          orderDate: createdOrder.createdAt,
           total: createdOrder.total,
           currency,
+          paymentStatus: tx.status,
+          paymentReference: tx.mockReference,
           items: items.map((item) => ({
             productName: item.productNameSnapshot,
             quantity: item.quantity,

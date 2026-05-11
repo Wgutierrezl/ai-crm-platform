@@ -289,6 +289,15 @@ describe('ConfirmCartCheckoutUseCase', () => {
     const { uc, transactionalEmailService } = build('approved', 'ana@example.com');
     await uc.execute({ companyId, customerId, channel });
     expect(transactionalEmailService.sendOrderConfirmation).toHaveBeenCalledTimes(1);
+    expect(transactionalEmailService.sendOrderConfirmation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        companyId,
+        orderId: expect.any(String),
+        orderDate: expect.any(Date),
+        paymentStatus: 'approved',
+        paymentReference: 'MOCK-1',
+      }),
+    );
   });
 
   it('does not fail checkout if email sender throws', async () => {

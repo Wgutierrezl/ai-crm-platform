@@ -1,5 +1,29 @@
 # PROGRESS - AI CRM Backend
 
+## Entrada 2026-05-11 (PDF real de recibo adjunto a correo de compra)
+
+### Implementado
+- Generador PDF real desacoplado por puerto:
+  - `PdfReceiptGeneratorPort`
+  - adapter inicial `PdfkitReceiptGenerator`
+- Extension de correo transaccional con adjuntos:
+  - `EmailSenderPort` acepta `attachments` opcionales
+  - `GmailSmtpEmailSender` envia adjuntos en `multipart/mixed`
+- Integracion en checkout `approved`:
+  - tras crear `Order`, `OrderItems`, `PaymentTransaction`,
+  - se genera PDF real con datos reales,
+  - se adjunta al correo HTML de confirmacion.
+- Resiliencia mantenida:
+  - falla PDF => log y correo sin adjunto,
+  - falla SMTP => log, sin rollback de orden ni ruptura de WhatsApp.
+
+### Estado funcional
+- Onboarding por WhatsApp + correo de bienvenida: probado OK.
+- Correo de confirmacion de compra HTML: probado OK.
+- Recibo PDF real: integrado como adjunto de compra.
+- Pago: continua mock (simulado).
+- Recibo PDF: no es factura legal.
+
 ## Entrada 2026-05-11 (checkout mock validado + SMTP Gmail + incidencia FK delete)
 
 ### 1) Checkout mock probado en flujo real de WhatsApp

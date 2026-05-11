@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Socket } from 'net';
 import { connect as tlsConnect, TLSSocket } from 'tls';
-import { EmailSenderPort, SendEmailInput } from '../../domain/ports/email-sender.port';
+import { EmailAttachment, EmailSenderPort, SendEmailInput } from '../../domain/ports/email-sender.port';
 
 @Injectable()
 export class GmailSmtpEmailSender implements EmailSenderPort {
@@ -56,6 +56,7 @@ export class GmailSmtpEmailSender implements EmailSenderPort {
         subject: input.subject,
         html: input.html,
         text: input.text ?? '',
+        attachments: input.attachments,
       });
       await this.writeRaw(smtpSocket, `${body}\r\n.\r\n`);
       await this.readResponse(smtpSocket, 250);
@@ -74,29 +75,48 @@ export class GmailSmtpEmailSender implements EmailSenderPort {
     subject: string;
     html: string;
     text: string;
+    attachments?: EmailAttachment[];
   }): string {
-    const boundary = `crm_${Date.now().toString(16)}`;
+    const boundaryMixed = `crm_mixed_${Date.now().toString(16)}`;
+    const boundaryAlternative = `crm_alt_${Date.now().toString(16)}`;
     const encodedSubject = `=?UTF-8?B?${Buffer.from(input.subject, 'utf8').toString('base64')}?=`;
     const safeText = input.text.replace(/\r?\n/g, '\r\n');
-    return [
+    const lines = [
       `From: ${input.from}`,
       `To: ${input.to}`,
       `Subject: ${encodedSubject}`,
       'MIME-Version: 1.0',
-      `Content-Type: multipart/alternative; boundary="${boundary}"`,
+      `Content-Type: multipart/mixed; boundary="${boundaryMixed}"`,
       '',
-      `--${boundary}`,
+      `--${boundaryMixed}`,
+      `Content-Type: multipart/alternative; boundary="${boundaryAlternative}"`,
+      '',
+      `--${boundaryAlternative}`,
       'Content-Type: text/plain; charset="UTF-8"',
       'Content-Transfer-Encoding: 8bit',
       '',
       safeText,
-      `--${boundary}`,
+      `--${boundaryAlternative}`,
       'Content-Type: text/html; charset="UTF-8"',
       'Content-Transfer-Encoding: 8bit',
       '',
       input.html,
-      `--${boundary}--`,
-    ].join('\r\n');
+      `--${boundaryAlternative}--`,
+    ];
+
+    for (const attachment of input.attachments ?? []) {
+      lines.push(
+        `--${boundaryMixed}`,
+        `Content-Type: ${attachment.contentType}; name="${attachment.filename}"`,
+        'Content-Transfer-Encoding: base64',
+        `Content-Disposition: attachment; filename="${attachment.filename}"`,
+        '',
+        attachment.contentBase64,
+      );
+    }
+
+    lines.push(`--${boundaryMixed}--`);
+    return lines.join('\r\n');
   }
 
   private async openSocket(input: {
@@ -197,4 +217,3 @@ export class GmailSmtpEmailSender implements EmailSenderPort {
     });
   }
 }
-

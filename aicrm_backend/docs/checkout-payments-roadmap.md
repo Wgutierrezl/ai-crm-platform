@@ -265,6 +265,21 @@ Migracion:
   - preferido: Puppeteer (si entorno lo soporta),
   - alternativa: pdfkit.
 
+## Estado actualizado (2026-05-11) - PDF real integrado
+- Se integra generacion de PDF real de recibo usando adapter desacoplado (`PdfReceiptGeneratorPort`).
+- Implementacion activa inicial:
+  - `PdfkitReceiptGenerator` (pdfkit) para evitar dependencias pesadas de runtime Chromium.
+- Al confirmar checkout mock `approved`:
+  1. se crean `order`, `order_items`, `payment_transactions`,
+  2. se intenta generar PDF real con datos reales,
+  3. se envia correo HTML de confirmacion con adjunto `recibo-orden-{orderId}.pdf`.
+- Resiliencia mantenida:
+  - si PDF falla: log + correo sin adjunto,
+  - si SMTP falla: log + no rollback de orden + no ruptura de WhatsApp.
+- Aclaracion legal:
+  - el PDF es recibo de prueba (entorno mock),
+  - no es factura legal/electronica.
+
 ## 7) Mejoras futuras UX conversacional
 - respuestas mas naturales/humanas
 - botones mas contextuales

@@ -32,6 +32,7 @@ import { OrderItemRepository } from './domain/ports/order-item.repository.port';
 import { CategoryRepository } from './domain/ports/category.repository.port';
 import { ImageStoragePort } from './domain/ports/image-storage.port';
 import { EmailSenderPort } from './domain/ports/email-sender.port';
+import { PdfReceiptGeneratorPort } from './domain/ports/pdf-receipt-generator.port';
 import { CartSessionRepository } from './domain/ports/cart-session.repository.port';
 import { CartItemRepository } from './domain/ports/cart-item.repository.port';
 import { CompanyWhatsappCredentialRepository } from './domain/ports/company-whatsapp-credential.repository.port';
@@ -113,6 +114,7 @@ import { MetaWhatsappService } from './infrastructure/whatsapp/meta-whatsapp.ser
 import { CloudinaryImageStorageService } from './infrastructure/external-services/cloudinary/cloudinary-image-storage.service';
 import { MockPaymentProvider } from './infrastructure/payments/mock-payment.provider';
 import { GmailSmtpEmailSender } from './infrastructure/email/gmail-smtp-email-sender';
+import { PdfkitReceiptGenerator } from './infrastructure/pdf/pdfkit-receipt-generator';
 
 @Module({
   imports: [
@@ -235,6 +237,7 @@ import { GmailSmtpEmailSender } from './infrastructure/email/gmail-smtp-email-se
     MockPaymentProvider,
     CloudinaryImageStorageService,
     GmailSmtpEmailSender,
+    PdfkitReceiptGenerator,
     CreateConversationUseCase,
     GetConversationsUseCase,
     CreateMessageUseCase,
@@ -320,6 +323,10 @@ import { GmailSmtpEmailSender } from './infrastructure/email/gmail-smtp-email-se
     {
       provide: EmailSenderPort,
       useExisting: GmailSmtpEmailSender,
+    },
+    {
+      provide: PdfReceiptGeneratorPort,
+      useExisting: PdfkitReceiptGenerator,
     },
   ],
 })

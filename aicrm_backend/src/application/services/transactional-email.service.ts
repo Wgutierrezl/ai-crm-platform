@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { CompanyRepository } from '../../domain/ports/company.repository.port';
 import { Customer } from '../../domain/entities/customer.entity';
 import { EmailSenderPort } from '../../domain/ports/email-sender.port';
+import { PdfReceiptGeneratorPort } from '../../domain/ports/pdf-receipt-generator.port';
 
 export interface OrderEmailItem {
   productName: string;
@@ -17,6 +18,7 @@ export class TransactionalEmailService {
   constructor(
     private readonly emailSender: EmailSenderPort,
     private readonly companyRepository: CompanyRepository,
+    private readonly pdfReceiptGenerator: PdfReceiptGeneratorPort,
   ) {}
 
   async sendWelcomeOnOnboardingCompleted(input: {
@@ -53,8 +55,11 @@ export class TransactionalEmailService {
     companyId: string;
     customer: Customer | null;
     orderId: string;
+    orderDate: Date;
     total: number;
     currency: string;
+    paymentStatus: string;
+    paymentReference: string;
     items: OrderEmailItem[];
   }): Promise<void> {
     const email = String(input.customer?.email ?? '').trim();
@@ -75,6 +80,40 @@ export class TransactionalEmailService {
       currency: input.currency,
       items: input.items,
     });
+    let attachments:
+      | {
+          filename: string;
+          contentType: string;
+          contentBase64: string;
+        }[]
+      | undefined;
+
+    try {
+      const receiptPdf = await this.pdfReceiptGenerator.generatePurchaseReceipt({
+        companyName,
+        orderId: input.orderId,
+        orderDate: input.orderDate,
+        customerName,
+        customerEmail: email,
+        customerPhone: input.customer?.phone ?? null,
+        items: input.items,
+        total: input.total,
+        currency: input.currency,
+        paymentStatus: input.paymentStatus,
+        paymentReference: input.paymentReference,
+      });
+      attachments = [
+        {
+          filename: receiptPdf.fileName,
+          contentType: receiptPdf.contentType,
+          contentBase64: receiptPdf.contentBase64,
+        },
+      ];
+    } catch (error) {
+      this.logger.error(
+        `Fallo generacion PDF recibo orderId=${input.orderId} companyId=${input.companyId}: ${error instanceof Error ? error.message : 'unknown'}`,
+      );
+    }
 
     try {
       await this.emailSender.send({
@@ -82,6 +121,7 @@ export class TransactionalEmailService {
         subject,
         html,
         text: `Hola ${customerName}, tu compra ${input.orderId.slice(0, 8)} fue confirmada por ${input.currency} ${input.total}.`,
+        attachments,
       });
     } catch (error) {
       this.logger.error(
@@ -153,6 +193,7 @@ export class TransactionalEmailService {
         <div style="margin-top:16px;padding:12px;border-radius:10px;background:#eff6ff;border:1px solid #bfdbfe;">
           <strong style="color:#1d4ed8;">Total: ${this.escapeHtml(input.currency)} ${input.total.toFixed(2)}</strong>
         </div>
+        <p style="margin:14px 0 0;color:#475569;font-size:12px;">Pago simulado aprobado en entorno de prueba.</p>
       `,
     });
   }
@@ -209,4 +250,3 @@ export class TransactionalEmailService {
       .replaceAll("'", '&#39;');
   }
 }
-

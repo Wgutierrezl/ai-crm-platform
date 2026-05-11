@@ -1,5 +1,27 @@
 # PROJECT CONTEXT - AI CRM Backend
 
+## Actualizacion 2026-05-11 - Recibo PDF real en correo de compra
+
+### Estado funcional
+- Checkout/pago continua en modo mock.
+- Persistencia de `orders`, `order_items`, `payment_transactions` continua real.
+- Correo de confirmacion de compra ahora adjunta PDF real de recibo:
+  - generado desde datos reales de orden/transaccion/cliente/tenant.
+- Correo de bienvenida onboarding ya validado OK.
+
+### Arquitectura aplicada
+- Puerto nuevo: `PdfReceiptGeneratorPort`.
+- Adapter inicial: `PdfkitReceiptGenerator`.
+- Envio de correo:
+  - `EmailSenderPort` extendido con adjuntos opcionales.
+  - `GmailSmtpEmailSender` con soporte `multipart/mixed`.
+
+### Resiliencia
+- Si falla PDF o SMTP:
+  - se registra log,
+  - no se revierte la orden,
+  - no se rompe el flujo de WhatsApp.
+
 ## Actualizacion 2026-05-11 - Checkout mock validado + SMTP Gmail operativo
 
 ### Estado validado de checkout mock en canal WhatsApp
