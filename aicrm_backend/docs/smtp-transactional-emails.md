@@ -1,17 +1,16 @@
 # SMTP Gmail - Correos Transaccionales HTML
 
-## Estado implementado (2026-05-11)
-- Se agrego envio de correos transaccionales HTML desacoplado por puerto hexagonal:
+## Estado implementado y validado (2026-05-12)
+- Envio transaccional HTML activo por arquitectura hexagonal:
   - Puerto: `EmailSenderPort`
   - Adapter: `GmailSmtpEmailSender`
-  - Servicio de negocio: `TransactionalEmailService`
-
-## Estado de pruebas en sesion actual
-- Correo de confirmacion de compra: **probado OK**.
-- Correo de bienvenida onboarding: **pendiente de prueba manual integrada**.
-- Incidencia operativa detectada y resuelta:
-  - causa inicial de error SMTP: copia/configuracion incorrecta de variables en `.env`.
-  - estado posterior: envio correcto tras corregir `.env`.
+  - Servicio: `TransactionalEmailService`
+- Pruebas funcionales validadas:
+  - correo HTML de confirmacion de compra: **OK**,
+  - correo HTML de bienvenida onboarding/registro: **OK**.
+- Incidencia operativa previa resuelta:
+  - causa inicial: configuracion incorrecta en `.env`,
+  - estado final: envio SMTP estable tras correccion.
 
 ## Variables de entorno
 Configurar en `.env`:
@@ -60,22 +59,20 @@ Para Gmail/Google Workspace no usar password normal de cuenta.
   - NO se revierte onboarding ni orden,
   - NO se rompe flujo de WhatsApp.
 
-## Limitaciones actuales
-- No hay PDF adjunto en esta fase.
-- No hay cola/reintentos asincronos (job queue) todavia.
-- Validacion de email es de formato (no verifica existencia real del inbox).
+## Adjuntos PDF (estado actual)
+- Confirmacion de compra envia adjunto PDF real de recibo cuando se genera correctamente.
+- `EmailSenderPort` soporta `attachments` opcionales.
+- `GmailSmtpEmailSender` soporta `multipart/mixed` + adjuntos base64.
+- Si falla generacion de PDF:
+  - se registra log,
+  - se envia correo sin adjunto,
+  - no se revierte orden.
 
-## Pendiente futuro
-- Recibo PDF real integrado como adjunto en confirmacion de compra.
-- Outbox/queue para reintentos robustos.
-- Evaluar OAuth Google para reducir errores de email en onboarding (fase futura).
+## Limitaciones y siguientes pasos
+1. No hay outbox/queue de reintentos asincronos todavia.
+2. Validacion de email es de formato (no verifica inbox real).
+3. Mejorar tracking de entregabilidad (bounce/reject) en fase posterior.
 
-## Update 2026-05-11 - Adjuntos PDF en confirmacion de compra
-- Se extiende `EmailSenderPort` con `attachments` opcionales.
-- `GmailSmtpEmailSender` ahora soporta `multipart/mixed` + adjuntos base64.
-- Se mantiene compatibilidad completa:
-  - welcome onboarding sin adjuntos,
-  - confirmacion de compra con adjunto PDF cuando se genera correctamente.
-- Resiliencia:
-  - si falla generacion de PDF, se loguea error y se envia correo sin adjunto.
-  - si falla SMTP, no revierte orden ni rompe flujo WhatsApp.
+## Referencias
+- Detalle de recibo PDF: `docs/pdf-purchase-receipt.md`
+- Estado checkout/pagos mock: `docs/checkout-payments-roadmap.md`

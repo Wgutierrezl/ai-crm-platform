@@ -34,6 +34,11 @@ export interface RegisterResponseDto {
   email: string;
 }
 
+export interface GoogleExchangeRequestDto {
+  code: string;
+  authCode?: string;
+}
+
 export interface UserDto {
   id: string;
   email: string;

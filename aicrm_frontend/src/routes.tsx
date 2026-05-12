@@ -1,6 +1,8 @@
 import { createBrowserRouter } from "react-router";
 import Login from "./app/pages/Login";
 import Register from "./app/pages/Register";
+import GoogleAuthCallback from "./app/pages/GoogleAuthCallback";
+import GoogleAuthFailure from "./app/pages/GoogleAuthFailure";
 import Layout from "./app/components/Layout";
 import Dashboard from "./app/pages/Dashboard";
 import Products from "./app/pages/Products";
@@ -29,6 +31,18 @@ export const router = createBrowserRouter([
       {
         path: "/register",
         Component: Register,
+      },
+      {
+        path: "/auth/google/success",
+        Component: GoogleAuthCallback,
+      },
+      {
+        path: "/login/google/callback",
+        Component: GoogleAuthCallback,
+      },
+      {
+        path: "/auth/google/failure",
+        Component: GoogleAuthFailure,
       },
     ],
   },

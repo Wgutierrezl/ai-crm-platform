@@ -1,5 +1,45 @@
 # PROGRESS - AI CRM Backend
 
+## Entrada 2026-05-12 (OAuth Users/frontend + validaciones integradas)
+
+### Validaciones funcionales cerradas
+- Correo HTML de confirmacion de compra: **OK**.
+- Correo HTML de bienvenida onboarding: **OK**.
+- Recibo PDF real adjunto en correo de compra: **OK**.
+
+### Google OAuth 2.0 / OIDC (Users frontend)
+- Implementado como segundo metodo de acceso (sin reemplazar login email/password).
+- Flujo activo:
+  - `GET /auth/google/start`
+  - `GET /auth/google/callback`
+  - `POST /auth/google/exchange`
+- Seguridad:
+  - JWT backend no viaja en URL.
+  - se usa `auth_code` temporal one-time.
+- Compatibilidad corregida en exchange:
+  - backend acepta `authCode` y `code`.
+- Logging controlado agregado:
+  - Start / Callback / Exchange (backend),
+  - FrontendStart / FrontendSuccess / FrontendFailure.
+- Politica de datos:
+  - no se guardan `access_token` ni `refresh_token` en esta fase.
+
+### Limitaciones conocidas
+1. Registro Google de usuario nuevo aun requiere flujo guiado adicional para capturar:
+   - nombre de empresa,
+   - tipo de identificacion real (`NIT`/`CC`),
+   - numero de identificacion.
+2. PDF funcional pero con mejora visual pendiente.
+
+### Proximos pasos priorizados
+1. Mejorar diseno visual del PDF.
+2. Implementar flujo frontend de completar registro para usuario nuevo con Google.
+3. Endurecer pruebas E2E:
+   - OAuth frontend,
+   - onboarding + welcome email,
+   - checkout mock + PDF adjunto.
+4. Fase siguiente: OAuth Google opcional para onboarding WhatsApp Customers (sin reemplazar onboarding manual).
+
 ## Entrada 2026-05-11 (PDF real de recibo adjunto a correo de compra)
 
 ### Implementado

@@ -52,14 +52,14 @@
   - se registra error,
   - no se rompe el flujo de onboarding/WhatsApp.
 
-## Estado de validacion de correo onboarding (2026-05-11)
-- Implementacion: lista en backend.
-- Prueba manual pendiente:
-  - completar onboarding real de usuario nuevo con email valido,
-  - confirmar recepcion de correo de bienvenida.
-- Nota:
-  - en la sesion actual se valido en productivo local el correo de compra,
-  - el correo onboarding queda en cola de validacion funcional manual.
+## Estado de validacion de correo onboarding (2026-05-12)
+- Implementacion: activa en backend.
+- Prueba manual integrada: **OK**.
+  - onboarding completado,
+  - correo HTML de bienvenida recibido correctamente.
+- Si SMTP falla:
+  - se registra error,
+  - no se rompe onboarding ni canal WhatsApp.
 
 ## Current Instabilities (Observed)
 - Resueltas en esta iteracion para flujo NAME -> EMAIL -> DOCUMENT.
@@ -96,3 +96,15 @@ Reglas:
    - existing user greeting path
    - incomplete profile continuation path
    - document skip path (`omitir`)
+
+## Google OAuth para Customers (fase futura, no implementada)
+- Objetivo: opcion adicional de onboarding, sin reemplazar flujo manual.
+- Flujo esperado:
+  1. bot ofrece "Registrarme con Google",
+  2. customer abre link seguro,
+  3. callback OAuth se vincula al contexto WhatsApp (`companyId`, `customerId`, `conversationId`, `wa_id`) usando state/token temporal,
+  4. se aprovecha email verificado/nombre/foto cuando aplique.
+- Reglas:
+  - si customer ya esta registrado, no iniciar registro nuevamente,
+  - onboarding manual sigue siendo fallback obligatorio,
+  - no guardar tokens Google en fase basica.

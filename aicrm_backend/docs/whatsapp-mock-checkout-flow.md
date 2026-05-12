@@ -1,8 +1,11 @@
 # WhatsApp Mock Checkout Flow
 
 ## Documento fuente
-- Este documento es la referencia principal del flujo mock de checkout por WhatsApp.
-- Complementa a `docs/checkout-payments-roadmap.md` (roadmap y evolucion).
+- Este documento se mantiene como checklist operativo de validacion en canal.
+- Fuente funcional/roadmap principal:
+  - `docs/checkout-payments-roadmap.md`
+  - `docs/smtp-transactional-emails.md`
+  - `docs/pdf-purchase-receipt.md`
 
 ## Estado implementado
 - Inicio deterministico de checkout desde texto:
@@ -77,8 +80,11 @@ Se guardan en `conversation_states.context.checkoutState`:
   - respuesta enviada al usuario.
 - Correo:
   - confirmacion de compra por SMTP Gmail probada en OK tras corregir `.env`.
-- Pendiente:
-  - probar correo de bienvenida al completar onboarding.
+
+## Actualizacion de validaciones (2026-05-12)
+- Correo de bienvenida onboarding: **OK**.
+- Recibo PDF adjunto en confirmacion de compra: **OK**.
+- Pago se mantiene mock; orden/trazabilidad siguen reales.
 
 ## Incidencia de limpieza de datos de prueba
 - Al borrar customers de prueba con historial de checkout, se observo:

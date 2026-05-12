@@ -30,23 +30,28 @@ export default function Login() {
 
     try {
       if (!email || !password) {
-        setError("Por favor, ingrese email y contraseña válidos");
+        setError("Por favor, ingrese email y contrase\u00f1a v\u00e1lidos");
         setLoading(false);
         return;
       }
 
-      // Llamar al servicio de autenticación
       await authService.login(email, password);
 
       logger.info("Login exitoso, redirigiendo al dashboard");
       navigate("/dashboard", { replace: true });
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Error al iniciar sesión";
-      setError(errorMessage || "Error al iniciar sesión. Intenta nuevamente.");
+      const errorMessage = err instanceof Error ? err.message : "Error al iniciar sesi\u00f3n";
+      setError(errorMessage || "Error al iniciar sesi\u00f3n. Intenta nuevamente.");
       logger.error("Error en login", err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleLogin = () => {
+    const url = authService.getGoogleStartUrl();
+    logger.info("[GoogleOAuth][FrontendStart] click continuar con google", { url });
+    window.location.href = url;
   };
 
   return (
@@ -54,14 +59,12 @@ export default function Login() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mb-4">
-            <h1 className="text-3xl text-primary mb-2" style={{ fontFamily: 'var(--font-heading)' }}>
+            <h1 className="text-3xl text-primary mb-2" style={{ fontFamily: "var(--font-heading)" }}>
               CRM AI
             </h1>
           </div>
-          <CardTitle>Iniciar sesión</CardTitle>
-          <CardDescription>
-            Accede a tu cuenta para gestionar tus ventas
-          </CardDescription>
+          <CardTitle>Iniciar sesi\u00f3n</CardTitle>
+          <CardDescription>Accede a tu cuenta para gestionar tus ventas</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -85,11 +88,11 @@ export default function Login() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Contraseña</Label>
+              <Label htmlFor="password">Contrase\u00f1a</Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder="********"
                 value={password}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                 required
@@ -97,13 +100,23 @@ export default function Login() {
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Iniciando sesión..." : "Iniciar sesión"}
+              {loading ? "Iniciando sesi\u00f3n..." : "Iniciar sesi\u00f3n"}
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={handleGoogleLogin}
+              disabled={loading}
+            >
+              Continuar con Google
             </Button>
 
             <div className="text-center text-sm text-muted-foreground">
-              ¿No tienes cuenta?{" "}
+              \u00bfNo tienes cuenta?{" "}
               <Link to="/register" className="text-primary hover:underline">
-                Regístrate aquí
+                Reg\u00edstrate aqu\u00ed
               </Link>
             </div>
           </form>

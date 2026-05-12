@@ -4,11 +4,13 @@
  */
 
 import apiClient from "../client/apiClient";
+import type { AxiosError } from "axios";
 import { logger } from "../../utils/logger/logger";
 import { authStorage } from "../../utils/storage/authStorage";
 import type {
   LoginRequestDto,
   LoginResponseDto,
+  GoogleExchangeRequestDto,
   RegisterRequestDto,
   RegisterResponseDto,
 } from "../dtos/auth.dto";
@@ -45,6 +47,61 @@ export const authService = {
       return authData;
     } catch (error) {
       logger.error("Error en login", error);
+      throw error;
+    }
+  },
+
+  /**
+   * URL de inicio para OAuth con Google.
+   */
+  getGoogleStartUrl(): string {
+    const url = (
+      import.meta.env.VITE_GOOGLE_LOGIN_START_URL ||
+      `${import.meta.env.VITE_API_URL || "http://localhost:3000/api/v1"}/auth/google/start`
+    );
+    logger.info("[GoogleOAuth][FrontendStart] resolved start url", { url });
+    return url;
+  },
+
+  /**
+   * Intercambia auth code temporal por JWT propio del backend.
+   */
+  async exchangeGoogleAuthCode(code: string): Promise<LoginResponseDto> {
+    const payload: GoogleExchangeRequestDto = { authCode: code, code };
+    logger.info("[GoogleOAuth][FrontendSuccess] exchange request", {
+      hasCode: Boolean(code),
+      codeMasked: `${code.slice(0, 4)}...${code.slice(-4)}`,
+      payloadKeys: Object.keys(payload),
+    });
+    try {
+      const response = await apiClient.post<LoginResponseDto>(
+        "/auth/google/exchange",
+        payload
+      );
+
+      const authData = response.data;
+      authStorage.setAuthData({
+        token: authData.accessToken,
+        userId: authData.userId,
+        companyId: authData.companyId,
+        role: authData.role,
+      });
+
+      logger.info("[GoogleOAuth][FrontendSuccess] exchange success", {
+        userId: authData.userId,
+        companyId: authData.companyId,
+        role: authData.role,
+        jwtMasked: `${authData.accessToken.slice(0, 6)}...${authData.accessToken.slice(-6)}`,
+      });
+      return authData;
+    } catch (error: unknown) {
+      const axiosError = error as AxiosError;
+      const responseData = axiosError.response?.data as unknown;
+      logger.error("[GoogleOAuth][FrontendSuccess] exchange failed", {
+        status: axiosError.response?.status,
+        data: responseData,
+        message: axiosError.message,
+      });
       throw error;
     }
   },

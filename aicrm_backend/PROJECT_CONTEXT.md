@@ -1,5 +1,44 @@
 # PROJECT CONTEXT - AI CRM Backend
 
+## Actualizacion 2026-05-12 - Estado consolidado (SMTP + PDF + OAuth Users)
+
+### Estado operativo actual
+- Checkout/pago: mock.
+- Persistencia comercial: real (`orders`, `order_items`, `payment_transactions`).
+- Correo transaccional SMTP Gmail:
+  - confirmacion de compra HTML: **OK**,
+  - bienvenida onboarding HTML: **OK**.
+- PDF de recibo de compra:
+  - adjunto en confirmacion de compra: **OK**,
+  - no es factura legal.
+
+### OAuth Google Users/frontend (fase implementada)
+- Metodo adicional de acceso para usuarios internos.
+- Login tradicional email/password se mantiene activo.
+- Flujo:
+  - `GET /auth/google/start`
+  - `GET /auth/google/callback`
+  - `POST /auth/google/exchange`
+- JWT backend protegido:
+  - se emite por `exchange` usando `auth_code` temporal (no JWT en URL).
+- Compatibilidad:
+  - `exchange` acepta `authCode` y `code`.
+- Datos:
+  - no se guardan `access_token` ni `refresh_token` en esta fase.
+
+### Limitaciones activas
+1. Flujo de usuario Google nuevo aun no solicita en UI:
+   - nombre de empresa,
+   - tipo de identificacion real (`NIT`/`CC`),
+   - numero de identificacion.
+2. Diseno visual del PDF requiere mejora.
+
+### Siguiente fase recomendada
+1. Completar registro guiado para usuario nuevo con Google (frontend + backend controlado).
+2. Mejorar UX visual del PDF.
+3. OAuth Google para Customers/WhatsApp como opcion adicional (no reemplazo de onboarding manual).
+4. Endurecer E2E de OAuth/correos/PDF.
+
 ## Actualizacion 2026-05-11 - Recibo PDF real en correo de compra
 
 ### Estado funcional

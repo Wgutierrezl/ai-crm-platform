@@ -230,6 +230,10 @@ Migracion:
 - Ver detalle tecnico y configuracion en:
   - `docs/smtp-transactional-emails.md`
 
+## Estado actualizado de correo onboarding (2026-05-12)
+- Correo HTML de bienvenida onboarding validado en flujo real: **OK**.
+- Si SMTP falla, no se revierte onboarding ni checkout.
+
 ## Validacion real de flujo (2026-05-11)
 - Flujo checkout mock probado en WhatsApp:
   - se confirma compra,
@@ -279,6 +283,26 @@ Migracion:
 - Aclaracion legal:
   - el PDF es recibo de prueba (entorno mock),
   - no es factura legal/electronica.
+- Estado funcional:
+  - adjunto PDF en correo de compra validado: **OK**.
+- Pendiente:
+  - mejorar diseno visual del PDF (tipografia/jerarquia/branding).
+
+## OAuth Google Users/frontend (2026-05-12)
+- Implementado como acceso adicional para usuarios internos.
+- Endpoints:
+  - `GET /auth/google/start`
+  - `GET /auth/google/callback`
+  - `POST /auth/google/exchange`
+- Seguridad:
+  - `auth_code` temporal para no exponer JWT en URL.
+- Compatibilidad aplicada:
+  - exchange acepta `authCode` y `code` para evitar 400 por mismatch frontend/backend.
+- Alcance:
+  - no aplica a Customers/WhatsApp en esta fase.
+- No se guardan `access_token` ni `refresh_token`.
+- Referencia principal:
+  - `docs/google-oauth-users-frontend.md`
 
 ## 7) Mejoras futuras UX conversacional
 - respuestas mas naturales/humanas

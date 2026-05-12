@@ -21,6 +21,7 @@ import { CategoryOrmEntity } from './infrastructure/database/entities/category.o
 import { CartSessionOrmEntity } from './infrastructure/database/entities/cart-session.orm-entity';
 import { CartItemOrmEntity } from './infrastructure/database/entities/cart-item.orm-entity';
 import { PaymentTransactionOrmEntity } from './infrastructure/database/entities/payment-transaction.orm-entity';
+import { OauthIdentityOrmEntity } from './infrastructure/database/entities/oauth-identity.orm-entity';
 import { CompanyRepository } from './domain/ports/company.repository.port';
 import { UserRepository } from './domain/ports/user.repository.port';
 import { CustomerRepository } from './domain/ports/customer.repository.port';
@@ -39,6 +40,9 @@ import { CompanyWhatsappCredentialRepository } from './domain/ports/company-what
 import { CompanyWhatsappAppRepository } from './domain/ports/company-whatsapp-app.repository.port';
 import { PaymentProviderPort } from './domain/ports/payment-provider.port';
 import { PaymentTransactionRepository } from './domain/ports/payment-transaction.repository.port';
+import { OauthIdentityRepository } from './domain/ports/oauth-identity.repository.port';
+import { GoogleOidcProviderPort } from './domain/ports/google-oidc-provider.port';
+import { OauthTempStorePort } from './domain/ports/oauth-temp-store.port';
 import { WhatsappMessageSender } from './domain/ports/whatsapp-message-sender.port';
 import { ExternalIdentityRepository } from './domain/ports/external-identity.repository.port';
 import { ConversationStateRepository } from './domain/ports/conversation-state.repository.port';
@@ -58,8 +62,12 @@ import { ConversationStateTypeormRepository } from './infrastructure/repositorie
 import { CartSessionTypeormRepository } from './infrastructure/repositories/cart-session.typeorm-repository';
 import { CartItemTypeormRepository } from './infrastructure/repositories/cart-item.typeorm-repository';
 import { PaymentTransactionTypeormRepository } from './infrastructure/repositories/payment-transaction.typeorm-repository';
+import { OauthIdentityTypeormRepository } from './infrastructure/repositories/oauth-identity.typeorm-repository';
 import { RegisterUserUseCase } from './application/use-cases/register-user.use-case';
 import { LoginUserUseCase } from './application/use-cases/login-user.use-case';
+import { StartGoogleLoginUseCase } from './application/use-cases/start-google-login.use-case';
+import { HandleGoogleCallbackUseCase } from './application/use-cases/handle-google-callback.use-case';
+import { ExchangeGoogleAuthCodeUseCase } from './application/use-cases/exchange-google-auth-code.use-case';
 import { CreateProductUseCase } from './application/use-cases/create-product.use-case';
 import { GetProductsByCompanyUseCase } from './application/use-cases/get-products-by-company.use-case';
 import { UpdateProductUseCase } from './application/use-cases/update-product.use-case';
@@ -115,6 +123,8 @@ import { CloudinaryImageStorageService } from './infrastructure/external-service
 import { MockPaymentProvider } from './infrastructure/payments/mock-payment.provider';
 import { GmailSmtpEmailSender } from './infrastructure/email/gmail-smtp-email-sender';
 import { PdfkitReceiptGenerator } from './infrastructure/pdf/pdfkit-receipt-generator';
+import { GoogleOidcAdapter } from './infrastructure/oauth/google-oidc.adapter';
+import { InMemoryOauthTempStoreAdapter } from './infrastructure/security/in-memory-oauth-temp-store.adapter';
 
 @Module({
   imports: [
@@ -145,6 +155,7 @@ import { PdfkitReceiptGenerator } from './infrastructure/pdf/pdfkit-receipt-gene
           CartSessionOrmEntity,
           CartItemOrmEntity,
           PaymentTransactionOrmEntity,
+          OauthIdentityOrmEntity,
         ],
         synchronize: false,
       }),
@@ -166,6 +177,7 @@ import { PdfkitReceiptGenerator } from './infrastructure/pdf/pdfkit-receipt-gene
       CartSessionOrmEntity,
       CartItemOrmEntity,
       PaymentTransactionOrmEntity,
+      OauthIdentityOrmEntity,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -203,6 +215,9 @@ import { PdfkitReceiptGenerator } from './infrastructure/pdf/pdfkit-receipt-gene
     JwtAuthGuard,
     RegisterUserUseCase,
     LoginUserUseCase,
+    StartGoogleLoginUseCase,
+    HandleGoogleCallbackUseCase,
+    ExchangeGoogleAuthCodeUseCase,
     CreateProductUseCase,
     GetProductsByCompanyUseCase,
     UpdateProductUseCase,
@@ -238,6 +253,8 @@ import { PdfkitReceiptGenerator } from './infrastructure/pdf/pdfkit-receipt-gene
     CloudinaryImageStorageService,
     GmailSmtpEmailSender,
     PdfkitReceiptGenerator,
+    GoogleOidcAdapter,
+    InMemoryOauthTempStoreAdapter,
     CreateConversationUseCase,
     GetConversationsUseCase,
     CreateMessageUseCase,
@@ -309,6 +326,10 @@ import { PdfkitReceiptGenerator } from './infrastructure/pdf/pdfkit-receipt-gene
       useClass: PaymentTransactionTypeormRepository,
     },
     {
+      provide: OauthIdentityRepository,
+      useClass: OauthIdentityTypeormRepository,
+    },
+    {
       provide: PaymentProviderPort,
       useExisting: MockPaymentProvider,
     },
@@ -323,6 +344,14 @@ import { PdfkitReceiptGenerator } from './infrastructure/pdf/pdfkit-receipt-gene
     {
       provide: EmailSenderPort,
       useExisting: GmailSmtpEmailSender,
+    },
+    {
+      provide: GoogleOidcProviderPort,
+      useExisting: GoogleOidcAdapter,
+    },
+    {
+      provide: OauthTempStorePort,
+      useExisting: InMemoryOauthTempStoreAdapter,
     },
     {
       provide: PdfReceiptGeneratorPort,
