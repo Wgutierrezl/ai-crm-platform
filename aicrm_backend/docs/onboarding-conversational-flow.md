@@ -1,99 +1,76 @@
 # Onboarding Conversational Flow
 
-## Scope Implemented
-- WhatsApp onboarding progressive flow.
-- Identity resolution first.
-- External identity + customer + conversation reuse.
-- Conversation state persistence.
-- AI context enrichment with onboarding metadata.
+Fecha de actualizacion: 2026-05-12
 
-## Expected Lifecycle
-1. Resolve identity first (`ASSISTANT_RESOLVE_USER_IDENTITY`).
-2. Load customer + conversation + onboarding state.
-3. Branch:
-   - `registered`: skip onboarding, greet with customer name, continue assistant flow.
-   - `new_user`: start onboarding from first required field.
-   - `profile_incomplete` / `onboarding_pending`: continue from `onboardingStep`.
-4. Persist user message + bot message.
-5. Update customer profile and onboarding state consistently.
+## Estado vigente
+- Resolucion de identidad antes de IA.
+- Reuso de `external_identities`, `customers`, `conversations`.
+- Persistencia de `conversation_states`.
+- Onboarding manual + onboarding acelerado por Google OAuth customers.
 
-## Tools Available
-- `ASSISTANT_RESOLVE_USER_IDENTITY`
-- `ASSISTANT_START_ONBOARDING`
-- `ASSISTANT_COLLECT_PROFILE_DATA`
-- `ASSISTANT_REGISTER_USER`
-- `ASSISTANT_GET_USER_PROFILE`
-- `ASSISTANT_UPDATE_USER_PROFILE`
+## Maquina de estado (alto nivel)
+- `WAITING_NAME`
+- `WAITING_EMAIL`
+- `WAITING_DOCUMENT` (opcional)
+- `COMPLETED`
 
-## Prompt/Context Contract for AI
-- `customer_exists`
-- `customer_name`
-- `onboarding_completed`
-- `onboarding_step`
-- `missing_fields`
-- `customer_profile`
-- `conversation_state`
-- `available_tools`
-- `current_channel`
+## Flujo manual
+1. Resolver identidad.
+2. Si incompleto, continuar paso pendiente.
+3. Persistir cambios en customer + conversation state.
+4. Al completar, enviar welcome email (si aplica).
 
-## What Works
-- Identity resolution before AI decision path.
-- Existing users can skip full onboarding path.
-- External identity and customer reuse are active.
-- Profile extraction captures multiple fields in one message.
-- Correo de bienvenida HTML al completar onboarding (si email valido).
+## Flujo Google OAuth customers
+1. Customer solicita Google en WhatsApp.
+2. Backend genera link OAuth con state/TTL one-time.
+3. Callback valida y vincula perfil Google.
+4. Si nombre+email verificado, marca onboarding basico completo:
+   - `customer.onboardingCompleted=true`
+   - `customer.onboardingStep=COMPLETED`
+   - `profileCompletionPercentage=100`
+   - `conversation_states.registration_step=COMPLETED`
+5. En siguientes mensajes, entra a flujo normal del bot (no vuelve a pedir email).
 
-## Welcome Email Trigger
-- Se dispara cuando `ASSISTANT_COLLECT_PROFILE_DATA` retorna `completed=true`.
-- Condiciones:
-  - customer con email valido por formato,
-  - configuracion SMTP disponible.
-- Si SMTP falla:
-  - se registra error,
-  - no se rompe el flujo de onboarding/WhatsApp.
+## Contextos separados (importante)
+- Onboarding context:
+  - `conversation_states.registration_step`, `missingFields`.
+- OAuth context:
+  - `customer_oauth_link_sessions`, `customer_oauth_identities`.
+- Cart/Checkout context:
+  - `conversation_states.context.checkoutState`.
 
-## Estado de validacion de correo onboarding (2026-05-12)
-- Implementacion: activa en backend.
-- Prueba manual integrada: **OK**.
-  - onboarding completado,
-  - correo HTML de bienvenida recibido correctamente.
-- Si SMTP falla:
-  - se registra error,
-  - no se rompe onboarding ni canal WhatsApp.
+No deben pisarse entre si.
 
-## Estado actual relevante para OAuth Customers
-- `external_identities` hoy representa identidad de canal (`companyId + channel + externalUserId/wa_id`) y vincula a `customerId`.
-- `conversation_states` conserva `registration_step` y `context_json` para continuidad del onboarding.
-- `HandleWhatsappWebhookUseCase` ya soporta interacciones WhatsApp (`list_reply`, `button_reply`) y fallback a texto si falla payload interactivo.
-- `HandleInboundChannelMessageUseCase` ya maneja ruteo deterministico + onboarding manual como flujo principal.
+## Correo de bienvenida
+Servicio unificado para manual + Google OAuth.
 
-## Google OAuth para Customers (opcional, implementado en backend)
-- Objetivo: opcion adicional de onboarding, sin reemplazar flujo manual.
-- Estado:
-  - disponible en backend con endpoints dedicados de customers,
-  - onboarding manual sigue siendo camino por defecto.
-- Comportamiento:
-  - en onboarding inicial se ofrece opcion interactiva `Continuar con Google`,
-  - al elegirla, se genera link OAuth temporal (state one-time + TTL),
-  - callback vincula perfil Google a customer y retoma onboarding con campos faltantes.
-  - intenciones OAuth Google se manejan primero por routing deterministico (antes de IA).
-  - la IA no construye links OAuth; los links siempre salen del backend.
-  - si Google retorna nombre + email verificado, onboarding basico se cierra en `COMPLETED` y no se vuelve a pedir email.
+Reglas:
+- Manual completado -> `source=manual`.
+- Google OAuth completado -> `source=google_oauth`.
+- Deduplicacion por `customer.metadata.welcomeEmailSentAt`.
+- Falla SMTP no rompe onboarding ni WhatsApp.
 
-## Reglas de correo de bienvenida
-- Registro manual completado:
-  - envia welcome email (`source=manual`).
-- Registro completado por Google OAuth customers:
-  - envia el mismo welcome email (`source=google_oauth`).
-- Deduplicacion:
-  - se usa `customer.metadata.welcomeEmailSentAt`.
-  - si ya existe, se omite envio (`[OnboardingEmail] skipped already_sent`).
-- Resiliencia:
-  - si SMTP falla, el flujo conversacional continua (`[OnboardingEmail] failed but flow continues`).
-- Separacion de dominio:
-  - `external_identities` se mantiene para identidad de canal,
-  - `customer_oauth_identities` se usa para identidad OAuth de customers,
-  - no se reutilizan `oauth_identities` ni `oauth_registration_sessions` de users.
+Logs esperados:
+- `[OnboardingEmail] sent source=manual`
+- `[OnboardingEmail] sent source=google_oauth`
+- `[OnboardingEmail] skipped already_sent`
+- `[OnboardingEmail] failed but flow continues`
 
-Referencia detallada:
-- `docs/google-oauth-whatsapp-customers-roadmap.md`
+## Troubleshooting
+1. Repeticion de email tras OAuth:
+- revisar que customer y state queden en `COMPLETED` en callback.
+
+2. Onboarding reiniciado en usuario ya registrado:
+- revisar resolucion de identidad y estado normalizado.
+
+3. Correo duplicado:
+- revisar `welcomeEmailSentAt` en metadata.
+
+4. Correo no enviado:
+- revisar SMTP env + formato email customer.
+
+## Relacion con otros docs
+- OAuth users: `docs/google-oauth-users-frontend.md`
+- OAuth customers: `docs/google-oauth-whatsapp-customers-roadmap.md`
+- Checkout mock: `docs/whatsapp-mock-checkout-flow.md`
+- SMTP: `docs/smtp-transactional-emails.md`
