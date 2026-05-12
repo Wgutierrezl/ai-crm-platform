@@ -6,14 +6,13 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
-import { Company } from '../../domain/entities/company.entity';
 import { OauthIdentity } from '../../domain/entities/oauth-identity.entity';
+import { OauthRegistrationSession } from '../../domain/entities/oauth-registration-session.entity';
 import { User } from '../../domain/entities/user.entity';
-import { CompanyRepository } from '../../domain/ports/company.repository.port';
 import { GoogleOidcProviderPort } from '../../domain/ports/google-oidc-provider.port';
 import { OauthIdentityRepository } from '../../domain/ports/oauth-identity.repository.port';
+import { OauthRegistrationSessionRepository } from '../../domain/ports/oauth-registration-session.repository.port';
 import { OauthTempStorePort } from '../../domain/ports/oauth-temp-store.port';
 import { UserRepository } from '../../domain/ports/user.repository.port';
 
@@ -33,8 +32,8 @@ export class HandleGoogleCallbackUseCase {
     private readonly oidcProvider: GoogleOidcProviderPort,
     private readonly oauthTempStore: OauthTempStorePort,
     private readonly oauthIdentityRepository: OauthIdentityRepository,
+    private readonly oauthRegistrationSessionRepository: OauthRegistrationSessionRepository,
     private readonly userRepository: UserRepository,
-    private readonly companyRepository: CompanyRepository,
     private readonly configService: ConfigService,
   ) {}
 
@@ -79,33 +78,38 @@ export class HandleGoogleCallbackUseCase {
         `[GoogleOAuth][Callback] user by email exists=${Boolean(user)} email=${this.maskValue(profile.email)}`,
       );
       if (!user) {
-        const companyId = uuidv4();
-        const company = new Company(
-          companyId,
-          this.inferCompanyName(profile.email, profile.fullName),
-          new Date(),
-        );
-        await this.companyRepository.create(company);
-        this.logger.log(
-          `[GoogleOAuth][Callback] created company for new user companyId=${this.maskValue(companyId)}`,
-        );
-
-        user = await this.userRepository.create(
-          new User(
+        const ttl = Number(this.configService.get<string>('OAUTH_STATE_TTL_MINUTES', '10'));
+        const now = new Date();
+        const session = await this.oauthRegistrationSessionRepository.create(
+          new OauthRegistrationSession(
             uuidv4(),
+            'google',
+            profile.providerUserId,
             profile.email,
-            this.buildOAuthPlaceholderPasswordHash(),
-            'GOOGLE',
-            `GOOGLE-${profile.providerUserId.slice(0, 32)}`,
-            'admin',
-            companyId,
-            new Date(),
-            profile.fullName ?? undefined,
+            profile.emailVerified,
+            profile.fullName,
+            profile.pictureUrl,
+            'pending',
+            new Date(now.getTime() + Math.max(1, ttl) * 60_000),
+            null,
+            now,
+            now,
           ),
         );
-        this.logger.log(
-          `[GoogleOAuth][Callback] created new user userId=${this.maskValue(user.id)}`,
+        const authCode = await this.oauthTempStore.issueAuthCode(
+          {
+            kind: 'registration_required',
+            email: profile.email,
+            registrationSessionId: session.id,
+          },
+          Math.max(1, Math.min(ttl, 5)),
         );
+        const successBase = this.required('GOOGLE_OAUTH_SUCCESS_REDIRECT_URL');
+        const redirectUrl = `${successBase}${successBase.includes('?') ? '&' : '?'}code=${encodeURIComponent(authCode)}`;
+        this.logger.log(
+          `[GoogleOAuth][Callback] registration required sessionId=${this.maskValue(session.id)} redirect=${this.maskUrl(redirectUrl)}`,
+        );
+        return { redirectUrl };
       }
 
       const alreadyLinkedUser = await this.oauthIdentityRepository.findByProviderAndUserId(
@@ -141,6 +145,7 @@ export class HandleGoogleCallbackUseCase {
     const ttl = Number(this.configService.get<string>('OAUTH_STATE_TTL_MINUTES', '10'));
     const authCode = await this.oauthTempStore.issueAuthCode(
       {
+        kind: 'authenticated',
         userId: user.id,
         companyId: user.companyId,
         email: user.email,
@@ -163,16 +168,6 @@ export class HandleGoogleCallbackUseCase {
     const value = this.configService.get<string>(key, '').trim();
     if (!value) throw new BadRequestException(`Falta configuracion ${key}`);
     return value;
-  }
-
-  private inferCompanyName(email: string, fullName: string | null): string {
-    if (fullName?.trim()) return `${fullName.trim()} - Empresa`;
-    const [local] = email.split('@');
-    return `${local || 'Nueva'} - Empresa`;
-  }
-
-  private buildOAuthPlaceholderPasswordHash(): string {
-    return bcrypt.hashSync(`oauth_google_${uuidv4().replace(/-/g, '')}`, 10);
   }
 
   private maskValue(value: string | null | undefined): string {

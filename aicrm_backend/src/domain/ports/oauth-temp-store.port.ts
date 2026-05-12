@@ -3,10 +3,12 @@ export interface OAuthStatePayload {
 }
 
 export interface OAuthAuthCodePayload {
-  userId: string;
-  companyId: string;
+  kind?: 'authenticated' | 'registration_required';
+  userId?: string;
+  companyId?: string;
   email: string;
-  role: string;
+  role?: string;
+  registrationSessionId?: string;
 }
 
 export abstract class OauthTempStorePort {

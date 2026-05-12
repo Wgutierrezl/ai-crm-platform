@@ -28,6 +28,24 @@ export interface LoginResponseDto {
   role: string;
 }
 
+export interface GoogleExchangeAuthenticatedResponseDto {
+  status: "authenticated";
+  accessToken: string;
+  userId: string;
+  companyId: string;
+  role: string;
+}
+
+export interface GoogleExchangeRegistrationRequiredResponseDto {
+  status: "registration_required";
+  registrationToken: string;
+  email?: string;
+}
+
+export type GoogleExchangeResponseDto =
+  | GoogleExchangeAuthenticatedResponseDto
+  | GoogleExchangeRegistrationRequiredResponseDto;
+
 export interface RegisterResponseDto {
   userId: string;
   companyId: string;
@@ -35,8 +53,14 @@ export interface RegisterResponseDto {
 }
 
 export interface GoogleExchangeRequestDto {
-  code: string;
-  authCode?: string;
+  authCode: string;
+}
+
+export interface GoogleCompleteRegistrationRequestDto {
+  registrationToken: string;
+  companyName: string;
+  identificationType: "CC" | "NIT";
+  identificationNumber: string;
 }
 
 export interface UserDto {

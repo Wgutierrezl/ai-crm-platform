@@ -12,12 +12,17 @@ type StoreItem<T> = {
   expiresAt: number;
 };
 
+type ConsumedCodeItem = {
+  consumedAt: number;
+};
+
 @Injectable()
 export class InMemoryOauthTempStoreAdapter implements OauthTempStorePort {
   constructor(private readonly configService: ConfigService) {}
 
   private readonly states = new Map<string, StoreItem<OAuthStatePayload>>();
   private readonly authCodes = new Map<string, StoreItem<OAuthAuthCodePayload>>();
+  private readonly consumedAuthCodes = new Map<string, ConsumedCodeItem>();
 
   async issueState(payload: OAuthStatePayload, ttlMinutes: number): Promise<string> {
     this.cleanup();
@@ -53,8 +58,34 @@ export class InMemoryOauthTempStoreAdapter implements OauthTempStorePort {
     const item = this.authCodes.get(code);
     if (!item) return null;
     this.authCodes.delete(code);
+    this.consumedAuthCodes.set(code, { consumedAt: Date.now() });
     if (item.expiresAt < Date.now()) return null;
     return item.payload;
+  }
+
+  peekAuthCodeStatus(code: string): {
+    exists: boolean;
+    expired: boolean;
+    consumed: boolean;
+    hasUserId: boolean;
+    hasPendingRegistration: boolean;
+    expiresAtEpochMs: number | null;
+  } {
+    this.cleanup();
+    const item = this.authCodes.get(code);
+    const now = Date.now();
+    const expired = Boolean(item && item.expiresAt < now);
+    const consumed = this.consumedAuthCodes.has(code);
+    return {
+      exists: Boolean(item),
+      expired,
+      consumed,
+      hasUserId: Boolean(item?.payload?.userId),
+      hasPendingRegistration:
+        item?.payload?.kind === 'registration_required' ||
+        Boolean(item?.payload?.registrationSessionId),
+      expiresAtEpochMs: item?.expiresAt ?? null,
+    };
   }
 
   private generateToken(prefix: string): string {
@@ -71,6 +102,9 @@ export class InMemoryOauthTempStoreAdapter implements OauthTempStorePort {
     }
     for (const [code, item] of this.authCodes.entries()) {
       if (item.expiresAt < now) this.authCodes.delete(code);
+    }
+    for (const [code, item] of this.consumedAuthCodes.entries()) {
+      if (item.consumedAt + 15 * 60_000 < now) this.consumedAuthCodes.delete(code);
     }
   }
 }

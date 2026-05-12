@@ -5,10 +5,13 @@ import { LoginUserUseCase } from '../../../application/use-cases/login-user.use-
 import { StartGoogleLoginUseCase } from '../../../application/use-cases/start-google-login.use-case';
 import { HandleGoogleCallbackUseCase } from '../../../application/use-cases/handle-google-callback.use-case';
 import { ExchangeGoogleAuthCodeUseCase } from '../../../application/use-cases/exchange-google-auth-code.use-case';
+import { CompleteGoogleRegistrationUseCase } from '../../../application/use-cases/complete-google-registration.use-case';
 import { RegisterDto } from '../dtos/register.dto';
 import { LoginDto } from '../dtos/login.dto';
 import { GoogleAuthExchangeDto } from '../dtos/google-auth-exchange.dto';
+import { GoogleCompleteRegistrationDto } from '../dtos/google-complete-registration.dto';
 import type { Response } from 'express';
+import { randomUUID } from 'crypto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -21,6 +24,7 @@ export class AuthController {
     private readonly startGoogleLoginUseCase: StartGoogleLoginUseCase,
     private readonly handleGoogleCallbackUseCase: HandleGoogleCallbackUseCase,
     private readonly exchangeGoogleAuthCodeUseCase: ExchangeGoogleAuthCodeUseCase,
+    private readonly completeGoogleRegistrationUseCase: CompleteGoogleRegistrationUseCase,
   ) {}
 
   @Post('register')
@@ -114,22 +118,73 @@ export class AuthController {
   @ApiBody({ type: GoogleAuthExchangeDto })
   @ApiResponse({ status: 201, description: 'JWT emitido correctamente' })
   async googleExchange(@Body() dto: GoogleAuthExchangeDto) {
+    const traceId = randomUUID();
     const incomingCode = String(dto.authCode ?? dto.code ?? '').trim();
     const selectedField = dto.authCode ? 'authCode' : dto.code ? 'code' : 'none';
     this.logger.log(
-      `[GoogleOAuth][Exchange] request received hasAuthCode=${Boolean(dto.authCode)} hasCode=${Boolean(dto.code)} selectedField=${selectedField} code=${this.maskValue(incomingCode)}`,
+      `[GoogleOAuth][Exchange] traceId=${traceId} endpoint=POST /auth/google/exchange request received hasAuthCode=${Boolean(dto.authCode)} hasCode=${Boolean(dto.code)} selectedField=${selectedField} code=${this.maskValue(incomingCode)}`,
     );
     if (!incomingCode) {
       this.logger.warn(
-        `[GoogleOAuth][Exchange] invalid payload missing auth code hasAuthCode=${Boolean(dto.authCode)} hasCode=${Boolean(dto.code)}`,
+        `[GoogleOAuth][Exchange] traceId=${traceId} invalid payload missing auth code hasAuthCode=${Boolean(dto.authCode)} hasCode=${Boolean(dto.code)}`,
       );
       throw new BadRequestException('authCode is required');
     }
-    const response = await this.exchangeGoogleAuthCodeUseCase.execute({ code: incomingCode });
+    try {
+      const response = await this.exchangeGoogleAuthCodeUseCase.execute({
+        code: incomingCode,
+        traceId,
+      });
+      this.logger.log(
+        `[GoogleOAuth][Exchange] traceId=${traceId} response success status=${response.status} userId=${this.maskValue(response.userId)} companyId=${this.maskValue(response.companyId)} role=${response.role} jwt=${this.maskValue(response.accessToken)} registrationToken=${this.maskValue(response.registrationToken)}`,
+      );
+      return response;
+    } catch (error) {
+      this.logger.error(
+        `[GoogleOAuth][Exchange] traceId=${traceId} response error reason=${error instanceof Error ? error.message : 'unknown'}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+      throw error;
+    }
+  }
+
+  @Post('google/complete-registration')
+  @ApiOperation({ summary: 'Completa registro Google para usuario nuevo y emite JWT' })
+  @ApiBody({ type: GoogleCompleteRegistrationDto })
+  @ApiResponse({ status: 201, description: 'Registro completado y JWT emitido' })
+  async completeGoogleRegistration(@Body() dto: GoogleCompleteRegistrationDto) {
+    const traceId = randomUUID();
+    const registrationToken = String(
+      dto.registrationToken ?? dto.authCode ?? '',
+    ).trim();
     this.logger.log(
-      `[GoogleOAuth][Exchange] response success userId=${this.maskValue(response.userId)} companyId=${this.maskValue(response.companyId)} role=${response.role} jwt=${this.maskValue(response.accessToken)}`,
+      `[GoogleOAuth][CompleteRegistration] traceId=${traceId} endpoint=POST /auth/google/complete-registration request received hasRegistrationToken=${Boolean(
+        dto.registrationToken,
+      )} hasAuthCode=${Boolean(dto.authCode)} token=${this.maskValue(registrationToken)} companyNamePresent=${Boolean(
+        dto.companyName?.trim(),
+      )} identificationType=${dto.identificationType} identificationNumber=${this.maskValue(dto.identificationNumber)}`,
     );
-    return response;
+    if (!registrationToken) {
+      throw new BadRequestException('registrationToken is required');
+    }
+    try {
+      const response = await this.completeGoogleRegistrationUseCase.execute({
+        registrationToken,
+        companyName: dto.companyName,
+        identificationType: dto.identificationType,
+        identificationNumber: dto.identificationNumber,
+      });
+      this.logger.log(
+        `[GoogleOAuth][CompleteRegistration] traceId=${traceId} response success userId=${this.maskValue(response.userId)} companyId=${this.maskValue(response.companyId)} role=${response.role} jwt=${this.maskValue(response.accessToken)}`,
+      );
+      return response;
+    } catch (error) {
+      this.logger.error(
+        `[GoogleOAuth][CompleteRegistration] traceId=${traceId} response error reason=${error instanceof Error ? error.message : 'unknown'}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+      throw error;
+    }
   }
 
   private maskValue(value: string | null | undefined): string {

@@ -10,7 +10,9 @@ import { authStorage } from "../../utils/storage/authStorage";
 import type {
   LoginRequestDto,
   LoginResponseDto,
+  GoogleExchangeResponseDto,
   GoogleExchangeRequestDto,
+  GoogleCompleteRegistrationRequestDto,
   RegisterRequestDto,
   RegisterResponseDto,
 } from "../dtos/auth.dto";
@@ -66,34 +68,25 @@ export const authService = {
   /**
    * Intercambia auth code temporal por JWT propio del backend.
    */
-  async exchangeGoogleAuthCode(code: string): Promise<LoginResponseDto> {
-    const payload: GoogleExchangeRequestDto = { authCode: code, code };
+  async exchangeGoogleAuthCode(code: string): Promise<GoogleExchangeResponseDto> {
+    const payload: GoogleExchangeRequestDto = { authCode: code };
     logger.info("[GoogleOAuth][FrontendSuccess] exchange request", {
       hasCode: Boolean(code),
       codeMasked: `${code.slice(0, 4)}...${code.slice(-4)}`,
       payloadKeys: Object.keys(payload),
+      payload,
     });
     try {
-      const response = await apiClient.post<LoginResponseDto>(
+      const response = await apiClient.post<GoogleExchangeResponseDto>(
         "/auth/google/exchange",
         payload
       );
 
-      const authData = response.data;
-      authStorage.setAuthData({
-        token: authData.accessToken,
-        userId: authData.userId,
-        companyId: authData.companyId,
-        role: authData.role,
-      });
-
       logger.info("[GoogleOAuth][FrontendSuccess] exchange success", {
-        userId: authData.userId,
-        companyId: authData.companyId,
-        role: authData.role,
-        jwtMasked: `${authData.accessToken.slice(0, 6)}...${authData.accessToken.slice(-6)}`,
+        status: response.status,
+        body: response.data,
       });
-      return authData;
+      return response.data;
     } catch (error: unknown) {
       const axiosError = error as AxiosError;
       const responseData = axiosError.response?.data as unknown;
@@ -104,6 +97,29 @@ export const authService = {
       });
       throw error;
     }
+  },
+
+  async completeGoogleRegistration(
+    payload: GoogleCompleteRegistrationRequestDto
+  ): Promise<LoginResponseDto> {
+    logger.info("[GoogleOAuth][FrontendCompleteRegistration] request", {
+      payload: {
+        registrationToken: `${payload.registrationToken.slice(0, 4)}...${payload.registrationToken.slice(-4)}`,
+        companyName: payload.companyName,
+        identificationType: payload.identificationType,
+        identificationNumberMasked: `${payload.identificationNumber.slice(0, 2)}...${payload.identificationNumber.slice(-2)}`,
+      },
+    });
+    const response = await apiClient.post<LoginResponseDto>(
+      "/auth/google/complete-registration",
+      payload
+    );
+    logger.info("[GoogleOAuth][FrontendCompleteRegistration] success", {
+      status: response.status,
+      userId: response.data.userId,
+      companyId: response.data.companyId,
+    });
+    return response.data;
   },
 
   /**

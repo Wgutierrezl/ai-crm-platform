@@ -22,6 +22,7 @@ import { CartSessionOrmEntity } from './infrastructure/database/entities/cart-se
 import { CartItemOrmEntity } from './infrastructure/database/entities/cart-item.orm-entity';
 import { PaymentTransactionOrmEntity } from './infrastructure/database/entities/payment-transaction.orm-entity';
 import { OauthIdentityOrmEntity } from './infrastructure/database/entities/oauth-identity.orm-entity';
+import { OauthRegistrationSessionOrmEntity } from './infrastructure/database/entities/oauth-registration-session.orm-entity';
 import { CompanyRepository } from './domain/ports/company.repository.port';
 import { UserRepository } from './domain/ports/user.repository.port';
 import { CustomerRepository } from './domain/ports/customer.repository.port';
@@ -41,6 +42,7 @@ import { CompanyWhatsappAppRepository } from './domain/ports/company-whatsapp-ap
 import { PaymentProviderPort } from './domain/ports/payment-provider.port';
 import { PaymentTransactionRepository } from './domain/ports/payment-transaction.repository.port';
 import { OauthIdentityRepository } from './domain/ports/oauth-identity.repository.port';
+import { OauthRegistrationSessionRepository } from './domain/ports/oauth-registration-session.repository.port';
 import { GoogleOidcProviderPort } from './domain/ports/google-oidc-provider.port';
 import { OauthTempStorePort } from './domain/ports/oauth-temp-store.port';
 import { WhatsappMessageSender } from './domain/ports/whatsapp-message-sender.port';
@@ -63,11 +65,13 @@ import { CartSessionTypeormRepository } from './infrastructure/repositories/cart
 import { CartItemTypeormRepository } from './infrastructure/repositories/cart-item.typeorm-repository';
 import { PaymentTransactionTypeormRepository } from './infrastructure/repositories/payment-transaction.typeorm-repository';
 import { OauthIdentityTypeormRepository } from './infrastructure/repositories/oauth-identity.typeorm-repository';
+import { OauthRegistrationSessionTypeormRepository } from './infrastructure/repositories/oauth-registration-session.typeorm-repository';
 import { RegisterUserUseCase } from './application/use-cases/register-user.use-case';
 import { LoginUserUseCase } from './application/use-cases/login-user.use-case';
 import { StartGoogleLoginUseCase } from './application/use-cases/start-google-login.use-case';
 import { HandleGoogleCallbackUseCase } from './application/use-cases/handle-google-callback.use-case';
 import { ExchangeGoogleAuthCodeUseCase } from './application/use-cases/exchange-google-auth-code.use-case';
+import { CompleteGoogleRegistrationUseCase } from './application/use-cases/complete-google-registration.use-case';
 import { CreateProductUseCase } from './application/use-cases/create-product.use-case';
 import { GetProductsByCompanyUseCase } from './application/use-cases/get-products-by-company.use-case';
 import { UpdateProductUseCase } from './application/use-cases/update-product.use-case';
@@ -156,6 +160,7 @@ import { InMemoryOauthTempStoreAdapter } from './infrastructure/security/in-memo
           CartItemOrmEntity,
           PaymentTransactionOrmEntity,
           OauthIdentityOrmEntity,
+          OauthRegistrationSessionOrmEntity,
         ],
         synchronize: false,
       }),
@@ -178,6 +183,7 @@ import { InMemoryOauthTempStoreAdapter } from './infrastructure/security/in-memo
       CartItemOrmEntity,
       PaymentTransactionOrmEntity,
       OauthIdentityOrmEntity,
+      OauthRegistrationSessionOrmEntity,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -218,6 +224,7 @@ import { InMemoryOauthTempStoreAdapter } from './infrastructure/security/in-memo
     StartGoogleLoginUseCase,
     HandleGoogleCallbackUseCase,
     ExchangeGoogleAuthCodeUseCase,
+    CompleteGoogleRegistrationUseCase,
     CreateProductUseCase,
     GetProductsByCompanyUseCase,
     UpdateProductUseCase,
@@ -328,6 +335,10 @@ import { InMemoryOauthTempStoreAdapter } from './infrastructure/security/in-memo
     {
       provide: OauthIdentityRepository,
       useClass: OauthIdentityTypeormRepository,
+    },
+    {
+      provide: OauthRegistrationSessionRepository,
+      useClass: OauthRegistrationSessionTypeormRepository,
     },
     {
       provide: PaymentProviderPort,
