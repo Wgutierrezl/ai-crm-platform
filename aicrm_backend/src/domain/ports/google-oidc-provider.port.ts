@@ -11,10 +11,12 @@ export interface GoogleOidcProfile {
 export interface BuildGoogleAuthUrlInput {
   state: string;
   scopes: string[];
+  callbackUrl?: string;
 }
 
 export interface ExchangeGoogleCodeInput {
   code: string;
+  callbackUrl?: string;
 }
 
 export abstract class GoogleOidcProviderPort {

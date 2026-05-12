@@ -49,7 +49,10 @@ describe('HandleInboundChannelMessageUseCase checkout flow', () => {
     const updateCartItemQuantityUseCase = { execute: jest.fn() };
     const removeCartItemUseCase = { execute: jest.fn() };
     const clearCartUseCase = { execute: jest.fn() };
-    const conversationStateRepository = { update: jest.fn().mockResolvedValue(baseState) };
+    const conversationStateRepository = {
+      create: jest.fn().mockResolvedValue(baseState),
+      update: jest.fn().mockResolvedValue(baseState),
+    };
     const companyRepository = { findById: jest.fn().mockResolvedValue({ id: 'company-1', assistantName: 'Bot' }) };
     const confirmCartCheckoutUseCase = {
       execute: jest.fn().mockResolvedValue({
@@ -82,6 +85,7 @@ describe('HandleInboundChannelMessageUseCase checkout flow', () => {
       companyRepository as any,
       confirmCartCheckoutUseCase as any,
       transactionalEmailService as any,
+      { execute: jest.fn() } as any,
     );
     return {
       uc,
@@ -197,5 +201,33 @@ describe('HandleInboundChannelMessageUseCase checkout flow', () => {
     expect(duplicatedResult.shouldReply).toBe(false);
     expect(messageRepository.create).not.toHaveBeenCalled();
     expect(confirmCartCheckoutUseCase.execute).not.toHaveBeenCalled();
+  });
+
+  it('creates conversation state when checkout starts from interactive action and state is null', async () => {
+    const { uc, onboardingTools, conversationStateRepository } = build();
+    onboardingTools.ASSISTANT_RESOLVE_USER_IDENTITY.mockResolvedValueOnce({
+      status: 'registered',
+      customerExists: true,
+      onboardingCompleted: true,
+      onboardingStep: 'COMPLETED',
+      missingFields: [],
+      identity: { id: 'ext-1' },
+      customer: { id: 'customer-1', firstName: 'Ana', fullName: 'Ana Diaz' },
+      conversation: { id: 'conv-1' },
+      state: null,
+    });
+
+    const result = await uc.execute({
+      companyId: 'company-1',
+      channel: 'whatsapp',
+      externalUserId: 'wa-1',
+      phone: '300',
+      text: 'cart:checkout_mock',
+      channelMessageId: 'm-5',
+      metadata: { interactiveReplyId: 'cart:checkout_mock' },
+    });
+
+    expect(result.reply).toContain('Resumen de tu compra');
+    expect(conversationStateRepository.create).toHaveBeenCalledTimes(1);
   });
 });

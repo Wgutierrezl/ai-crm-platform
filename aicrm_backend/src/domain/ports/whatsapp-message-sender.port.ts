@@ -21,6 +21,12 @@ export interface WhatsappImagePayload {
   caption?: string;
 }
 
+export interface WhatsappUrlButtonPayload {
+  body: string;
+  buttonText: string;
+  url: string;
+}
+
 export abstract class WhatsappMessageSender {
   abstract sendTextMessage(
     phoneNumberId: string,
@@ -41,5 +47,12 @@ export abstract class WhatsappMessageSender {
     accessToken: string,
     to: string,
     payload: WhatsappImagePayload,
+  ): Promise<void>;
+
+  abstract sendUrlButtonMessage(
+    phoneNumberId: string,
+    accessToken: string,
+    to: string,
+    payload: WhatsappUrlButtonPayload,
   ): Promise<void>;
 }

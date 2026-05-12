@@ -19,20 +19,44 @@ export class StartGoogleLoginUseCase {
 
   async execute(): Promise<StartGoogleLoginOutput> {
     const ttl = Number(this.configService.get<string>('OAUTH_STATE_TTL_MINUTES', '10'));
-    this.logger.log(`[GoogleOAuth][Start] issuing state ttlMinutes=${ttl}`);
+    this.logger.log(`[GoogleOAuth][Users][Start] issuing state ttlMinutes=${ttl}`);
     const state = await this.oauthTempStore.issueState(
       {
         nonce: randomUUID(),
       },
       ttl,
     );
-    this.logger.log(`[GoogleOAuth][Start] state issued state=${this.maskValue(state)}`);
+    this.logger.log(`[GoogleOAuth][Users][Start] state issued state=${this.maskValue(state)}`);
+    const callbackUrl = this.resolveUsersCallbackUrl();
+    this.logger.log(
+      `[GoogleOAuth][Users][Start] callbackUrl=${this.maskCallbackUrl(callbackUrl)}`,
+    );
     const authorizationUrl = this.oidcProvider.buildAuthorizationUrl({
       state,
       scopes: ['openid', 'email', 'profile'],
+      callbackUrl,
     });
-    this.logger.log(`[GoogleOAuth][Start] authorization url built`);
+    this.logger.log(`[GoogleOAuth][Users][Start] authorization url built`);
     return { authorizationUrl };
+  }
+
+  private resolveUsersCallbackUrl(): string | undefined {
+    const explicit = this.configService
+      .get<string>('GOOGLE_OAUTH_USERS_CALLBACK_URL', '')
+      .trim();
+    if (explicit) return explicit;
+    const legacy = this.configService.get<string>('GOOGLE_OAUTH_CALLBACK_URL', '').trim();
+    return legacy || undefined;
+  }
+
+  private maskCallbackUrl(value: string | undefined): string {
+    if (!value) return 'default_adapter_callback';
+    try {
+      const parsed = new URL(value);
+      return `${parsed.origin}${parsed.pathname}`;
+    } catch {
+      return this.maskValue(value);
+    }
   }
 
   private maskValue(value: string): string {

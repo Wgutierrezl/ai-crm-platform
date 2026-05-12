@@ -73,11 +73,11 @@ export class AuthController {
   @ApiResponse({ status: 302, description: 'Redireccion a Google OAuth' })
   async startGoogle(@Query('returnTo') returnTo: string | undefined, @Res() res: Response) {
     this.logger.log(
-      `[GoogleOAuth][Start] request received returnToPresent=${Boolean(returnTo)}`,
+      `[GoogleOAuth][Users][Start] request received returnToPresent=${Boolean(returnTo)}`,
     );
     const result = await this.startGoogleLoginUseCase.execute();
     this.logger.log(
-      `[GoogleOAuth][Start] redirect ready url=${this.maskUrl(result.authorizationUrl)}`,
+      `[GoogleOAuth][Users][Start] redirect ready url=${this.maskUrl(result.authorizationUrl)}`,
     );
     return res.redirect(result.authorizationUrl);
   }
@@ -91,23 +91,23 @@ export class AuthController {
     @Res() res: Response,
   ) {
     this.logger.log(
-      `[GoogleOAuth][Callback] callback received hasCode=${Boolean(code)} hasState=${Boolean(state)} code=${this.maskValue(code)} state=${this.maskValue(state)}`,
+      `[GoogleOAuth][Users][Callback] callback received hasCode=${Boolean(code)} hasState=${Boolean(state)} code=${this.maskValue(code)} state=${this.maskValue(state)}`,
     );
     try {
       const result = await this.handleGoogleCallbackUseCase.execute({ code, state });
       this.logger.log(
-        `[GoogleOAuth][Callback] success redirect=${this.maskUrl(result.redirectUrl)}`,
+        `[GoogleOAuth][Users][Callback] success redirect=${this.maskUrl(result.redirectUrl)}`,
       );
       return res.redirect(result.redirectUrl);
     } catch (error) {
       this.logger.error(
-        `[GoogleOAuth][Callback] failed message=${error instanceof Error ? error.message : 'unknown'}`,
+        `[GoogleOAuth][Users][Callback] failed message=${error instanceof Error ? error.message : 'unknown'}`,
         error instanceof Error ? error.stack : undefined,
       );
       const fallback = process.env.GOOGLE_OAUTH_FAILURE_REDIRECT_URL || '/login';
       const safeReason = encodeURIComponent('oauth_callback_failed');
       this.logger.warn(
-        `[GoogleOAuth][Callback] fallback redirect=${this.maskUrl(fallback)}`,
+        `[GoogleOAuth][Users][Callback] fallback redirect=${this.maskUrl(fallback)}`,
       );
       return res.redirect(`${fallback}${fallback.includes('?') ? '&' : '?'}reason=${safeReason}`);
     }

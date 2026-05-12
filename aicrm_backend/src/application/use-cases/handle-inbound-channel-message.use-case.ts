@@ -12,6 +12,7 @@ import {
 import {
   WhatsappImagePayload,
   WhatsappInteractiveListPayload,
+  WhatsappUrlButtonPayload,
 } from '../../domain/ports/whatsapp-message-sender.port';
 import { ToolExecutionService } from '../services/tool-execution.service';
 import { AddItemToCartUseCase } from './add-item-to-cart.use-case';
@@ -25,6 +26,7 @@ import { CompanyRepository } from '../../domain/ports/company.repository.port';
 import { Company } from '../../domain/entities/company.entity';
 import { ConfirmCartCheckoutUseCase } from './confirm-cart-checkout.use-case';
 import { TransactionalEmailService } from '../services/transactional-email.service';
+import { StartCustomerGoogleOAuthUseCase } from './start-customer-google-oauth.use-case';
 
 export interface HandleInboundChannelMessageInput {
   companyId: string;
@@ -42,6 +44,7 @@ export interface HandleInboundChannelMessageOutput {
   recipientExternalUserId: string;
   image?: WhatsappImagePayload | null;
   interactiveList?: WhatsappInteractiveListPayload | null;
+  urlButton?: WhatsappUrlButtonPayload | null;
 }
 
 type SelectionResult =
@@ -63,6 +66,8 @@ type DeterministicIntent =
   | 'checkout_cancel'
   | null;
 
+type GoogleOauthIntent = 'start' | 'manual' | null;
+
 @Injectable()
 export class HandleInboundChannelMessageUseCase {
   private readonly logger = new Logger(HandleInboundChannelMessageUseCase.name);
@@ -83,6 +88,7 @@ export class HandleInboundChannelMessageUseCase {
     private readonly companyRepository: CompanyRepository,
     private readonly confirmCartCheckoutUseCase: ConfirmCartCheckoutUseCase,
     private readonly transactionalEmailService: TransactionalEmailService,
+    private readonly startCustomerGoogleOAuthUseCase: StartCustomerGoogleOAuthUseCase,
   ) {}
 
   async execute(
@@ -133,7 +139,95 @@ export class HandleInboundChannelMessageUseCase {
       ),
     );
 
+    const googleOauthIntent = this.detectGoogleOauthIntent(
+      input.text,
+      input.metadata ?? null,
+    );
+    if (googleOauthIntent === 'start') {
+      if (resolved.status === 'registered') {
+        const reply =
+          'Tu registro ya esta completo. Si quieres, te ayudo con catalogo, productos o carrito.';
+        await this.persistBot(
+          input.companyId,
+          resolved.conversation.id,
+          input.channel,
+          reply,
+        );
+        return {
+          shouldReply: true,
+          reply,
+          recipientExternalUserId: input.externalUserId,
+          image: null,
+          interactiveList: null,
+          urlButton: null,
+        };
+      }
+
+      const start = await this.startCustomerGoogleOAuthUseCase.execute({
+        companyId: input.companyId,
+        customerId: resolved.customer.id,
+        conversationId: resolved.conversation.id,
+        channel: 'whatsapp',
+        externalUserId: input.externalUserId,
+      });
+      const reply =
+        'Perfecto. Te envio un boton para continuar con Google y completar tu registro.';
+      await this.persistBot(input.companyId, resolved.conversation.id, input.channel, reply);
+      return {
+        shouldReply: true,
+        reply,
+        recipientExternalUserId: input.externalUserId,
+        image: null,
+        interactiveList: null,
+        urlButton: {
+          body: 'Completa tu registro mas rapido con Google.',
+          buttonText: 'Usar Google',
+          url: start.authorizationUrl,
+        },
+      };
+    }
+
     if (resolved.status !== 'registered') {
+      if (this.shouldOfferGoogleOption(input.text, resolved.onboardingStep)) {
+        const interactiveList: WhatsappInteractiveListPayload = {
+          header: 'Registro',
+          body: 'Puedes seguir registro manual o continuar con Google para completar mas rapido.',
+          buttonText: 'Elegir opcion',
+          sections: [
+            {
+              title: 'Opciones',
+              rows: [
+                {
+                  id: 'onboarding:google:start',
+                  title: 'Continuar con Google',
+                  description: 'Vincular Google y acelerar registro',
+                },
+                {
+                  id: 'onboarding:manual',
+                  title: 'Registrar manualmente',
+                  description: 'Continuar por chat',
+                },
+              ],
+            },
+          ],
+        };
+        await this.persistBot(
+          input.companyId,
+          resolved.conversation.id,
+          input.channel,
+          'Elige como quieres continuar tu registro.',
+          { whatsapp_interactive_list: interactiveList },
+        );
+        return {
+          shouldReply: true,
+          reply: 'Elige como quieres continuar tu registro.',
+          recipientExternalUserId: input.externalUserId,
+          image: null,
+          interactiveList,
+          urlButton: null,
+        };
+      }
+
       const state =
         resolved.state ??
         (await this.onboardingTools.ASSISTANT_START_ONBOARDING({
@@ -158,6 +252,7 @@ export class HandleInboundChannelMessageUseCase {
         await this.transactionalEmailService.sendWelcomeOnOnboardingCompleted({
           companyId: input.companyId,
           customer: collected.customer,
+          source: 'manual',
         });
       }
       await this.persistBot(input.companyId, resolved.conversation.id, input.channel, reply);
@@ -203,13 +298,14 @@ export class HandleInboundChannelMessageUseCase {
       if (hasCategories) {
         const reply = `Hola ${resolved.customer.firstName ?? resolved.customer.fullName ?? 'cliente'} 👋 Estas son las categorias disponibles:`;
         await this.persistBot(input.companyId, resolved.conversation.id, input.channel, reply, categoryResult.botMetadata ?? null);
-        return {
-          shouldReply: true,
-          reply,
-          recipientExternalUserId: input.externalUserId,
-          image: null,
-          interactiveList: (categoryResult.botMetadata?.whatsapp_interactive_list as WhatsappInteractiveListPayload) ?? null,
-        };
+      return {
+        shouldReply: true,
+        reply,
+        recipientExternalUserId: input.externalUserId,
+        image: null,
+        interactiveList: (categoryResult.botMetadata?.whatsapp_interactive_list as WhatsappInteractiveListPayload) ?? null,
+        urlButton: null,
+      };
       }
 
       const productsResult = await this.toolExecutionService.execute('CRM_GET_PRODUCTS', { limit: 10 }, {
@@ -226,6 +322,7 @@ export class HandleInboundChannelMessageUseCase {
         recipientExternalUserId: input.externalUserId,
         image: null,
         interactiveList: (productsResult.botMetadata?.whatsapp_interactive_list as WhatsappInteractiveListPayload) ?? null,
+        urlButton: null,
       };
     }
 
@@ -247,6 +344,7 @@ export class HandleInboundChannelMessageUseCase {
         recipientExternalUserId: input.externalUserId,
         image: cartView.image,
         interactiveList: cartView.interactiveList,
+        urlButton: null,
       };
     }
 
@@ -301,6 +399,7 @@ export class HandleInboundChannelMessageUseCase {
         interactiveList:
           (categoryResult.botMetadata?.whatsapp_interactive_list as WhatsappInteractiveListPayload) ??
           null,
+        urlButton: null,
       };
     }
 
@@ -334,6 +433,7 @@ export class HandleInboundChannelMessageUseCase {
       recipientExternalUserId: input.externalUserId,
       image: null,
       interactiveList: (aiResult.botMessage.metadata?.whatsapp_interactive_list as WhatsappInteractiveListPayload) ?? null,
+      urlButton: null,
     };
   }
 
@@ -394,6 +494,52 @@ export class HandleInboundChannelMessageUseCase {
     if (checkoutConfirmPhrases.some((p) => normalized === p || normalized.includes(p)))
       return 'checkout_confirm';
     return null;
+  }
+
+  private isOnboardingGoogleStartIntent(text: string): boolean {
+    const normalized = this.normalizeText(text);
+    const strictAliases = [
+      'registrame con google',
+      'registrame por google',
+      'registro con google',
+      'continuar con google',
+      'usar google',
+      'usar mi cuenta de google',
+      'vincular google',
+      'login con google',
+      'iniciar con google',
+      'onboarding google start',
+    ];
+    return (
+      strictAliases.some((alias) => normalized.includes(alias)) ||
+      normalized.includes('registrar con google')
+    );
+  }
+
+  private detectGoogleOauthIntent(
+    text: string,
+    metadata: Record<string, unknown> | null,
+  ): GoogleOauthIntent {
+    const interactiveId = this.normalizeText(
+      String(metadata?.['interactiveReplyId'] ?? ''),
+    );
+    if (interactiveId === 'onboarding google start') return 'start';
+    if (interactiveId === 'onboarding manual') return 'manual';
+
+    if (this.isOnboardingGoogleStartIntent(text)) return 'start';
+    return null;
+  }
+
+  private shouldOfferGoogleOption(text: string, step: OnboardingStep): boolean {
+    if (step !== 'WAITING_NAME') return false;
+    const normalized = this.normalizeText(text);
+    if (!normalized) return true;
+    return (
+      this.onboardingTools.isGreetingMessage(text) ||
+      normalized.includes('registro') ||
+      normalized.includes('empezar') ||
+      normalized.includes('iniciar')
+    );
   }
 
   private async resolveCategoryFromText(
@@ -997,12 +1143,17 @@ export class HandleInboundChannelMessageUseCase {
       ReturnType<AssistantOnboardingToolsService['ASSISTANT_RESOLVE_USER_IDENTITY']>
     >,
   ): Promise<HandleInboundChannelMessageOutput> {
+    this.logger.log(
+      `[CheckoutFlow] confirm requested checkoutState=${this.getCheckoutState(resolved.state) ?? 'none'}`,
+    );
     if (this.getCheckoutState(resolved.state) !== 'CHECKOUT_WAITING_CONFIRMATION') {
+      this.logger.log('[CheckoutFlow] branch=confirm_rejected_missing_pending_state');
       const reply = 'Primero revisemos tu carrito. Escribe "confirmar compra" para iniciar checkout.';
       await this.persistBot(input.companyId, resolved.conversation.id, input.channel, reply);
       return { shouldReply: true, reply, recipientExternalUserId: input.externalUserId, image: null, interactiveList: null };
     }
 
+    this.logger.log('[CheckoutFlow] branch=confirm_executing_use_case');
     const result = await this.confirmCartCheckoutUseCase.execute({
       companyId: input.companyId,
       customerId: resolved.customer.id,
@@ -1066,7 +1217,24 @@ export class HandleInboundChannelMessageUseCase {
     conversationId: string,
     checkoutState: string,
   ): Promise<void> {
-    if (!state) return;
+    if (!state) {
+      this.logger.log(
+        `[CheckoutFlow] no conversation state found; creating one with checkoutState=${checkoutState}`,
+      );
+      await this.conversationStateRepository.create(
+        new ConversationState(
+          uuidv4(),
+          conversationId,
+          companyId,
+          'active',
+          'COMPLETED',
+          { checkoutState },
+          new Date(),
+          new Date(),
+        ),
+      );
+      return;
+    }
     await this.conversationStateRepository.update(
       new ConversationState(
         state.id,

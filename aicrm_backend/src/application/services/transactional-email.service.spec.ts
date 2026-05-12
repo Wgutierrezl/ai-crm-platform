@@ -18,12 +18,16 @@ describe('TransactionalEmailService', () => {
         contentBase64: Buffer.from('pdf').toString('base64'),
       }),
     };
+    const customerRepository = {
+      update: jest.fn().mockImplementation(async (c) => c),
+    };
     const service = new TransactionalEmailService(
       emailSender as any,
       companyRepository as any,
       pdfReceiptGenerator as any,
+      customerRepository as any,
     );
-    return { service, emailSender, pdfReceiptGenerator };
+    return { service, emailSender, pdfReceiptGenerator, customerRepository };
   };
 
   const customer = (email: string | null) =>
@@ -45,17 +49,20 @@ describe('TransactionalEmailService', () => {
     await service.sendWelcomeOnOnboardingCompleted({
       companyId,
       customer: customer(null),
+      source: 'manual',
     });
     expect(emailSender.send).not.toHaveBeenCalled();
   });
 
   it('sends welcome email when onboarding is completed and email is valid', async () => {
-    const { service, emailSender } = build();
+    const { service, emailSender, customerRepository } = build();
     await service.sendWelcomeOnOnboardingCompleted({
       companyId,
       customer: customer('ana@example.com'),
+      source: 'manual',
     });
     expect(emailSender.send).toHaveBeenCalledTimes(1);
+    expect(customerRepository.update).toHaveBeenCalledTimes(1);
   });
 
   it('sends order confirmation email when checkout approved and customer email exists', async () => {
@@ -91,6 +98,7 @@ describe('TransactionalEmailService', () => {
       emailSender as any,
       companyRepository as any,
       pdfReceiptGenerator as any,
+      { update: jest.fn().mockImplementation(async (c) => c) } as any,
     );
     await expect(
       service.sendOrderConfirmation({
@@ -120,6 +128,7 @@ describe('TransactionalEmailService', () => {
       emailSender as any,
       companyRepository as any,
       pdfReceiptGenerator as any,
+      { update: jest.fn().mockImplementation(async (c) => c) } as any,
     );
 
     await service.sendOrderConfirmation({

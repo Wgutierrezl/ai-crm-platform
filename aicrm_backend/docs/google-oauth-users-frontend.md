@@ -52,6 +52,21 @@
 - `POST /api/v1/auth/google/exchange`
 - `POST /api/v1/auth/google/complete-registration`
 
+## Callbacks OAuth separados (critico)
+- Users/frontend:
+  - callback exclusivo: `/api/v1/auth/google/callback`
+  - flujo: `auth_code -> exchange -> JWT frontend CRM`
+- Customers/WhatsApp:
+  - callback exclusivo: `/api/v1/customers/oauth/google/callback`
+  - flujo: vincula customer + retoma onboarding
+  - no emite JWT, no hace exchange de auth_code, no redirige dashboard CRM.
+
+## Variables de entorno recomendadas
+- `GOOGLE_OAUTH_USERS_CALLBACK_URL` (preferida para users/frontend).
+- `GOOGLE_OAUTH_CALLBACK_URL` (legacy users, fallback de compatibilidad).
+- `GOOGLE_OAUTH_CUSTOMERS_WHATSAPP_CALLBACK_URL` (preferida para customers/whatsapp).
+- `GOOGLE_CUSTOMER_OAUTH_CALLBACK_URL` (legacy customers, fallback de compatibilidad).
+
 ## Persistencia actual
 Tabla: `oauth_identities`
 - No guarda `access_token` ni `refresh_token`.

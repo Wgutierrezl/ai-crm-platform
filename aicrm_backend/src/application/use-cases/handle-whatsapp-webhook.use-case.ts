@@ -142,6 +142,28 @@ export class HandleWhatsappWebhookUseCase {
             });
 
             if (result.shouldReply && result.reply) {
+              if (result.urlButton) {
+                try {
+                  await this.whatsappMessageSender.sendUrlButtonMessage(
+                    app.phoneNumberId,
+                    credential.accessToken,
+                    recipientPhone,
+                    result.urlButton,
+                  );
+                } catch (urlButtonError) {
+                  this.logger.warn(
+                    '[WhatsAppSender] Google OAuth URL button failed, sending fallback text',
+                  );
+                  await this.whatsappMessageSender.sendTextMessage(
+                    app.phoneNumberId,
+                    credential.accessToken,
+                    recipientPhone,
+                    `${result.reply}\n\n${result.urlButton.url}`,
+                  );
+                }
+                continue;
+              }
+
               if (result.image) {
                 try {
                   await this.whatsappMessageSender.sendImageMessage(

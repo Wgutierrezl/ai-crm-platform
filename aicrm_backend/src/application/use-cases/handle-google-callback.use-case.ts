@@ -39,20 +39,25 @@ export class HandleGoogleCallbackUseCase {
 
   async execute(input: HandleGoogleCallbackInput): Promise<HandleGoogleCallbackOutput> {
     this.logger.log(
-      `[GoogleOAuth][Callback] processing hasCode=${Boolean(input.code)} hasState=${Boolean(input.state)} code=${this.maskValue(input.code)} state=${this.maskValue(input.state)}`,
+      `[GoogleOAuth][Users][Callback] processing hasCode=${Boolean(input.code)} hasState=${Boolean(input.state)} code=${this.maskValue(input.code)} state=${this.maskValue(input.state)}`,
     );
     const statePayload = await this.oauthTempStore.consumeState(input.state);
     this.logger.log(
-      `[GoogleOAuth][Callback] state validation result valid=${Boolean(statePayload)}`,
+      `[GoogleOAuth][Users][Callback] state validation result valid=${Boolean(statePayload)}`,
     );
     if (!statePayload) {
       throw new UnauthorizedException('State OAuth invalido o expirado.');
     }
+    const callbackUrl = this.resolveUsersCallbackUrl();
+    this.logger.log(
+      `[GoogleOAuth][Users][Callback] callbackUrl=${this.maskCallbackUrl(callbackUrl)}`,
+    );
     const profile = await this.oidcProvider.exchangeCodeForProfile({
       code: input.code,
+      callbackUrl,
     });
     this.logger.log(
-      `[GoogleOAuth][Callback] google exchange done email=${this.maskValue(profile.email)} emailVerified=${profile.emailVerified} sub=${this.maskValue(profile.providerUserId)}`,
+      `[GoogleOAuth][Users][Callback] google exchange done email=${this.maskValue(profile.email)} emailVerified=${profile.emailVerified} sub=${this.maskValue(profile.providerUserId)}`,
     );
     if (!profile.emailVerified) {
       throw new UnauthorizedException('Google reporta email no verificado.');
@@ -63,7 +68,7 @@ export class HandleGoogleCallbackUseCase {
       profile.providerUserId,
     );
     this.logger.log(
-      `[GoogleOAuth][Callback] oauth identity exists=${Boolean(existingIdentity)}`,
+      `[GoogleOAuth][Users][Callback] oauth identity exists=${Boolean(existingIdentity)}`,
     );
     let user: User | null = null;
 
@@ -75,7 +80,7 @@ export class HandleGoogleCallbackUseCase {
     } else {
       user = await this.userRepository.findByEmail(profile.email);
       this.logger.log(
-        `[GoogleOAuth][Callback] user by email exists=${Boolean(user)} email=${this.maskValue(profile.email)}`,
+        `[GoogleOAuth][Users][Callback] user by email exists=${Boolean(user)} email=${this.maskValue(profile.email)}`,
       );
       if (!user) {
         const ttl = Number(this.configService.get<string>('OAUTH_STATE_TTL_MINUTES', '10'));
@@ -107,7 +112,7 @@ export class HandleGoogleCallbackUseCase {
         const successBase = this.required('GOOGLE_OAUTH_SUCCESS_REDIRECT_URL');
         const redirectUrl = `${successBase}${successBase.includes('?') ? '&' : '?'}code=${encodeURIComponent(authCode)}`;
         this.logger.log(
-          `[GoogleOAuth][Callback] registration required sessionId=${this.maskValue(session.id)} redirect=${this.maskUrl(redirectUrl)}`,
+          `[GoogleOAuth][Users][Callback] registration required sessionId=${this.maskValue(session.id)} redirect=${this.maskUrl(redirectUrl)}`,
         );
         return { redirectUrl };
       }
@@ -137,7 +142,7 @@ export class HandleGoogleCallbackUseCase {
           ),
         );
         this.logger.log(
-          `[GoogleOAuth][Callback] oauth identity linked userId=${this.maskValue(user.id)} sub=${this.maskValue(profile.providerUserId)}`,
+          `[GoogleOAuth][Users][Callback] oauth identity linked userId=${this.maskValue(user.id)} sub=${this.maskValue(profile.providerUserId)}`,
         );
       }
     }
@@ -154,12 +159,12 @@ export class HandleGoogleCallbackUseCase {
       Math.max(1, Math.min(ttl, 5)),
     );
     this.logger.log(
-      `[GoogleOAuth][Callback] auth code issued code=${this.maskValue(authCode)} userId=${this.maskValue(user.id)}`,
+      `[GoogleOAuth][Users][Callback] auth code issued code=${this.maskValue(authCode)} userId=${this.maskValue(user.id)}`,
     );
     const successBase = this.required('GOOGLE_OAUTH_SUCCESS_REDIRECT_URL');
     const redirectUrl = `${successBase}${successBase.includes('?') ? '&' : '?'}code=${encodeURIComponent(authCode)}`;
     this.logger.log(
-      `[GoogleOAuth][Callback] final redirect prepared redirect=${this.maskUrl(redirectUrl)}`,
+      `[GoogleOAuth][Users][Callback] final redirect prepared redirect=${this.maskUrl(redirectUrl)}`,
     );
     return { redirectUrl };
   }
@@ -168,6 +173,25 @@ export class HandleGoogleCallbackUseCase {
     const value = this.configService.get<string>(key, '').trim();
     if (!value) throw new BadRequestException(`Falta configuracion ${key}`);
     return value;
+  }
+
+  private resolveUsersCallbackUrl(): string | undefined {
+    const explicit = this.configService
+      .get<string>('GOOGLE_OAUTH_USERS_CALLBACK_URL', '')
+      .trim();
+    if (explicit) return explicit;
+    const legacy = this.configService.get<string>('GOOGLE_OAUTH_CALLBACK_URL', '').trim();
+    return legacy || undefined;
+  }
+
+  private maskCallbackUrl(value: string | undefined): string {
+    if (!value) return 'default_adapter_callback';
+    try {
+      const parsed = new URL(value);
+      return `${parsed.origin}${parsed.pathname}`;
+    } catch {
+      return this.maskValue(value);
+    }
   }
 
   private maskValue(value: string | null | undefined): string {

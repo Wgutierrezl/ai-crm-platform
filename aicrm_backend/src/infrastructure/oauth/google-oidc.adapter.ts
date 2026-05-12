@@ -31,7 +31,7 @@ export class GoogleOidcAdapter implements GoogleOidcProviderPort {
 
   buildAuthorizationUrl(input: BuildGoogleAuthUrlInput): string {
     const clientId = this.required('GOOGLE_CLIENT_ID');
-    const callbackUrl = this.required('GOOGLE_OAUTH_CALLBACK_URL');
+    const callbackUrl = input.callbackUrl?.trim() || this.required('GOOGLE_OAUTH_CALLBACK_URL');
 
     const params = new URLSearchParams({
       client_id: clientId,
@@ -51,7 +51,7 @@ export class GoogleOidcAdapter implements GoogleOidcProviderPort {
   ): Promise<GoogleOidcProfile> {
     const clientId = this.required('GOOGLE_CLIENT_ID');
     const clientSecret = this.required('GOOGLE_CLIENT_SECRET');
-    const callbackUrl = this.required('GOOGLE_OAUTH_CALLBACK_URL');
+    const callbackUrl = input.callbackUrl?.trim() || this.required('GOOGLE_OAUTH_CALLBACK_URL');
 
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',

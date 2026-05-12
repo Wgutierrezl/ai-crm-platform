@@ -3,6 +3,7 @@ import { CompanyRepository } from '../../domain/ports/company.repository.port';
 import { Customer } from '../../domain/entities/customer.entity';
 import { EmailSenderPort } from '../../domain/ports/email-sender.port';
 import { PdfReceiptGeneratorPort } from '../../domain/ports/pdf-receipt-generator.port';
+import { CustomerRepository } from '../../domain/ports/customer.repository.port';
 
 export interface OrderEmailItem {
   productName: string;
@@ -19,14 +20,24 @@ export class TransactionalEmailService {
     private readonly emailSender: EmailSenderPort,
     private readonly companyRepository: CompanyRepository,
     private readonly pdfReceiptGenerator: PdfReceiptGeneratorPort,
+    private readonly customerRepository: CustomerRepository,
   ) {}
 
   async sendWelcomeOnOnboardingCompleted(input: {
     companyId: string;
     customer: Customer;
+    source: 'manual' | 'google_oauth';
   }): Promise<void> {
+    if (this.wasWelcomeAlreadySent(input.customer)) {
+      this.logger.log('[OnboardingEmail] skipped already_sent');
+      return;
+    }
+
     const email = String(input.customer.email ?? '').trim();
-    if (!this.isValidEmail(email)) return;
+    if (!this.isValidEmail(email)) {
+      this.logger.log('[OnboardingEmail] skipped invalid_email');
+      return;
+    }
 
     const company = await this.companyRepository.findById(input.companyId);
     const companyName = company?.name?.trim() || 'AI CRM';
@@ -44,10 +55,10 @@ export class TransactionalEmailService {
         html,
         text: `Hola ${customerName}, tu registro en ${companyName} fue completado correctamente.`,
       });
+      await this.persistWelcomeEmailSent(input.customer, input.source);
+      this.logger.log(`[OnboardingEmail] sent source=${input.source}`);
     } catch (error) {
-      this.logger.error(
-        `Fallo envio welcome email customerId=${input.customer.id} companyId=${input.companyId}: ${error instanceof Error ? error.message : 'unknown'}`,
-      );
+      this.logger.error('[OnboardingEmail] failed but flow continues');
     }
   }
 
@@ -248,5 +259,41 @@ export class TransactionalEmailService {
       .replaceAll('>', '&gt;')
       .replaceAll('"', '&quot;')
       .replaceAll("'", '&#39;');
+  }
+
+  private wasWelcomeAlreadySent(customer: Customer): boolean {
+    return Boolean(customer.metadata?.['welcomeEmailSentAt']);
+  }
+
+  private async persistWelcomeEmailSent(
+    customer: Customer,
+    source: 'manual' | 'google_oauth',
+  ): Promise<void> {
+    const nextMetadata = {
+      ...(customer.metadata ?? {}),
+      welcomeEmailSentAt: new Date().toISOString(),
+      welcomeEmailSource: source,
+    };
+    await this.customerRepository.update(
+      new Customer(
+        customer.id,
+        customer.name,
+        customer.phone,
+        customer.email,
+        customer.companyId,
+        customer.identificationType,
+        customer.identificationNumber,
+        customer.firstName,
+        customer.lastName,
+        customer.fullName,
+        customer.address,
+        customer.city,
+        customer.age,
+        nextMetadata,
+        customer.onboardingCompleted,
+        customer.onboardingStep,
+        customer.profileCompletionPercentage,
+      ),
+    );
   }
 }

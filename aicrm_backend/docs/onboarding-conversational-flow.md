@@ -67,12 +67,33 @@
 - `HandleWhatsappWebhookUseCase` ya soporta interacciones WhatsApp (`list_reply`, `button_reply`) y fallback a texto si falla payload interactivo.
 - `HandleInboundChannelMessageUseCase` ya maneja ruteo deterministico + onboarding manual como flujo principal.
 
-## Google OAuth para Customers (fase futura, no implementada)
+## Google OAuth para Customers (opcional, implementado en backend)
 - Objetivo: opcion adicional de onboarding, sin reemplazar flujo manual.
-- Recomendacion arquitectonica:
-  - mantener `external_identities` para identidad de canal,
-  - no mezclar OAuth customer en `oauth_identities` de users,
-  - crear identidad OAuth dedicada de customer + sesion temporal de link OAuth WhatsApp.
+- Estado:
+  - disponible en backend con endpoints dedicados de customers,
+  - onboarding manual sigue siendo camino por defecto.
+- Comportamiento:
+  - en onboarding inicial se ofrece opcion interactiva `Continuar con Google`,
+  - al elegirla, se genera link OAuth temporal (state one-time + TTL),
+  - callback vincula perfil Google a customer y retoma onboarding con campos faltantes.
+  - intenciones OAuth Google se manejan primero por routing deterministico (antes de IA).
+  - la IA no construye links OAuth; los links siempre salen del backend.
+  - si Google retorna nombre + email verificado, onboarding basico se cierra en `COMPLETED` y no se vuelve a pedir email.
+
+## Reglas de correo de bienvenida
+- Registro manual completado:
+  - envia welcome email (`source=manual`).
+- Registro completado por Google OAuth customers:
+  - envia el mismo welcome email (`source=google_oauth`).
+- Deduplicacion:
+  - se usa `customer.metadata.welcomeEmailSentAt`.
+  - si ya existe, se omite envio (`[OnboardingEmail] skipped already_sent`).
+- Resiliencia:
+  - si SMTP falla, el flujo conversacional continua (`[OnboardingEmail] failed but flow continues`).
+- Separacion de dominio:
+  - `external_identities` se mantiene para identidad de canal,
+  - `customer_oauth_identities` se usa para identidad OAuth de customers,
+  - no se reutilizan `oauth_identities` ni `oauth_registration_sessions` de users.
 
 Referencia detallada:
 - `docs/google-oauth-whatsapp-customers-roadmap.md`

@@ -73,6 +73,7 @@ describe('HandleInboundChannelMessageUseCase onboarding email', () => {
       { findById: jest.fn().mockResolvedValue({ id: 'company-1', assistantName: 'Bot' }) } as any,
       { execute: jest.fn() } as any,
       transactionalEmailService as any,
+      { execute: jest.fn() } as any,
     );
     return { uc, transactionalEmailService };
   };
@@ -104,4 +105,3 @@ describe('HandleInboundChannelMessageUseCase onboarding email', () => {
     expect(transactionalEmailService.sendWelcomeOnOnboardingCompleted).toHaveBeenCalledTimes(1);
   });
 });
-

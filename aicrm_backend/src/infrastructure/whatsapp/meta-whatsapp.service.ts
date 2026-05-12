@@ -4,6 +4,7 @@ import {
   WhatsappImagePayload,
   WhatsappInteractiveListPayload,
   WhatsappMessageSender,
+  WhatsappUrlButtonPayload,
 } from '../../domain/ports/whatsapp-message-sender.port';
 
 @Injectable()
@@ -112,6 +113,39 @@ export class MetaWhatsappService implements WhatsappMessageSender {
       throw new Error('No fue posible enviar imagen a Meta WhatsApp API');
     }
     this.logger.log(`[WhatsAppSender] Image message delivered status=${response.status}`);
+  }
+
+  async sendUrlButtonMessage(
+    phoneNumberId: string,
+    accessToken: string,
+    to: string,
+    payload: WhatsappUrlButtonPayload,
+  ): Promise<void> {
+    this.logger.log('[WhatsAppSender] Sending Google OAuth URL button');
+
+    const response = await this.sendMessage(phoneNumberId, accessToken, {
+      messaging_product: 'whatsapp',
+      to,
+      type: 'interactive',
+      interactive: {
+        type: 'cta_url',
+        body: { text: payload.body },
+        action: {
+          name: 'cta_url',
+          parameters: {
+            display_text: payload.buttonText,
+            url: payload.url,
+          },
+        },
+      },
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      this.logger.error(`[WhatsAppSender] Meta API error status=${response.status} body=${body}`);
+      throw new Error('No fue posible enviar boton URL a Meta WhatsApp API');
+    }
+    this.logger.log('[WhatsAppSender] Google OAuth URL button delivered');
   }
 
   private sendMessage(
