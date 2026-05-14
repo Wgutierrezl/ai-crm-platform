@@ -2,6 +2,32 @@
 
 Fecha de actualizacion: 2026-05-12
 
+## Actualizacion 2026-05-14 - Dockerizacion backend + frontend
+
+### Implementado
+- Dockerizacion inicial completa sin tocar logica de negocio:
+  - `aicrm_backend/Dockerfile` (build + runtime produccion).
+  - `aicrm_frontend/Dockerfile` (Vite dev server en contenedor).
+  - `docker-compose.yml` en raiz con servicios:
+    - `backend` (puerto `3000`)
+    - `frontend` (puerto `5173`)
+- Soporte para DB local fuera de Docker:
+  - backend en compose usa `DB_HOST=host.docker.internal`.
+  - `extra_hosts` agregado para compatibilidad de resolucion.
+- Ignorados Docker agregados:
+  - `aicrm_backend/.dockerignore`
+  - `aicrm_frontend/.dockerignore`
+- Documentacion de uso:
+  - `docs/dockerization-setup.md`
+- Variables de ejemplo actualizadas para contexto Docker:
+  - `aicrm_backend/.env.example`
+  - `aicrm_frontend/.env.example`
+
+### Alcance controlado
+- No se dockerizo MySQL.
+- No se ejecutaron migraciones.
+- No se modificaron flujos de OAuth, WhatsApp, SMTP, PDF, checkout, carrito ni IA.
+
 ## Completado
 
 ### OAuth Google Users/Frontend (Fase 1)

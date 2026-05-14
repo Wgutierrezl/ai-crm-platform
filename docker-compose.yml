@@ -1,0 +1,33 @@
+services:
+  backend:
+    build:
+      context: ./aicrm_backend
+      dockerfile: Dockerfile
+    container_name: aicrm_backend
+    env_file:
+      - ./aicrm_backend/.env
+    environment:
+      NODE_ENV: production
+      DB_HOST: host.docker.internal
+    ports:
+      - "3000:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./aicrm_frontend
+      dockerfile: Dockerfile
+    container_name: aicrm_frontend
+    environment:
+      VITE_API_URL: http://localhost:3000/api/v1
+      VITE_GOOGLE_LOGIN_START_URL: http://localhost:3000/api/v1/auth/google/start
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    volumes:
+      - ./aicrm_frontend:/app
+      - /app/node_modules
+    restart: unless-stopped
