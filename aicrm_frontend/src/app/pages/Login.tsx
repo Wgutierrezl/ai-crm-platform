@@ -30,7 +30,7 @@ export default function Login() {
 
     try {
       if (!email || !password) {
-        setError("Por favor, ingrese email y contrase\u00f1a v\u00e1lidos");
+        setError("Por favor, ingrese email y contraseña válidos");
         setLoading(false);
         return;
       }
@@ -40,8 +40,8 @@ export default function Login() {
       logger.info("Login exitoso, redirigiendo al dashboard");
       navigate("/dashboard", { replace: true });
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Error al iniciar sesi\u00f3n";
-      setError(errorMessage || "Error al iniciar sesi\u00f3n. Intenta nuevamente.");
+      const errorMessage = err instanceof Error ? err.message : "Error al iniciar sesión";
+      setError(errorMessage || "Error al iniciar sesión. Intenta nuevamente.");
       logger.error("Error en login", err);
     } finally {
       setLoading(false);
@@ -63,7 +63,7 @@ export default function Login() {
               CRM AI
             </h1>
           </div>
-          <CardTitle>Iniciar sesi\u00f3n</CardTitle>
+          <CardTitle>Iniciar sesión</CardTitle>
           <CardDescription>Accede a tu cuenta para gestionar tus ventas</CardDescription>
         </CardHeader>
         <CardContent>
@@ -88,7 +88,7 @@ export default function Login() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Contrase\u00f1a</Label>
+              <Label htmlFor="password">Contraseña</Label>
               <Input
                 id="password"
                 type="password"
@@ -100,7 +100,7 @@ export default function Login() {
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Iniciando sesi\u00f3n..." : "Iniciar sesi\u00f3n"}
+              {loading ? "Iniciando sesión..." : "Iniciar sesión"}
             </Button>
 
             <Button
@@ -114,9 +114,9 @@ export default function Login() {
             </Button>
 
             <div className="text-center text-sm text-muted-foreground">
-              \u00bfNo tienes cuenta?{" "}
+              ¿No tienes cuenta?{" "}
               <Link to="/register" className="text-primary hover:underline">
-                Reg\u00edstrate aqu\u00ed
+                Regístrate aquí
               </Link>
             </div>
           </form>
