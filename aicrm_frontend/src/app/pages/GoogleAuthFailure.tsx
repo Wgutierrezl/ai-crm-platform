@@ -7,6 +7,7 @@ export default function GoogleAuthFailure() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const reason = params.get("reason");
+
   useEffect(() => {
     logger.warn("[GoogleOAuth][FrontendFailure] page entered", {
       path: window.location.pathname,

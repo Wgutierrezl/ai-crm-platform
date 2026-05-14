@@ -226,3 +226,14 @@ El frontend del AI CRM se encuentra en una fase de prototipo funcional basado en
 2. Ajustes UX para flujo de catalogo conversacional (alineado con WhatsApp).
 3. Cobertura de tests de componentes y servicios API.
 4. Preparacion de interfaces para fase suppliers/proveedores.
+
+## Entrada 2026-05-14 (fix auth text encoding/render)
+
+### Correccion aplicada
+- Se corrigieron textos con encoding dañado en pantallas de autenticacion.
+- Login ya no muestra secuencias escapadas visibles (`\u00f3`, `\u00f1`, `\u00bf`) en UI.
+- Register y GoogleAuthFailure quedaron alineadas con caracteres UTF-8 correctos.
+
+### Alcance
+- Solo cambios de texto/render en frontend auth.
+- Sin cambios de logica de autenticacion ni endpoints.

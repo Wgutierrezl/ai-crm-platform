@@ -78,7 +78,7 @@ export default function Register() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mb-4">
-            <h1 className="text-3xl text-primary mb-2" style={{ fontFamily: 'var(--font-heading)' }}>
+            <h1 className="text-3xl text-primary mb-2" style={{ fontFamily: "var(--font-heading)" }}>
               CRM AI
             </h1>
           </div>
