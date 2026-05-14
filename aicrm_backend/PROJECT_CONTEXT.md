@@ -1,5 +1,31 @@
 # PROJECT CONTEXT - AI CRM Backend
 
+## Actualizacion 2026-05-14 - Cierre de sesion (docker + auth ui + orders)
+
+### Entregado en esta sesion
+- Dockerizacion backend/frontend operativa para entorno local:
+  - `Dockerfile` backend/frontend,
+  - `docker-compose.yml` en raiz,
+  - uso de `host.docker.internal` para MySQL local.
+- Fix frontend auth:
+  - correccion de textos con encoding/render dañado en login/registro/callback.
+- Mejora de ordenes:
+  - payload de ordenes enriquecido en backend,
+  - dashboard/detail de ordenes alineado a datos reales,
+  - helper centralizado de formato monetario en frontend.
+
+### Incidente tecnico importante
+- Se detecto que `npm run lint` backend aplica `eslint ... --fix` global, generando cambios masivos fuera de alcance.
+- Se realizo cleanup manual de worktree para conservar solo cambios intencionales.
+
+### Workflow Git reforzado
+- Desarrollo por feature branch.
+- PR obligatorio hacia `master`.
+- Merge controlado y sin trabajo directo sobre `master`.
+
+### Referencia consolidada de esta sesion
+- `docs/session-2026-05-14-delivery-notes.md`
+
 ## Actualizacion 2026-05-12 - Estado consolidado (SMTP + PDF + OAuth Users)
 
 ### Estado operativo actual

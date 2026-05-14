@@ -2,6 +2,17 @@
 
 Fecha de actualizacion: 2026-05-12
 
+## Actualizacion 2026-05-14 - Cierre de sesion (documentacion consolidada)
+
+- Nota consolidada de sesion:
+  - `docs/session-2026-05-14-delivery-notes.md`
+- Incluye:
+  - alcance Docker/backend/frontend implementado,
+  - mejora de ordenes dashboard/detail,
+  - incidente tecnico por lint global con `--fix`,
+  - workflow Git por feature branches + PR a `master`,
+  - pendientes de fases siguientes.
+
 ## Actualizacion 2026-05-14 - Dockerizacion backend + frontend
 
 ### Implementado
@@ -155,6 +166,20 @@ Fecha de actualizacion: 2026-05-12
 3. Plantillas visuales de PDF.
 4. Plantillas de correo y copy conversacional.
 5. Mejora de experiencia carrito/checkout en WhatsApp.
+
+## Actualizacion 2026-05-14 - Enriquecimiento de consulta de ordenes para frontend
+
+### Causa raiz
+- `GET /orders` devolvia datos planos (solo orden base), insuficientes para panel/detalle.
+- Frontend dependia de fallbacks para cliente/items/pago.
+
+### Ajuste aplicado
+- `GetOrdersByCompanyUseCase` ahora devuelve payload enriquecido por orden con:
+  - customer (nombre/email/telefono),
+  - items con detalle de producto,
+  - payment transaction mas reciente por `orderId`.
+- No se altero flujo de checkout ni creacion de ordenes/transacciones.
+- No se ejecutaron migraciones ni cambios de esquema.
 
 ## Proximos pasos
 1. Google Drive (fase futura).
