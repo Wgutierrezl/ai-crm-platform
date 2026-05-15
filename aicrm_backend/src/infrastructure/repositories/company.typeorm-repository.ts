@@ -45,6 +45,32 @@ export class CompanyTypeormRepository implements CompanyRepository {
     );
   }
 
+  async updateAssistantSettings(input: {
+    companyId: string;
+    assistantName: string | null;
+    assistantContext: string | null;
+    assistantWelcomeMessage: string | null;
+  }): Promise<Company> {
+    const entity = await this.ormRepo.findOneBy({ id: input.companyId });
+    if (!entity) {
+      throw new Error(`Company not found id=${input.companyId}`);
+    }
+
+    entity.assistantName = input.assistantName;
+    entity.assistantContext = input.assistantContext;
+    entity.assistantWelcomeMessage = input.assistantWelcomeMessage;
+
+    const saved = await this.ormRepo.save(entity);
+    return new Company(
+      saved.id,
+      saved.name,
+      saved.createdAt,
+      saved.assistantName ?? null,
+      saved.assistantContext ?? null,
+      saved.assistantWelcomeMessage ?? null,
+    );
+  }
+
   async findAllByCompanyId(_companyId: string): Promise<Company[]> {
     // Company es el agregado raiz; filtrar por companyId no aplica
     return [];

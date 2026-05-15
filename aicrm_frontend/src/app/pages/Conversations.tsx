@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent, type KeyboardEvent } from "react";
+﻿import { useEffect, useState, type ChangeEvent, type KeyboardEvent } from "react";
 import { Send, Bot, Package, UserPlus, ShoppingCart, Paperclip } from "lucide-react";
 import { Button } from "../components/ui/button.tsx";
 import { Input } from "../components/ui/input.tsx";
@@ -14,8 +14,8 @@ import type { MessageRole } from "../../api/dtos/message.dto";
 const mockConversations = [
   {
     id: "1",
-    customer: "María González",
-    lastMessage: "¿Tienen disponible el producto X?",
+    customer: "MarÃ­a GonzÃ¡lez",
+    lastMessage: "Â¿Tienen disponible el producto X?",
     time: "5 min",
     unread: true,
     status: "lead",
@@ -30,8 +30,8 @@ const mockConversations = [
   },
   {
     id: "3",
-    customer: "Ana López",
-    lastMessage: "Gracias por la información",
+    customer: "Ana LÃ³pez",
+    lastMessage: "Gracias por la informaciÃ³n",
     time: "1h",
     unread: false,
     status: "buyer",
@@ -42,13 +42,13 @@ const mockMessages = [
   {
     id: 1,
     role: "customer",
-    content: "Hola, buenos días. Estoy buscando una laptop para trabajo",
+    content: "Hola, buenos dÃ­as. Estoy buscando una laptop para trabajo",
     timestamp: "10:30 AM",
   },
   {
     id: 2,
     role: "bot",
-    content: "¡Hola! Encantado de ayudarte. Tenemos varias opciones de laptops. ¿Qué características te interesan más?",
+    content: "Â¡Hola! Encantado de ayudarte. Tenemos varias opciones de laptops. Â¿QuÃ© caracterÃ­sticas te interesan mÃ¡s?",
     timestamp: "10:30 AM",
   },
   {
@@ -60,32 +60,32 @@ const mockMessages = [
   {
     id: 4,
     role: "bot",
-    content: "Perfecto! Te recomiendo la Laptop Dell XPS 15. Tiene 16GB RAM, procesador Intel i7, y excelente rendimiento. El precio es $4,500,000. ¿Te gustaría más información?",
+    content: "Perfecto! Te recomiendo la Laptop Dell XPS 15. Tiene 16GB RAM, procesador Intel i7, y excelente rendimiento. El precio es $4,500,000. Â¿Te gustarÃ­a mÃ¡s informaciÃ³n?",
     timestamp: "10:32 AM",
     action: "GET_PRODUCTS",
   },
   {
     id: 5,
     role: "customer",
-    content: "Sí, me interesa. ¿Cuánto tiempo de garantía tiene?",
+    content: "SÃ­, me interesa. Â¿CuÃ¡nto tiempo de garantÃ­a tiene?",
     timestamp: "10:35 AM",
   },
   {
     id: 6,
     role: "agent",
-    content: "Hola María, soy Juan del equipo de ventas. La laptop tiene 1 año de garantía del fabricante y podemos extenderla a 3 años por un costo adicional.",
+    content: "Hola MarÃ­a, soy Juan del equipo de ventas. La laptop tiene 1 aÃ±o de garantÃ­a del fabricante y podemos extenderla a 3 aÃ±os por un costo adicional.",
     timestamp: "10:40 AM",
   },
   {
     id: 7,
     role: "customer",
-    content: "Perfecto, me gustaría comprarla con la garantía extendida",
+    content: "Perfecto, me gustarÃ­a comprarla con la garantÃ­a extendida",
     timestamp: "10:42 AM",
   },
   {
     id: 8,
     role: "bot",
-    content: "¡Excelente! He creado tu orden con la Laptop Dell XPS 15 y garantía extendida. El total es $4,850,000. Te enviaré los detalles de pago.",
+    content: "Â¡Excelente! He creado tu orden con la Laptop Dell XPS 15 y garantÃ­a extendida. El total es $4,850,000. Te enviarÃ© los detalles de pago.",
     timestamp: "10:43 AM",
     action: "CREATE_ORDER",
   },
@@ -98,9 +98,9 @@ const suggestedProducts = [
 ];
 
 const aiSuggestedActions = [
-  { label: "Ver productos", icon: Package, action: "GET_PRODUCTS" },
-  { label: "Crear cliente", icon: UserPlus, action: "CREATE_CUSTOMER" },
-  { label: "Crear orden", icon: ShoppingCart, action: "CREATE_ORDER" },
+  { label: "Ver catálogo", icon: Package },
+  { label: "Registrar cliente", icon: UserPlus },
+  { label: "Preparar pedido", icon: ShoppingCart },
 ];
 
 export default function Conversations() {
@@ -121,7 +121,7 @@ export default function Conversations() {
         const mapped = apiConversations.map((conv, index) => ({
           id: conv.id,
           customer: `Cliente ${index + 1}`,
-          lastMessage: "Conversación activa",
+          lastMessage: "ConversaciÃ³n activa",
           time: new Date(conv.createdAt).toLocaleDateString("es-CO"),
           unread: false,
           status: "lead",
@@ -304,7 +304,7 @@ export default function Conversations() {
                       {message.action && (
                         <div className="mt-2 pt-2 border-t border-current/20">
                           <Badge variant="outline" className="text-xs">
-                            Acción: {message.action}
+                            Acción sugerida por IA
                           </Badge>
                         </div>
                       )}
@@ -377,7 +377,7 @@ export default function Conversations() {
                     <span>$4,500,000</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>Garantía extendida</span>
+                    <span>GarantÃ­a extendida</span>
                     <span>$350,000</span>
                   </div>
                   <div className="pt-2 border-t border-primary/20 flex justify-between font-medium">
@@ -396,7 +396,7 @@ export default function Conversations() {
                     key={index}
                     variant="outline"
                     className="w-full justify-start"
-                    onClick={() => toast.info(`Acción: ${action.action}`)}
+                    onClick={() => toast.info(`Sugerencia: ${action.label}`)}
                   >
                     <action.icon className="w-4 h-4 mr-2" />
                     {action.label}
@@ -407,10 +407,10 @@ export default function Conversations() {
 
             <div className="p-3 rounded-lg bg-[var(--success)]/10 border border-[var(--success)]/20">
               <p className="text-sm font-medium text-[var(--success)] mb-1">
-                Orden creada automáticamente
+                Orden creada automÃ¡ticamente
               </p>
               <p className="text-xs text-muted-foreground">
-                La IA creó la orden ORD-1234 por $4,850,000
+                La IA creÃ³ la orden ORD-1234 por $4,850,000
               </p>
               <Button variant="outline" size="sm" className="w-full mt-2">
                 Ver orden

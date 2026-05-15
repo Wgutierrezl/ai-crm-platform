@@ -100,6 +100,8 @@ import { GetOrdersByCompanyUseCase } from './application/use-cases/get-orders-by
 import { CreateCustomerUseCase } from './application/use-cases/create-customer.use-case';
 import { GetCustomersByCompanyUseCase } from './application/use-cases/get-customers-by-company.use-case';
 import { GetCustomerByIdUseCase } from './application/use-cases/get-customer-by-id.use-case';
+import { GetCompanySettingsUseCase } from './application/use-cases/get-company-settings.use-case';
+import { UpdateCompanySettingsUseCase } from './application/use-cases/update-company-settings.use-case';
 import { GetCustomerByPhoneUseCase } from './application/use-cases/get-customer-by-phone.use-case';
 import { UpsertCompanyWhatsappCredentialUseCase } from './application/use-cases/upsert-company-whatsapp-credential.use-case';
 import { UpsertCompanyWhatsappAppUseCase } from './application/use-cases/upsert-company-whatsapp-app.use-case';
@@ -128,6 +130,7 @@ import { OrderController } from './interfaces/http/controllers/order.controller'
 import { CustomerController } from './interfaces/http/controllers/customer.controller';
 import { CompanyWhatsappCredentialController } from './interfaces/http/controllers/company-whatsapp-credential.controller';
 import { CompanyWhatsappAppController } from './interfaces/http/controllers/company-whatsapp-app.controller';
+import { CompanySettingsController } from './interfaces/http/controllers/company-settings.controller';
 import { WhatsappWebhookController } from './interfaces/http/controllers/whatsapp-webhook.controller';
 import { CustomersOAuthController } from './interfaces/http/controllers/customers-oauth.controller';
 import { JwtAuthGuard } from './interfaces/http/guards/jwt-auth.guard';
@@ -228,6 +231,7 @@ import { InMemoryOauthTempStoreAdapter } from './infrastructure/security/in-memo
     OrderController,
     CompanyWhatsappAppController,
     CompanyWhatsappCredentialController,
+    CompanySettingsController,
     WhatsappWebhookController,
     CustomersOAuthController,
   ],
@@ -254,6 +258,8 @@ import { InMemoryOauthTempStoreAdapter } from './infrastructure/security/in-memo
     CreateCustomerUseCase,
     GetCustomersByCompanyUseCase,
     GetCustomerByIdUseCase,
+    GetCompanySettingsUseCase,
+    UpdateCompanySettingsUseCase,
     GetCustomerByPhoneUseCase,
     UpsertCompanyWhatsappAppUseCase,
     UpsertCompanyWhatsappCredentialUseCase,

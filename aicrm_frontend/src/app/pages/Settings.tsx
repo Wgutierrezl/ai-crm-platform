@@ -1,57 +1,107 @@
-import { useState, type ChangeEvent } from "react";
-import { Save, Plus, Trash2, User } from "lucide-react";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { Save, User } from "lucide-react";
 import { Button } from "../components/ui/button.tsx";
 import { Input } from "../components/ui/input.tsx";
 import { Label } from "../components/ui/label.tsx";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card.tsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs.tsx";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table.tsx";
-import { Badge } from "../components/ui/badge.tsx";
 import { Textarea } from "../components/ui/textarea.tsx";
 import { toast } from "sonner";
 import { useNavigate } from "react-router";
 import { authService } from "../../api/services/auth.service";
+import { companySettingsService } from "../../api/services/company-settings.service";
 import { authStorage } from "../../utils/storage/authStorage";
 
-const mockUsers = [
-  { id: 1, name: "Juan Pérez", email: "juan.perez@miempresa.com", role: "admin" },
-  { id: 2, name: "Ana García", email: "ana.garcia@miempresa.com", role: "agent" },
-  { id: 3, name: "Carlos López", email: "carlos.lopez@miempresa.com", role: "agent" },
-];
+type SettingsForm = {
+  companyName: string;
+  assistantName: string;
+  assistantWelcomeMessage: string;
+  assistantContext: string;
+};
+
+const initialForm: SettingsForm = {
+  companyName: "",
+  assistantName: "",
+  assistantWelcomeMessage: "",
+  assistantContext: "",
+};
 
 export default function Settings() {
   const navigate = useNavigate();
-  const [companyData, setCompanyData] = useState({
-    name: "Mi Empresa S.A.",
-    primaryColor: "#0EA5A4",
-  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [form, setForm] = useState<SettingsForm>(initialForm);
+  const [initialLoadedForm, setInitialLoadedForm] = useState<SettingsForm>(initialForm);
   const authData = authStorage.getAuthData();
 
-  const [salesPrompt, setSalesPrompt] = useState(
-    "Actúa como un asistente de ventas profesional y amigable. Ayuda a los clientes a encontrar productos, responde sus preguntas y facilita la creación de órdenes."
-  );
+  useEffect(() => {
+    const loadSettings = async () => {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const settings = await companySettingsService.getSettings();
+        setForm({
+          companyName: settings.companyName,
+          assistantName: settings.assistantName ?? "",
+          assistantWelcomeMessage: settings.assistantWelcomeMessage ?? "",
+          assistantContext: settings.assistantContext ?? "",
+        });
+        setInitialLoadedForm({
+          companyName: settings.companyName,
+          assistantName: settings.assistantName ?? "",
+          assistantWelcomeMessage: settings.assistantWelcomeMessage ?? "",
+          assistantContext: settings.assistantContext ?? "",
+        });
+      } catch {
+        setLoadError("No fue posible cargar la configuración de empresa.");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const [password, setPassword] = useState({
-    current: "",
-    new: "",
-    confirm: "",
-  });
+    loadSettings();
+  }, []);
 
-  const handleSaveCompany = () => {
-    toast.success("Configuración de empresa guardada");
+  const hasChanges = useMemo(() => {
+    return (
+      form.assistantName !== initialLoadedForm.assistantName ||
+      form.assistantWelcomeMessage !== initialLoadedForm.assistantWelcomeMessage ||
+      form.assistantContext !== initialLoadedForm.assistantContext
+    );
+  }, [form, initialLoadedForm]);
+
+  const updateField = (field: keyof SettingsForm, value: string) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSavePrompt = () => {
-    toast.success("Configuración de prompts guardada");
-  };
+  const handleSaveAssistant = async () => {
+    setSaving(true);
+    try {
+      const updated = await companySettingsService.updateSettings({
+        assistantName: form.assistantName.trim() || null,
+        assistantWelcomeMessage: form.assistantWelcomeMessage.trim() || null,
+        assistantContext: form.assistantContext.trim() || null,
+      });
 
-  const handleChangePassword = () => {
-    if (password.new !== password.confirm) {
-      toast.error("Las contraseñas no coinciden");
-      return;
+      setForm((prev) => ({
+        ...prev,
+        assistantName: updated.assistantName ?? "",
+        assistantWelcomeMessage: updated.assistantWelcomeMessage ?? "",
+        assistantContext: updated.assistantContext ?? "",
+      }));
+      setInitialLoadedForm((prev) => ({
+        ...prev,
+        assistantName: updated.assistantName ?? "",
+        assistantWelcomeMessage: updated.assistantWelcomeMessage ?? "",
+        assistantContext: updated.assistantContext ?? "",
+      }));
+      toast.success("Configuración del asistente guardada");
+    } catch {
+      toast.error("No fue posible guardar la configuración");
+    } finally {
+      setSaving(false);
     }
-    toast.success("Contraseña actualizada exitosamente");
-    setPassword({ current: "", new: "", confirm: "" });
   };
 
   const handleLogout = () => {
@@ -60,169 +110,114 @@ export default function Settings() {
     navigate("/login");
   };
 
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-3xl" style={{ fontFamily: "var(--font-heading)" }}>
+          Configuración
+        </h1>
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-sm text-muted-foreground">Cargando configuración...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl mb-2" style={{ fontFamily: 'var(--font-heading)' }}>
+        <h1 className="text-3xl mb-2" style={{ fontFamily: "var(--font-heading)" }}>
           Configuración
         </h1>
-        <p className="text-muted-foreground">Gestiona la configuración de tu empresa</p>
+        <p className="text-muted-foreground">
+          Personaliza cómo tu asistente atiende a tus clientes.
+        </p>
       </div>
 
-      <Tabs defaultValue="company" className="space-y-6">
+      {loadError ? (
+        <Card className="border-destructive/40">
+          <CardContent className="p-4">
+            <p className="text-sm text-destructive">{loadError}</p>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <Tabs defaultValue="assistant" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="company">Empresa</TabsTrigger>
-          <TabsTrigger value="users">Usuarios</TabsTrigger>
-          <TabsTrigger value="prompts">Prompts IA</TabsTrigger>
+          <TabsTrigger value="assistant">Asistente</TabsTrigger>
           <TabsTrigger value="security">Seguridad</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="company" className="space-y-6">
+        <TabsContent value="assistant" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Información de la Empresa</CardTitle>
+              <CardTitle>Perfil de la Empresa</CardTitle>
               <CardDescription>
-                Configura los datos básicos de tu empresa
+                Datos generales usados para contextualizar al asistente.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="companyName">Nombre de la Empresa</Label>
+                <Label htmlFor="companyName">Nombre de la empresa</Label>
+                <Input id="companyName" value={form.companyName} disabled />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Asistente Comercial</CardTitle>
+              <CardDescription>
+                Define nombre, bienvenida y contexto para respuestas más alineadas a tu negocio.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="assistantName">Nombre del asistente</Label>
                 <Input
-                  id="companyName"
-                  value={companyData.name}
+                  id="assistantName"
+                  placeholder="Ej: Sofía"
+                  value={form.assistantName}
                   onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                    setCompanyData({ ...companyData, name: e.target.value })
+                    updateField("assistantName", e.target.value)
                   }
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="primaryColor">Color Primario</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="primaryColor"
-                    type="color"
-                    value={companyData.primaryColor}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                      setCompanyData({ ...companyData, primaryColor: e.target.value })
-                    }
-                    className="w-20 h-10"
-                  />
-                  <Input
-                    value={companyData.primaryColor}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                      setCompanyData({ ...companyData, primaryColor: e.target.value })
-                    }
-                    className="flex-1"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="logo">Logo de la Empresa</Label>
-                <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    Arrastra tu logo aquí o haz clic para seleccionar
-                  </p>
-                  <Button variant="outline" className="mt-4">
-                    Seleccionar Archivo
-                  </Button>
-                </div>
-              </div>
-
-              <Button onClick={handleSaveCompany}>
-                <Save className="w-4 h-4 mr-2" />
-                Guardar Cambios
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="users" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Usuarios Internos</CardTitle>
-                  <CardDescription>
-                    Gestiona los usuarios de tu equipo
-                  </CardDescription>
-                </div>
-                <Button>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Invitar Usuario
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Rol</TableHead>
-                    <TableHead>Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {mockUsers.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">{user.name}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>
-                        <Badge variant={user.role === "admin" ? "default" : "secondary"}>
-                          {user.role === "admin" ? "Admin" : "Agente"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="sm">
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="prompts" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Configuración de Prompts de Ventas</CardTitle>
-              <CardDescription>
-                Personaliza cómo la IA interactúa con tus clientes
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="salesPrompt">Prompt del Bot de Ventas</Label>
+                <Label htmlFor="assistantWelcomeMessage">Mensaje de bienvenida</Label>
                 <Textarea
-                  id="salesPrompt"
-                  value={salesPrompt}
-                  onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setSalesPrompt(e.target.value)}
-                  rows={6}
-                  placeholder="Define cómo debe comportarse el bot de ventas..."
+                  id="assistantWelcomeMessage"
+                  rows={4}
+                  placeholder="Ej: Hola {{customerName}}, soy {{assistantName}}. Te ayudo con tu compra."
+                  value={form.assistantWelcomeMessage}
+                  onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+                    updateField("assistantWelcomeMessage", e.target.value)
+                  }
                 />
                 <p className="text-xs text-muted-foreground">
-                  Este prompt define el comportamiento y personalidad del asistente IA
+                  Puedes usar placeholders: {"{{customerName}}"}, {"{{assistantName}}"}, {"{{companyName}}"}.
                 </p>
               </div>
 
-              <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-                <h4 className="font-medium mb-2">Acciones Disponibles</h4>
-                <ul className="text-sm space-y-1 text-muted-foreground">
-                  <li>• GET_PRODUCTS - Consultar catálogo de productos</li>
-                  <li>• CREATE_CUSTOMER - Crear nuevo cliente</li>
-                  <li>• CREATE_ORDER - Generar orden de compra</li>
-                </ul>
+              <div className="space-y-2">
+                <Label htmlFor="assistantContext">Contexto de la empresa e instrucciones comerciales</Label>
+                <Textarea
+                  id="assistantContext"
+                  rows={6}
+                  placeholder="Ej: Somos una tienda B2B. Prioriza respuestas claras, tono cercano y enfoque en cierre comercial."
+                  value={form.assistantContext}
+                  onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+                    updateField("assistantContext", e.target.value)
+                  }
+                />
               </div>
 
-              <Button onClick={handleSavePrompt}>
+              <Button onClick={handleSaveAssistant} disabled={saving || !hasChanges}>
                 <Save className="w-4 h-4 mr-2" />
-                Guardar Configuración
+                {saving ? "Guardando..." : "Guardar configuración"}
               </Button>
             </CardContent>
           </Card>
@@ -233,7 +228,7 @@ export default function Settings() {
             <CardHeader>
               <CardTitle>Seguridad de la Cuenta</CardTitle>
               <CardDescription>
-                Gestiona la seguridad de tu cuenta
+                Información de sesión y salida segura.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -241,7 +236,7 @@ export default function Settings() {
                 <div className="flex items-center gap-3">
                   <User className="w-5 h-5 text-primary" />
                   <div>
-                    <p className="font-medium">Sesión Activa</p>
+                    <p className="font-medium">Sesión activa</p>
                     <p className="text-sm text-muted-foreground">
                       {authData
                         ? `Usuario ${authData.userId.slice(0, 8)} · Empresa ${authData.companyId.slice(0, 8)}`
@@ -251,47 +246,8 @@ export default function Settings() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="currentPassword">Contraseña Actual</Label>
-                <Input
-                  id="currentPassword"
-                  type="password"
-                  value={password.current}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                    setPassword({ ...password, current: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="newPassword">Nueva Contraseña</Label>
-                <Input
-                  id="newPassword"
-                  type="password"
-                  value={password.new}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword({ ...password, new: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirmar Nueva Contraseña</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  value={password.confirm}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                    setPassword({ ...password, confirm: e.target.value })
-                  }
-                />
-              </div>
-
-              <Button onClick={handleChangePassword}>
-                <Save className="w-4 h-4 mr-2" />
-                Cambiar Contraseña
-              </Button>
-
               <Button variant="destructive" onClick={handleLogout}>
-                Cerrar Sesión
+                Cerrar sesión
               </Button>
             </CardContent>
           </Card>
