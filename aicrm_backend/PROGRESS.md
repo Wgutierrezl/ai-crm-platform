@@ -2,6 +2,50 @@
 
 Fecha de actualizacion: 2026-05-12
 
+## Actualizacion 2026-05-15 - Company Assistant Settings (sin migraciones)
+
+### Implementado
+- Configuracion de asistente por empresa expuesta con endpoints protegidos por JWT:
+  - `GET /api/v1/company/settings`
+  - `PATCH /api/v1/company/settings`
+- Los endpoints usan `companyId` del usuario autenticado (`CurrentUser`), no del body.
+- Campos reutilizados sin cambios de esquema:
+  - `assistant_name`
+  - `assistant_context`
+  - `assistant_welcome_message`
+- Validaciones de entrada agregadas con `class-validator` para update.
+- Confirmado en codigo:
+  - los campos `assistant_*` existen en entidad/migracion,
+  - el flujo de WhatsApp ya usa `assistantName`, `assistantContext` y `assistantWelcomeMessage`.
+
+### Alcance controlado
+- No se crearon migraciones.
+- No se implemento aun validacion `X-Hub-Signature-256`.
+
+### Analisis tecnico requerido - Meta `X-Hub-Signature-256` (pendiente de implementacion)
+- Que es:
+  - header firmado por Meta para verificar integridad/autenticidad del webhook.
+- Por que importa:
+  - evita procesar requests falsificados a `POST /api/v1/webhooks/whatsapp`.
+- Configuracion necesaria:
+  - `META_APP_SECRET`.
+- Implicacion tecnica clave en NestJS:
+  - validar HMAC SHA256 sobre `raw body` antes de parseo JSON normal.
+- Archivos probables a tocar en rama futura:
+  - `src/main.ts` (habilitar acceso a `rawBody`),
+  - `src/interfaces/http/controllers/whatsapp-webhook.controller.ts` (o middleware/guard dedicado),
+  - nuevo servicio de validacion de firma (HMAC + `timingSafeEqual`),
+  - validacion/config de env.
+- Riesgos:
+  - romper procesamiento actual si `raw body` se configura mal,
+  - rechazar eventos reales si `META_APP_SECRET` o entorno estan mal,
+  - afectar pruebas locales/ngrok si no existe modo disabled por env.
+- Estrategia recomendada:
+  - `WHATSAPP_WEBHOOK_VALIDATE_SIGNATURE=false` en local/dev,
+  - `true` en produccion,
+  - comparar `x-hub-signature-256` con HMAC SHA256 usando `timingSafeEqual`,
+  - logs seguros sin secretos ni payload completo.
+
 ## Actualizacion 2026-05-14 - Cierre de sesion (documentacion consolidada)
 
 - Nota consolidada de sesion:
