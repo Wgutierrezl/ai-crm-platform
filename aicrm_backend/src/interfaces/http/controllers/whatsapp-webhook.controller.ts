@@ -2,13 +2,17 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   HttpCode,
   Logger,
   Post,
   Query,
+  Req,
 } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Request } from 'express';
 import { HandleWhatsappWebhookUseCase } from '../../../application/use-cases/handle-whatsapp-webhook.use-case';
+import { ValidateMetaWebhookSignatureUseCase } from '../../../application/use-cases/validate-meta-webhook-signature.use-case';
 import { VerifyWhatsappWebhookUseCase } from '../../../application/use-cases/verify-whatsapp-webhook.use-case';
 
 @ApiTags('WhatsApp Webhook')
@@ -19,6 +23,7 @@ export class WhatsappWebhookController {
   constructor(
     private readonly verifyWebhookUseCase: VerifyWhatsappWebhookUseCase,
     private readonly handleWebhookUseCase: HandleWhatsappWebhookUseCase,
+    private readonly validateSignatureUseCase: ValidateMetaWebhookSignatureUseCase,
   ) {}
 
   @Get()
@@ -46,7 +51,16 @@ export class WhatsappWebhookController {
     summary: 'Recepcion de eventos/mensajes de WhatsApp desde Meta',
   })
   @ApiResponse({ status: 200, description: 'Webhook procesado correctamente' })
-  async receive(@Body() payload: unknown): Promise<{ ok: true }> {
+  async receive(
+    @Body() payload: unknown,
+    @Req() req: Request & { rawBody?: Buffer },
+    @Headers('x-hub-signature-256') signatureHeader?: string,
+  ): Promise<{ ok: true }> {
+    await this.validateSignatureUseCase.execute({
+      rawBody: req.rawBody,
+      payload,
+      signatureHeader,
+    });
     await this.handleWebhookUseCase.execute(payload);
     return { ok: true };
   }

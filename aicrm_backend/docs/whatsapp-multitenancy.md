@@ -19,6 +19,36 @@
 5. Resolve/create external customer by `wa_id` or phone.
 6. Continue conversational lifecycle.
 
+## Signature Validation (`X-Hub-Signature-256`) - Implemented 2026-05-15
+- `POST /api/v1/webhooks/whatsapp` validates signature before business processing.
+- Strategy: dynamic-first per app/tenant:
+  - extract minimal `phone_number_id` from parsed webhook payload,
+  - resolve app in `company_whatsapp_apps`,
+  - resolve active credentials in `company_whatsapp_credentials`,
+  - use `app_secret` from DB as primary secret.
+- HMAC validation:
+  - uses raw request body (`rawBody`) + `sha256` HMAC,
+  - requires header format `sha256=<64-hex>`,
+  - compares with `timingSafeEqual` after length checks.
+- Fail-closed behavior when signature validation is enabled:
+  - rejects missing/invalid header,
+  - rejects missing raw body,
+  - rejects missing app, credentials, or secret.
+
+## Config Flags
+- `WHATSAPP_WEBHOOK_VALIDATE_SIGNATURE=false|true`
+  - `false`: bypass validation (recommended only local/dev).
+  - `true`: enforces signature validation.
+- `WHATSAPP_WEBHOOK_ALLOW_GLOBAL_SECRET_FALLBACK=false|true`
+  - enables fallback to `META_APP_SECRET` only if explicitly true.
+  - fallback is logged as warning; never silent.
+- `META_APP_SECRET=...`
+  - used only when fallback flag is enabled and per-app secret is missing.
+
+## Notes
+- `GET /api/v1/webhooks/whatsapp` verification flow remains unchanged.
+- No secrets/tokens/signatures/payloads completos are logged.
+
 ## Current Risks
 - Legacy records without `company_id` can break strict tenant resolution.
 - If global mode and strict mode coexist without a clear flag, behavior may diverge by environment.

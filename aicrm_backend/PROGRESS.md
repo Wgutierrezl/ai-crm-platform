@@ -2,6 +2,38 @@
 
 Fecha de actualizacion: 2026-05-12
 
+## Actualizacion 2026-05-15 - Firma webhook Meta WhatsApp (dynamic-first)
+
+### Implementado
+- Validacion de firma `X-Hub-Signature-256` para:
+  - `POST /api/v1/webhooks/whatsapp`.
+- Orden de ejecucion:
+  1. validar firma,
+  2. solo si es valida, ejecutar `HandleWhatsappWebhookUseCase`.
+- Estrategia aplicada:
+  - dynamic-first por `phone_number_id` -> `company_whatsapp_apps` -> `company_whatsapp_credentials` -> `app_secret`.
+  - fallback global opcional a `META_APP_SECRET` solo si `WHATSAPP_WEBHOOK_ALLOW_GLOBAL_SECRET_FALLBACK=true`.
+- Endurecimiento tecnico:
+  - uso de `rawBody` real (Nest `rawBody: true`),
+  - parse estricto de header `sha256=<hex>`,
+  - comparacion segura con `timingSafeEqual` y validacion de longitudes,
+  - rechazo temprano en falta de header/rawBody/app/credencial/secreto/firma invalida.
+
+### Configuracion agregada/ajustada
+- `WHATSAPP_WEBHOOK_VALIDATE_SIGNATURE`:
+  - recomendado `false` en local/dev,
+  - recomendado `true` en staging/prod.
+- `WHATSAPP_WEBHOOK_ALLOW_GLOBAL_SECRET_FALLBACK`:
+  - default `false`,
+  - habilitar solo como puente temporal de configuracion.
+- `META_APP_SECRET`:
+  - usado unicamente cuando fallback global esta habilitado explicitamente.
+
+### No incluido en esta fase
+- No migraciones.
+- No cifrado de secretos en BD (queda como hardening posterior).
+- No cambios en `GET /api/v1/webhooks/whatsapp`.
+
 ## Actualizacion 2026-05-14 - Cierre de sesion (documentacion consolidada)
 
 - Nota consolidada de sesion:

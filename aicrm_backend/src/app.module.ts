@@ -105,6 +105,7 @@ import { UpsertCompanyWhatsappCredentialUseCase } from './application/use-cases/
 import { UpsertCompanyWhatsappAppUseCase } from './application/use-cases/upsert-company-whatsapp-app.use-case';
 import { VerifyWhatsappWebhookUseCase } from './application/use-cases/verify-whatsapp-webhook.use-case';
 import { HandleWhatsappWebhookUseCase } from './application/use-cases/handle-whatsapp-webhook.use-case';
+import { ValidateMetaWebhookSignatureUseCase } from './application/use-cases/validate-meta-webhook-signature.use-case';
 import { HandleInboundChannelMessageUseCase } from './application/use-cases/handle-inbound-channel-message.use-case';
 import { GetOrCreateActiveCartSessionUseCase } from './application/use-cases/get-or-create-active-cart-session.use-case';
 import { AddItemToCartUseCase } from './application/use-cases/add-item-to-cart.use-case';
@@ -257,6 +258,7 @@ import { InMemoryOauthTempStoreAdapter } from './infrastructure/security/in-memo
     UpsertCompanyWhatsappAppUseCase,
     UpsertCompanyWhatsappCredentialUseCase,
     VerifyWhatsappWebhookUseCase,
+    ValidateMetaWebhookSignatureUseCase,
     HandleWhatsappWebhookUseCase,
     HandleInboundChannelMessageUseCase,
     ToolExecutionService,
