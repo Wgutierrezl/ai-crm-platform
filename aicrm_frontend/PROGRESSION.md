@@ -1,5 +1,33 @@
 # PROGRESSION - AI CRM Frontend
 
+## Entrada 2026-05-15 (settings de asistente por empresa)
+
+### Implementado
+- Pantalla `Settings` rediseñada para negocio y conectada a backend real.
+- Se elimino exposicion tecnica al usuario final:
+  - se retiro seccion `Prompts IA`,
+  - se retiro bloque `Acciones Disponibles` con tools internas.
+- Nueva configuracion consumiendo API:
+  - `GET /api/v1/company/settings`
+  - `PATCH /api/v1/company/settings`
+- Campos activos en UI:
+  - nombre del asistente,
+  - mensaje de bienvenida,
+  - contexto de empresa/instrucciones comerciales.
+- Estados UX agregados:
+  - loading,
+  - error al cargar,
+  - success/error al guardar.
+
+### Limpieza visible aplicada (alcance minimo)
+- `Conversations.tsx` deja de mostrar nombres tecnicos de acciones/tools en badges y botones sugeridos.
+
+### Pendiente para sesiones siguientes
+1. Desmock completo de `Customers`.
+2. Desmock completo de `Conversations`.
+3. Limpieza de bloques mock de `Dashboard`.
+4. Providers IA administrables desde frontend.
+
 ## Resumen
 El frontend del AI CRM se encuentra en una fase de prototipo funcional basado en un diseño previamente definido en Figma. Ya existe una base navegable y visualmente consistente sobre la cual se puede avanzar hacia la integracion completa con backend.
 

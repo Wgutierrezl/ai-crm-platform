@@ -98,3 +98,50 @@
   - `PROGRESS.md`
 - For frontend progress timeline, keep using:
   - `aicrm_frontend/PROGRESSION.md`
+
+---
+
+## Follow-up implemented on 2026-05-15 (feature branch: `feat/company-assistant-settings`)
+
+### Backend
+- Added secure assistant settings endpoints (JWT + tenant from `CurrentUser`):
+  - `GET /api/v1/company/settings`
+  - `PATCH /api/v1/company/settings`
+- Reused existing `companies` fields (no migration):
+  - `assistant_name`
+  - `assistant_context`
+  - `assistant_welcome_message`
+
+### Frontend
+- `Settings` page redesigned to business-friendly assistant configuration.
+- Removed technical exposure:
+  - removed `Prompts IA` technical editor,
+  - removed `Acciones Disponibles` showing internal tools.
+
+### Visible cleanup
+- `Conversations` UI no longer surfaces technical tool/action names to end users in suggestion badges/buttons.
+
+### Still pending (not implemented in this branch)
+- Full de-mock of `Customers`.
+- Full de-mock of `Conversations`.
+- Dashboard mock cleanup.
+- IA providers administrable from frontend.
+- Meta webhook signature validation (`X-Hub-Signature-256`).
+- Email outbox/retry strategy.
+
+### Meta `X-Hub-Signature-256` analysis (documented, not implemented)
+- Requires validating webhook signature for:
+  - `POST /api/v1/webhooks/whatsapp`
+- Required env:
+  - `META_APP_SECRET`
+- NestJS technical requirement:
+  - access raw request body before JSON parsing for HMAC SHA256 verification.
+- Likely touch points:
+  - bootstrap/main setup for raw body access,
+  - webhook controller and/or dedicated signature validator middleware/service,
+  - env-driven enable/disable strategy.
+- Recommended rollout:
+  - disabled in local/dev (`WHATSAPP_WEBHOOK_VALIDATE_SIGNATURE=false`),
+  - enabled in production,
+  - compare signature with `timingSafeEqual`,
+  - keep logs safe (no secrets, no full payload dump).
