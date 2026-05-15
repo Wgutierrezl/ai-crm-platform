@@ -1,5 +1,5 @@
-import { useEffect, useState, type ChangeEvent } from "react";
-import { Search, Eye, CheckCircle, XCircle } from "lucide-react";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { Eye, Search } from "lucide-react";
 import { Button } from "../components/ui/button.tsx";
 import { Input } from "../components/ui/input.tsx";
 import { Card, CardContent, CardHeader } from "../components/ui/card.tsx";
@@ -13,163 +13,119 @@ import { toast } from "sonner";
 import { orderService } from "../../api/services/order.service";
 import { logger } from "../../utils/logger/logger";
 import type { OrderDto } from "../../api/dtos/order.dto";
+import { formatCurrency } from "../../utils/format/currency";
 
-type OrderView = OrderDto & {
-  customer: string;
-  date: string;
-  channel: "chat" | "manual";
-  itemCount: number;
-};
+type FilterStatus = "all" | "pending" | "paid" | "cancelled" | "failed";
 
-const mockOrders: OrderView[] = [
-  {
-    id: "ORD-1234",
-    customerId: "cust-1",
-    companyId: "",
-    customer: "María González",
-    status: "paid",
-    total: 4850000,
-    date: "2026-04-22",
-    channel: "chat",
-    itemCount: 2,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "ORD-1235",
-    customerId: "cust-2",
-    companyId: "",
-    customer: "Carlos Ruiz",
-    status: "pending",
-    total: 1200000,
-    date: "2026-04-22",
-    channel: "chat",
-    itemCount: 1,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "ORD-1236",
-    customerId: "cust-3",
-    companyId: "",
-    customer: "Ana López",
-    status: "paid",
-    total: 2100000,
-    date: "2026-04-21",
-    channel: "manual",
-    itemCount: 3,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "ORD-1237",
-    customerId: "cust-4",
-    companyId: "",
-    customer: "Pedro Martínez",
-    status: "cancelled",
-    total: 980000,
-    date: "2026-04-21",
-    channel: "chat",
-    itemCount: 1,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "ORD-1238",
-    customerId: "cust-5",
-    companyId: "",
-    customer: "Laura Díaz",
-    status: "pending",
-    total: 3500000,
-    date: "2026-04-20",
-    channel: "manual",
-    itemCount: 4,
-    createdAt: new Date().toISOString(),
-  },
-];
+function getOrderUiStatus(order: OrderDto): "pending" | "paid" | "cancelled" | "failed" {
+  if (order.status === "cancelled") return "cancelled";
+  if (order.status === "payment_failed") return "failed";
+
+  const paymentStatus = order.paymentTransaction?.status;
+  if (paymentStatus === "approved") return "paid";
+  if (paymentStatus === "rejected" || paymentStatus === "error") return "failed";
+  if (paymentStatus === "pending") return "pending";
+
+  if (order.status === "paid" || order.status === "confirmed" || order.status === "mock_paid") {
+    return "paid";
+  }
+
+  return "pending";
+}
+
+function getStatusBadge(status: "pending" | "paid" | "cancelled" | "failed") {
+  switch (status) {
+    case "pending":
+      return <Badge variant="secondary">Pendiente</Badge>;
+    case "paid":
+      return <Badge className="bg-[var(--success)] text-white">Pagada</Badge>;
+    case "cancelled":
+      return <Badge variant="destructive">Cancelada</Badge>;
+    case "failed":
+      return <Badge variant="destructive">Pago fallido</Badge>;
+    default:
+      return <Badge variant="secondary">No disponible</Badge>;
+  }
+}
+
+function getChannelLabel(order: OrderDto): "Chat IA" | "Manual" {
+  return order.paymentTransaction ? "Chat IA" : "Manual";
+}
+
+function getCustomerName(order: OrderDto): string {
+  return (
+    order.customer?.fullName ||
+    order.customer?.name ||
+    `Cliente ${order.customerId.slice(0, 8)}`
+  );
+}
 
 export default function Orders() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [orders, setOrders] = useState<OrderView[]>(mockOrders);
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
+  const [orders, setOrders] = useState<OrderDto[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadOrders = async () => {
+      setLoading(true);
       try {
         const data = await orderService.getOrders();
-        const mapped: OrderView[] = data.map((order) => ({
-          ...order,
-          customer: `Cliente ${order.customerId.slice(0, 6)}`,
-          date: new Date(order.createdAt).toLocaleDateString("es-CO"),
-          channel: "chat",
-          itemCount: order.items?.length ?? 1,
-        }));
-        setOrders(mapped);
+        setOrders(data);
       } catch (error) {
-        logger.warn("No se pudieron cargar órdenes desde API. Se usa mock fallback", error);
-        toast.warning("Órdenes cargadas desde datos de ejemplo");
+        logger.error("No se pudieron cargar órdenes desde API", error);
+        toast.error("No se pudieron cargar las órdenes");
+      } finally {
+        setLoading(false);
       }
     };
 
     loadOrders();
   }, []);
 
-  const filteredOrders = orders.filter((order) => {
+  const enrichedOrders = useMemo(
+    () =>
+      orders.map((order) => ({
+        ...order,
+        uiStatus: getOrderUiStatus(order),
+        customerName: getCustomerName(order),
+        itemCount: order.items?.length ?? 0,
+      })),
+    [orders],
+  );
+
+  const filteredOrders = enrichedOrders.filter((order) => {
     const matchesSearch =
       order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.customer.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = filterStatus === "all" || order.status === filterStatus;
+      order.customerName.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter = filterStatus === "all" || order.uiStatus === filterStatus;
     return matchesSearch && matchesFilter;
   });
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "pending":
-        return <Badge variant="secondary">Pendiente</Badge>;
-      case "paid":
-        return <Badge className="bg-[var(--success)] text-white">Pagada</Badge>;
-      case "cancelled":
-        return <Badge variant="destructive">Cancelada</Badge>;
-      default:
-        return null;
-    }
-  };
-
-  const totalOrders = orders.length;
-  const pendingOrders = orders.filter((o) => o.status === "pending").length;
-  const paidOrders = orders.filter((o) => o.status === "paid").length;
-  const totalRevenue = orders
-    .filter((o) => o.status === "paid")
+  const totalOrders = enrichedOrders.length;
+  const pendingOrders = enrichedOrders.filter((o) => o.uiStatus === "pending").length;
+  const paidOrders = enrichedOrders.filter((o) => o.uiStatus === "paid").length;
+  const totalRevenue = enrichedOrders
+    .filter((o) => o.uiStatus === "paid")
     .reduce((sum, o) => sum + o.total, 0);
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl mb-2" style={{ fontFamily: 'var(--font-heading)' }}>
+        <h1 className="text-3xl mb-2" style={{ fontFamily: "var(--font-heading)" }}>
           Órdenes
         </h1>
         <p className="text-muted-foreground">Gestiona todas las órdenes de compra</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <KPICard
-          title="Total Órdenes"
-          value={totalOrders}
-          icon={DollarSign}
-          iconColor="text-primary"
-        />
-        <KPICard
-          title="Pendientes"
-          value={pendingOrders}
-          icon={Clock}
-          iconColor="text-[var(--warning)]"
-        />
-        <KPICard
-          title="Pagadas"
-          value={paidOrders}
-          icon={CheckCircleIcon}
-          iconColor="text-[var(--success)]"
-        />
+        <KPICard title="Total órdenes" value={totalOrders} icon={DollarSign} iconColor="text-primary" />
+        <KPICard title="Pendientes" value={pendingOrders} icon={Clock} iconColor="text-[var(--warning)]" />
+        <KPICard title="Pagadas" value={paidOrders} icon={CheckCircleIcon} iconColor="text-[var(--success)]" />
         <KPICard
           title="Ingresos"
-          value={`$${(totalRevenue / 1000000).toFixed(1)}M`}
+          value={formatCurrency(totalRevenue)}
           icon={DollarSign}
           iconColor="text-[var(--success)]"
         />
@@ -187,8 +143,8 @@ export default function Orders() {
                 className="pl-10"
               />
             </div>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-[180px]">
+            <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value as FilterStatus)}>
+              <SelectTrigger className="w-[200px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -196,6 +152,7 @@ export default function Orders() {
                 <SelectItem value="pending">Pendiente</SelectItem>
                 <SelectItem value="paid">Pagada</SelectItem>
                 <SelectItem value="cancelled">Cancelada</SelectItem>
+                <SelectItem value="failed">Pago fallido</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -204,58 +161,42 @@ export default function Orders() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID Orden</TableHead>
+                <TableHead>ID orden</TableHead>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>Total</TableHead>
-                <TableHead>Fecha Creación</TableHead>
+                <TableHead>Fecha creación</TableHead>
                 <TableHead>Canal</TableHead>
                 <TableHead>Items</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredOrders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell className="font-medium">{order.id}</TableCell>
-                  <TableCell>{order.customer}</TableCell>
-                  <TableCell>{getStatusBadge(order.status)}</TableCell>
-                  <TableCell className="font-medium">
-                    ${order.total.toLocaleString()}
-                  </TableCell>
-                  <TableCell>{order.date}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">
-                      {order.channel === "chat" ? "Chat IA" : "Manual"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{order.itemCount}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate(`/orders/${order.id}`)}
-                      >
+              {!loading &&
+                filteredOrders.map((order) => (
+                  <TableRow key={order.id}>
+                    <TableCell className="font-medium">{order.id}</TableCell>
+                    <TableCell>{order.customerName}</TableCell>
+                    <TableCell>{getStatusBadge(order.uiStatus)}</TableCell>
+                    <TableCell className="font-medium">{formatCurrency(order.total)}</TableCell>
+                    <TableCell>{new Date(order.createdAt).toLocaleString("es-CO")}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{getChannelLabel(order)}</Badge>
+                    </TableCell>
+                    <TableCell>{order.itemCount}</TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="sm" onClick={() => navigate(`/orders/${order.id}`)}>
                         <Eye className="w-4 h-4 mr-2" />
                         Ver
                       </Button>
-                      {order.status === "pending" && (
-                        <>
-                          <Button variant="ghost" size="sm" className="text-[var(--success)]">
-                            <CheckCircle className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" className="text-[var(--error)]">
-                            <XCircle className="w-4 h-4" />
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                  </TableRow>
+                ))}
             </TableBody>
           </Table>
+          {!loading && filteredOrders.length === 0 ? (
+            <p className="text-sm text-muted-foreground mt-4">No hay órdenes para los filtros seleccionados.</p>
+          ) : null}
         </CardContent>
       </Card>
     </div>

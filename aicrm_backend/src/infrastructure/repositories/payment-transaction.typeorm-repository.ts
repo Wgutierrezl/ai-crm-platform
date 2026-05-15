@@ -106,4 +106,15 @@ export class PaymentTransactionTypeormRepository extends PaymentTransactionRepos
     });
     return found ? this.toDomain(found) : null;
   }
+
+  async findLatestByOrderId(
+    companyId: string,
+    orderId: string,
+  ): Promise<PaymentTransaction | null> {
+    const found = await this.ormRepo.findOne({
+      where: { companyId, orderId },
+      order: { createdAt: 'DESC' },
+    });
+    return found ? this.toDomain(found) : null;
+  }
 }

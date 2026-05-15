@@ -237,3 +237,38 @@ El frontend del AI CRM se encuentra en una fase de prototipo funcional basado en
 ### Alcance
 - Solo cambios de texto/render en frontend auth.
 - Sin cambios de logica de autenticacion ni endpoints.
+
+## Entrada 2026-05-14 (orders dashboard/detail improvements)
+
+### Causa raiz identificada
+- El backend de `GET /orders` devolvia ordenes planas (sin customer, sin detalle de producto, sin transaccion).
+- El frontend completaba con fallbacks/mock, afectando KPIs, filtros y detalle.
+
+### Correcciones aplicadas
+- Frontend Orders/OrderDetail ahora consumen y renderizan datos reales enriquecidos.
+- Se eliminaron fallbacks engañosos para cliente/items/ingresos.
+- Se normalizo calculo de pagadas/ingresos usando estado de orden + estado de transaccion.
+- Se agrego helper seguro de formato monetario (`Intl.NumberFormat`).
+
+### Alcance
+- Sin cambios de logica de checkout.
+- Sin cambios de backend fuera del dominio de consulta de ordenes.
+
+## Entrada 2026-05-14 (session closure + incident note)
+
+### Documentacion consolidada
+- Nota de sesion en backend docs:
+  - `aicrm_backend/docs/session-2026-05-14-delivery-notes.md`
+- Resumen:
+  - dockerizacion backend/frontend completada,
+  - fix de encoding/render en auth,
+  - mejoras en orders list/detail y formato monetario.
+
+### Incidente tecnico relevante
+- `npm run lint` backend ejecutaba `eslint ... --fix` sobre scope global.
+- Resultado:
+  - cambios masivos no intencionales fuera de alcance.
+- Mitigacion adoptada:
+  - cleanup manual del worktree.
+- Recomendacion:
+  - usar lint sin autofix global para validacion de ramas acotadas.
