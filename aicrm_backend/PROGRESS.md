@@ -2,49 +2,37 @@
 
 Fecha de actualizacion: 2026-05-12
 
-## Actualizacion 2026-05-15 - Company Assistant Settings (sin migraciones)
+## Actualizacion 2026-05-15 - Firma webhook Meta WhatsApp (dynamic-first)
 
 ### Implementado
-- Configuracion de asistente por empresa expuesta con endpoints protegidos por JWT:
-  - `GET /api/v1/company/settings`
-  - `PATCH /api/v1/company/settings`
-- Los endpoints usan `companyId` del usuario autenticado (`CurrentUser`), no del body.
-- Campos reutilizados sin cambios de esquema:
-  - `assistant_name`
-  - `assistant_context`
-  - `assistant_welcome_message`
-- Validaciones de entrada agregadas con `class-validator` para update.
-- Confirmado en codigo:
-  - los campos `assistant_*` existen en entidad/migracion,
-  - el flujo de WhatsApp ya usa `assistantName`, `assistantContext` y `assistantWelcomeMessage`.
+- Validacion de firma `X-Hub-Signature-256` para:
+  - `POST /api/v1/webhooks/whatsapp`.
+- Orden de ejecucion:
+  1. validar firma,
+  2. solo si es valida, ejecutar `HandleWhatsappWebhookUseCase`.
+- Estrategia aplicada:
+  - dynamic-first por `phone_number_id` -> `company_whatsapp_apps` -> `company_whatsapp_credentials` -> `app_secret`.
+  - fallback global opcional a `META_APP_SECRET` solo si `WHATSAPP_WEBHOOK_ALLOW_GLOBAL_SECRET_FALLBACK=true`.
+- Endurecimiento tecnico:
+  - uso de `rawBody` real (Nest `rawBody: true`),
+  - parse estricto de header `sha256=<hex>`,
+  - comparacion segura con `timingSafeEqual` y validacion de longitudes,
+  - rechazo temprano en falta de header/rawBody/app/credencial/secreto/firma invalida.
 
-### Alcance controlado
-- No se crearon migraciones.
-- No se implemento aun validacion `X-Hub-Signature-256`.
+### Configuracion agregada/ajustada
+- `WHATSAPP_WEBHOOK_VALIDATE_SIGNATURE`:
+  - recomendado `false` en local/dev,
+  - recomendado `true` en staging/prod.
+- `WHATSAPP_WEBHOOK_ALLOW_GLOBAL_SECRET_FALLBACK`:
+  - default `false`,
+  - habilitar solo como puente temporal de configuracion.
+- `META_APP_SECRET`:
+  - usado unicamente cuando fallback global esta habilitado explicitamente.
 
-### Analisis tecnico requerido - Meta `X-Hub-Signature-256` (pendiente de implementacion)
-- Que es:
-  - header firmado por Meta para verificar integridad/autenticidad del webhook.
-- Por que importa:
-  - evita procesar requests falsificados a `POST /api/v1/webhooks/whatsapp`.
-- Configuracion necesaria:
-  - `META_APP_SECRET`.
-- Implicacion tecnica clave en NestJS:
-  - validar HMAC SHA256 sobre `raw body` antes de parseo JSON normal.
-- Archivos probables a tocar en rama futura:
-  - `src/main.ts` (habilitar acceso a `rawBody`),
-  - `src/interfaces/http/controllers/whatsapp-webhook.controller.ts` (o middleware/guard dedicado),
-  - nuevo servicio de validacion de firma (HMAC + `timingSafeEqual`),
-  - validacion/config de env.
-- Riesgos:
-  - romper procesamiento actual si `raw body` se configura mal,
-  - rechazar eventos reales si `META_APP_SECRET` o entorno estan mal,
-  - afectar pruebas locales/ngrok si no existe modo disabled por env.
-- Estrategia recomendada:
-  - `WHATSAPP_WEBHOOK_VALIDATE_SIGNATURE=false` en local/dev,
-  - `true` en produccion,
-  - comparar `x-hub-signature-256` con HMAC SHA256 usando `timingSafeEqual`,
-  - logs seguros sin secretos ni payload completo.
+### No incluido en esta fase
+- No migraciones.
+- No cifrado de secretos en BD (queda como hardening posterior).
+- No cambios en `GET /api/v1/webhooks/whatsapp`.
 
 ## Actualizacion 2026-05-14 - Cierre de sesion (documentacion consolidada)
 
