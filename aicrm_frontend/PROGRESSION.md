@@ -25,6 +25,13 @@
 2. Filtro combinado categoria + proveedor en vista productos (optimizacion UX).
 3. Tests de integracion UI/API para asignacion y desasignacion de proveedor.
 
+### Nota de validacion 2026-05-17 (continuidad de pendientes)
+- Se priorizo cobertura backend de reglas multi-tenant de `supplierId`.
+- En frontend no se agregaron tests automáticos en esta fase:
+  - no hay setup activo de pruebas UI/componentes en el proyecto.
+- Los filtros combinados en `Products` ya estaban operando en conjunto
+  (texto + categoria + proveedor + stock), por lo que no se aplico refactor adicional.
+
 ## Entrada 2026-05-17 (modulo suppliers frontend fase 1)
 
 ### Implementado

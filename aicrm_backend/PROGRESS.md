@@ -30,6 +30,17 @@ Fecha de actualizacion: 2026-05-12
 - Sin cambios en WhatsApp/Bot, IA providers, checkout, PDF/correos u OAuth.
 - Sin relacion muchos-a-muchos (`product_suppliers` no aplica en esta regla).
 
+### Validacion adicional 2026-05-17 (tests backend)
+- Se agrego cobertura especifica de relacion producto-proveedor:
+  - create product con `supplierId` valido del mismo tenant.
+  - rechazo de `supplierId` inexistente.
+  - rechazo de `supplierId` de otro tenant.
+  - create product sin `supplierId`.
+  - update product con `supplierId: null` para quitar proveedor.
+  - consulta de productos por proveedor aislada por tenant.
+- Spec agregado:
+  - `src/application/use-cases/product-supplier-relation.use-case.spec.ts`.
+
 ## Actualizacion 2026-05-17 - Suppliers backend fase 1
 
 ### Implementado
