@@ -2,6 +2,28 @@
 
 Fecha de actualizacion: 2026-05-12
 
+## Actualizacion 2026-05-17 - Historial real de mensajes por conversacion
+
+### Implementado
+- Nuevo endpoint protegido:
+  - `GET /api/v1/conversations/:id/messages`
+- Seguridad multi-tenant aplicada:
+  - `companyId` tomado de `CurrentUser` (`JwtAuthGuard`),
+  - validacion de pertenencia de conversacion al tenant,
+  - respuesta `404` si la conversacion no existe o no pertenece a la empresa autenticada.
+- Historial real de mensajes:
+  - devuelve mensajes reales de la conversacion,
+  - orden ascendente por `createdAt`.
+- Cambios tecnicos:
+  - `GetConversationMessagesUseCase` agregado.
+  - `ConversationController` actualizado con `GET :id/messages`.
+  - registro en `AppModule`.
+  - spec unitario del caso de uso agregado para:
+    - tenant valido,
+    - tenant invalido,
+    - conversacion sin mensajes,
+    - conversacion inexistente.
+
 ## Actualizacion 2026-05-15 - Firma webhook Meta WhatsApp (dynamic-first)
 
 ### Implementado

@@ -1,5 +1,5 @@
-﻿import { useEffect, useState, type ChangeEvent, type KeyboardEvent } from "react";
-import { Send, Bot, Package, UserPlus, ShoppingCart, Paperclip } from "lucide-react";
+import { useEffect, useMemo, useState, type ChangeEvent, type KeyboardEvent } from "react";
+import { Bot, Loader2, Paperclip, Send, Search } from "lucide-react";
 import { Button } from "../components/ui/button.tsx";
 import { Input } from "../components/ui/input.tsx";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card.tsx";
@@ -9,186 +9,120 @@ import { toast } from "sonner";
 import { conversationService } from "../../api/services/conversation.service";
 import { messageService } from "../../api/services/message.service";
 import { logger } from "../../utils/logger/logger";
-import type { MessageRole } from "../../api/dtos/message.dto";
+import type { ConversationDto } from "../../api/dtos/conversation.dto";
+import type { MessageDto } from "../../api/dtos/message.dto";
 
-const mockConversations = [
-  {
-    id: "1",
-    customer: "MarÃ­a GonzÃ¡lez",
-    lastMessage: "Â¿Tienen disponible el producto X?",
-    time: "5 min",
-    unread: true,
-    status: "lead",
-  },
-  {
-    id: "2",
-    customer: "Carlos Ruiz",
-    lastMessage: "Quiero hacer un pedido",
-    time: "12 min",
-    unread: false,
-    status: "interested",
-  },
-  {
-    id: "3",
-    customer: "Ana LÃ³pez",
-    lastMessage: "Gracias por la informaciÃ³n",
-    time: "1h",
-    unread: false,
-    status: "buyer",
-  },
-];
-
-const mockMessages = [
-  {
-    id: 1,
-    role: "customer",
-    content: "Hola, buenos dÃ­as. Estoy buscando una laptop para trabajo",
-    timestamp: "10:30 AM",
-  },
-  {
-    id: 2,
-    role: "bot",
-    content: "Â¡Hola! Encantado de ayudarte. Tenemos varias opciones de laptops. Â¿QuÃ© caracterÃ­sticas te interesan mÃ¡s?",
-    timestamp: "10:30 AM",
-  },
-  {
-    id: 3,
-    role: "customer",
-    content: "Necesito algo con buen rendimiento, al menos 16GB RAM",
-    timestamp: "10:32 AM",
-  },
-  {
-    id: 4,
-    role: "bot",
-    content: "Perfecto! Te recomiendo la Laptop Dell XPS 15. Tiene 16GB RAM, procesador Intel i7, y excelente rendimiento. El precio es $4,500,000. Â¿Te gustarÃ­a mÃ¡s informaciÃ³n?",
-    timestamp: "10:32 AM",
-    action: "GET_PRODUCTS",
-  },
-  {
-    id: 5,
-    role: "customer",
-    content: "SÃ­, me interesa. Â¿CuÃ¡nto tiempo de garantÃ­a tiene?",
-    timestamp: "10:35 AM",
-  },
-  {
-    id: 6,
-    role: "agent",
-    content: "Hola MarÃ­a, soy Juan del equipo de ventas. La laptop tiene 1 aÃ±o de garantÃ­a del fabricante y podemos extenderla a 3 aÃ±os por un costo adicional.",
-    timestamp: "10:40 AM",
-  },
-  {
-    id: 7,
-    role: "customer",
-    content: "Perfecto, me gustarÃ­a comprarla con la garantÃ­a extendida",
-    timestamp: "10:42 AM",
-  },
-  {
-    id: 8,
-    role: "bot",
-    content: "Â¡Excelente! He creado tu orden con la Laptop Dell XPS 15 y garantÃ­a extendida. El total es $4,850,000. Te enviarÃ© los detalles de pago.",
-    timestamp: "10:43 AM",
-    action: "CREATE_ORDER",
-  },
-];
-
-const suggestedProducts = [
-  { id: 1, name: "Laptop Dell XPS 15", price: 4500000 },
-  { id: 2, name: "Monitor LG 27 4K", price: 1200000 },
-  { id: 3, name: "Mouse Logitech MX Master", price: 280000 },
-];
-
-const aiSuggestedActions = [
-  { label: "Ver catálogo", icon: Package },
-  { label: "Registrar cliente", icon: UserPlus },
-  { label: "Preparar pedido", icon: ShoppingCart },
-];
+type ConversationView = {
+  id: string;
+  customerId: string;
+  companyId: string;
+  createdAt: string;
+};
 
 export default function Conversations() {
-  const [conversations, setConversations] = useState(mockConversations);
-  const [selectedConversation, setSelectedConversation] = useState(mockConversations[0]);
-  const [messages, setMessages] = useState(mockMessages);
+  const [conversations, setConversations] = useState<ConversationView[]>([]);
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<MessageDto[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [loadingConversations, setLoadingConversations] = useState(false);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [conversationError, setConversationError] = useState<string | null>(null);
+  const [messageError, setMessageError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const selectedConversation = useMemo(
+    () => conversations.find((conv) => conv.id === selectedConversationId) ?? null,
+    [conversations, selectedConversationId],
+  );
 
   useEffect(() => {
     const loadConversations = async () => {
       try {
+        setLoadingConversations(true);
+        setConversationError(null);
+
         const apiConversations = await conversationService.getConversations();
-        if (apiConversations.length === 0) {
-          return;
+        const sorted = [...apiConversations].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        );
+
+        setConversations(
+          sorted.map((conv: ConversationDto) => ({
+            id: conv.id,
+            customerId: conv.customerId,
+            companyId: conv.companyId,
+            createdAt: conv.createdAt,
+          })),
+        );
+
+        if (sorted.length > 0) {
+          setSelectedConversationId(sorted[0].id);
+        } else {
+          setSelectedConversationId(null);
         }
-
-        const mapped = apiConversations.map((conv, index) => ({
-          id: conv.id,
-          customer: `Cliente ${index + 1}`,
-          lastMessage: "ConversaciÃ³n activa",
-          time: new Date(conv.createdAt).toLocaleDateString("es-CO"),
-          unread: false,
-          status: "lead",
-        }));
-
-        setConversations(mapped);
-        setSelectedConversation(mapped[0]);
       } catch (error) {
-        logger.warn("No se pudieron cargar conversaciones desde API. Se usa mock fallback", error);
-        toast.warning("Conversaciones cargadas desde datos de ejemplo");
+        logger.warn("No se pudieron cargar conversaciones desde API", error);
+        setConversationError("No se pudieron cargar las conversaciones.");
+        toast.error("No se pudieron cargar las conversaciones");
+      } finally {
+        setLoadingConversations(false);
       }
     };
 
-    loadConversations();
+    queueMicrotask(() => {
+      void loadConversations();
+    });
   }, []);
 
+  useEffect(() => {
+    const loadMessages = async () => {
+      if (!selectedConversationId) {
+        setMessages([]);
+        return;
+      }
+
+      try {
+        setLoadingMessages(true);
+        setMessageError(null);
+
+        const data = await conversationService.getConversationMessages(selectedConversationId);
+        setMessages(data);
+      } catch (error) {
+        logger.error("No se pudo cargar el historial de mensajes", error);
+        setMessageError("No fue posible cargar el historial de mensajes.");
+      } finally {
+        setLoadingMessages(false);
+      }
+    };
+
+    void loadMessages();
+  }, [selectedConversationId]);
+
+  const filteredConversations = useMemo(() => {
+    const term = searchQuery.toLowerCase();
+    return conversations.filter((conv) => {
+      if (!term) return true;
+      return (
+        conv.id.toLowerCase().includes(term) ||
+        conv.customerId.toLowerCase().includes(term)
+      );
+    });
+  }, [conversations, searchQuery]);
+
   const handleSendMessage = async (asAgent = true) => {
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || !selectedConversationId) return;
 
     setSending(true);
     try {
       if (asAgent) {
-        const response = await messageService.sendMessage(
-          String(selectedConversation.id),
-          newMessage,
-        );
-
-        const message = {
-          id: messages.length + 1,
-          role: response.role as MessageRole,
-          content: response.content,
-          timestamp: new Date(response.createdAt).toLocaleTimeString("es-CO", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-        };
-
-        setMessages((prev) => [...prev, message]);
+        await messageService.sendMessage(selectedConversationId, newMessage);
       } else {
-        const response = await messageService.processIncomingMessage(
-          String(selectedConversation.id),
-          newMessage,
-        );
-
-        const customerMessage = {
-          id: messages.length + 1,
-          role: response.customerMessage.role as MessageRole,
-          content: response.customerMessage.content,
-          timestamp: new Date(response.customerMessage.createdAt).toLocaleTimeString("es-CO", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-        };
-
-        const botMessage = {
-          id: messages.length + 2,
-          role: response.botMessage.role as MessageRole,
-          content: response.botMessage.content,
-          timestamp: new Date(response.botMessage.createdAt).toLocaleTimeString("es-CO", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          action: response.actionExecuted,
-        };
-
-        setMessages((prev) => [...prev, customerMessage, botMessage]);
+        await messageService.processIncomingMessage(selectedConversationId, newMessage);
       }
+
+      const refreshed = await conversationService.getConversationMessages(selectedConversationId);
+      setMessages(refreshed);
 
       setNewMessage("");
       toast.success(`Mensaje enviado como ${asAgent ? "agente" : "IA"}`);
@@ -213,23 +147,10 @@ export default function Conversations() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "lead":
-        return <Badge variant="secondary">Lead</Badge>;
-      case "interested":
-        return <Badge className="bg-[var(--info)] text-white">Interesado</Badge>;
-      case "buyer":
-        return <Badge className="bg-[var(--success)] text-white">Comprador</Badge>;
-      default:
-        return null;
-    }
-  };
-
   return (
     <div className="h-[calc(100vh-8rem)]">
       <div className="mb-4">
-        <h1 className="text-3xl mb-2" style={{ fontFamily: 'var(--font-heading)' }}>
+        <h1 className="text-3xl mb-2" style={{ fontFamily: "var(--font-heading)" }}>
           Conversaciones
         </h1>
         <p className="text-muted-foreground">Gestiona las conversaciones con tus clientes</p>
@@ -239,35 +160,58 @@ export default function Conversations() {
         <Card className="col-span-3 flex flex-col">
           <CardHeader>
             <CardTitle>Conversaciones</CardTitle>
+            <div className="relative mt-2">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(event: ChangeEvent<HTMLInputElement>) => setSearchQuery(event.target.value)}
+                placeholder="Buscar por ID o customerId"
+                className="pl-9"
+              />
+            </div>
           </CardHeader>
           <CardContent className="flex-1 overflow-hidden p-0">
             <ScrollArea className="h-full">
               <div className="space-y-1 p-4">
-                {conversations.map((conv) => (
-                  <div
-                    key={conv.id}
-                    onClick={() => setSelectedConversation(conv)}
-                    className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                      selectedConversation.id === conv.id
-                        ? "bg-primary/10 border border-primary/20"
-                        : "hover:bg-accent"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between mb-1">
-                      <p className="font-medium text-sm">{conv.customer}</p>
-                      {conv.unread && (
-                        <span className="w-2 h-2 rounded-full bg-primary"></span>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground truncate mb-1">
-                      {conv.lastMessage}
-                    </p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">{conv.time}</span>
-                      {getStatusBadge(conv.status)}
-                    </div>
+                {loadingConversations ? (
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Cargando conversaciones...
                   </div>
-                ))}
+                ) : conversationError ? (
+                  <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
+                    {conversationError}
+                  </div>
+                ) : filteredConversations.length === 0 ? (
+                  <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
+                    {conversations.length === 0
+                      ? "Aun no hay conversaciones registradas."
+                      : "No se encontraron conversaciones con esa busqueda."}
+                  </div>
+                ) : (
+                  filteredConversations.map((conv) => (
+                    <div
+                      key={conv.id}
+                      onClick={() => setSelectedConversationId(conv.id)}
+                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                        selectedConversationId === conv.id
+                          ? "bg-primary/10 border border-primary/20"
+                          : "hover:bg-accent"
+                      }`}
+                    >
+                      <div className="mb-1">
+                        <p className="font-medium text-sm">Conv: {conv.id.slice(0, 8)}</p>
+                        <p className="text-xs text-muted-foreground">Customer: {conv.customerId.slice(0, 8)}</p>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(conv.createdAt).toLocaleString("es-CO")}
+                        </span>
+                        <Badge variant="outline">Activa</Badge>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </ScrollArea>
           </CardContent>
@@ -277,67 +221,90 @@ export default function Conversations() {
           <CardHeader className="border-b border-border">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>{selectedConversation.customer}</CardTitle>
+                <CardTitle>
+                  {selectedConversation
+                    ? `Conversacion ${selectedConversation.id.slice(0, 8)}`
+                    : "Sin conversacion seleccionada"}
+                </CardTitle>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {getStatusBadge(selectedConversation.status)}
+                  {selectedConversation
+                    ? `Customer: ${selectedConversation.customerId}`
+                    : "Selecciona una conversacion para ver mensajes."}
                 </p>
               </div>
             </div>
           </CardHeader>
           <CardContent className="flex-1 flex flex-col p-0">
             <ScrollArea className="flex-1 p-4">
-              <div className="space-y-4">
-                {messages.map((message) => (
-                  <div key={message.id} className="flex flex-col">
-                    <div
-                      className={`max-w-[70%] rounded-lg p-3 ${getMessageBubbleClass(
-                        message.role
-                      )}`}
-                    >
-                      {message.role === "bot" && (
-                        <div className="flex items-center gap-2 mb-1">
-                          <Bot className="w-4 h-4" />
-                          <span className="text-xs">Bot IA</span>
-                        </div>
-                      )}
-                      <p className="text-sm">{message.content}</p>
-                      {message.action && (
-                        <div className="mt-2 pt-2 border-t border-current/20">
-                          <Badge variant="outline" className="text-xs">
-                            Acción sugerida por IA
-                          </Badge>
-                        </div>
-                      )}
+              {loadingMessages ? (
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Cargando historial...
+                </div>
+              ) : messageError ? (
+                <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
+                  {messageError}
+                </div>
+              ) : !selectedConversation ? (
+                <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
+                  Selecciona una conversacion para ver su historial real.
+                </div>
+              ) : messages.length === 0 ? (
+                <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
+                  Esta conversacion aun no tiene mensajes.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {messages.map((message) => (
+                    <div key={message.id} className="flex flex-col">
+                      <div className={`max-w-[70%] rounded-lg p-3 ${getMessageBubbleClass(message.role)}`}>
+                        {message.role === "bot" && (
+                          <div className="flex items-center gap-2 mb-1">
+                            <Bot className="w-4 h-4" />
+                            <span className="text-xs">Bot IA</span>
+                          </div>
+                        )}
+                        <p className="text-sm">{message.content}</p>
+                      </div>
+                      <span
+                        className={`text-xs text-muted-foreground mt-1 ${
+                          message.role === "agent" ? "text-right" : ""
+                        }`}
+                      >
+                        {new Date(message.createdAt).toLocaleTimeString("es-CO", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
                     </div>
-                    <span
-                      className={`text-xs text-muted-foreground mt-1 ${
-                        message.role === "agent" ? "text-right" : ""
-                      }`}
-                    >
-                      {message.timestamp}
-                    </span>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </ScrollArea>
 
             <div className="border-t border-border p-4">
               <div className="flex gap-2">
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" disabled>
                   <Paperclip className="w-4 h-4" />
                 </Button>
                 <Input
                   placeholder="Escribe un mensaje..."
                   value={newMessage}
-                  disabled={sending}
+                  disabled={sending || !selectedConversationId}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => setNewMessage(e.target.value)}
-                  onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => e.key === "Enter" && handleSendMessage()}
+                  onKeyDown={(e: KeyboardEvent<HTMLInputElement>) =>
+                    e.key === "Enter" && void handleSendMessage()
+                  }
                 />
-                <Button onClick={() => handleSendMessage()} disabled={sending}>
+                <Button onClick={() => void handleSendMessage()} disabled={sending || !selectedConversationId}>
                   <Send className="w-4 h-4 mr-2" />
                   {sending ? "Enviando..." : "Como Agente"}
                 </Button>
-                <Button variant="secondary" onClick={() => handleSendMessage(false)} disabled={sending}>
+                <Button
+                  variant="secondary"
+                  onClick={() => void handleSendMessage(false)}
+                  disabled={sending || !selectedConversationId}
+                >
                   <Bot className="w-4 h-4 mr-2" />
                   Enviar a IA
                 </Button>
@@ -350,71 +317,9 @@ export default function Conversations() {
           <CardHeader>
             <CardTitle>Contexto Comercial</CardTitle>
           </CardHeader>
-          <CardContent className="flex-1 overflow-hidden space-y-6">
-            <div>
-              <h3 className="font-medium mb-3">Productos Sugeridos</h3>
-              <div className="space-y-2">
-                {suggestedProducts.map((product) => (
-                  <div
-                    key={product.id}
-                    className="p-3 rounded-lg border border-border hover:bg-accent cursor-pointer transition-colors"
-                  >
-                    <p className="text-sm font-medium">{product.name}</p>
-                    <p className="text-sm text-primary">
-                      ${product.price.toLocaleString()}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <h3 className="font-medium mb-3">Carrito Sugerido por IA</h3>
-              <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Laptop Dell XPS 15</span>
-                    <span>$4,500,000</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>GarantÃ­a extendida</span>
-                    <span>$350,000</span>
-                  </div>
-                  <div className="pt-2 border-t border-primary/20 flex justify-between font-medium">
-                    <span>Total</span>
-                    <span className="text-primary">$4,850,000</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="font-medium mb-3">Acciones Sugeridas</h3>
-              <div className="space-y-2">
-                {aiSuggestedActions.map((action, index) => (
-                  <Button
-                    key={index}
-                    variant="outline"
-                    className="w-full justify-start"
-                    onClick={() => toast.info(`Sugerencia: ${action.label}`)}
-                  >
-                    <action.icon className="w-4 h-4 mr-2" />
-                    {action.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            <div className="p-3 rounded-lg bg-[var(--success)]/10 border border-[var(--success)]/20">
-              <p className="text-sm font-medium text-[var(--success)] mb-1">
-                Orden creada automÃ¡ticamente
-              </p>
-              <p className="text-xs text-muted-foreground">
-                La IA creÃ³ la orden ORD-1234 por $4,850,000
-              </p>
-              <Button variant="outline" size="sm" className="w-full mt-2">
-                Ver orden
-              </Button>
+          <CardContent className="flex-1 overflow-hidden space-y-4">
+            <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+              Sugerencias IA disponibles cuando exista endpoint real de contexto comercial para conversaciones.
             </div>
           </CardContent>
         </Card>

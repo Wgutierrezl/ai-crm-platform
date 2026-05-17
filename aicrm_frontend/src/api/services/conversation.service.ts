@@ -10,6 +10,7 @@ import type {
   ConversationListResponseDto,
   CreateConversationRequestDto,
 } from "../dtos/conversation.dto";
+import type { MessageListResponseDto } from "../dtos/message.dto";
 
 export const conversationService = {
   /**
@@ -55,6 +56,29 @@ export const conversationService = {
       return response.data;
     } catch (error) {
       logger.error("Error al crear conversación", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Obtener historial de mensajes de una conversacion
+   */
+  async getConversationMessages(conversationId: string): Promise<MessageListResponseDto> {
+    try {
+      logger.info("Obteniendo mensajes de conversacion...", { conversationId });
+
+      const response = await apiClient.get<MessageListResponseDto>(
+        `/conversations/${conversationId}/messages`,
+      );
+
+      logger.info("Mensajes de conversacion obtenidos exitosamente", {
+        conversationId,
+        count: response.data.length,
+      });
+
+      return response.data;
+    } catch (error) {
+      logger.error("Error al obtener mensajes de conversacion", error);
       throw error;
     }
   },

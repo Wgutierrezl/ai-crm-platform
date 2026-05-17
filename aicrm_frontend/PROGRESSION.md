@@ -1,5 +1,29 @@
 # PROGRESSION - AI CRM Frontend
 
+## Entrada 2026-05-17 (desmock fase 3: conversations con historial real)
+
+### Implementado
+- `Conversations.tsx` ya no usa mocks:
+  - `mockConversations`,
+  - `mockMessages`,
+  - `suggestedProducts`,
+  - `aiSuggestedActions`,
+  - carrito/orden simulada.
+- Lista de conversaciones conectada a backend real:
+  - `GET /api/v1/conversations`.
+- Historial real por conversacion conectado a backend real:
+  - `GET /api/v1/conversations/:id/messages`.
+- Al enviar mensaje (agente o IA), la vista refresca historial real.
+- Estados UX reales agregados:
+  - loading/error/empty para conversaciones,
+  - loading/error/empty para mensajes.
+- Panel lateral mock reemplazado por estado informativo honesto sobre contexto comercial/IA.
+
+### Pendientes
+1. Enriquecer listado con nombre de cliente y ultimo mensaje real (requiere endpoint enriquecido o agregacion adicional).
+2. Sugerencias IA/contexto comercial reales por conversacion (requiere endpoint dedicado).
+3. Tests frontend de UI cuando exista setup formal.
+
 ## Entrada 2026-05-17 (desmock fase 2: dashboard real parcial)
 
 ### Implementado
