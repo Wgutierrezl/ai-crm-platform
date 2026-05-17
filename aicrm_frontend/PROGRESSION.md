@@ -1,5 +1,31 @@
 # PROGRESSION - AI CRM Frontend
 
+## Entrada 2026-05-17 (desmock fase 1: customers)
+
+### Implementado
+- `Customers.tsx` ya no usa `mockCustomers`.
+- Se elimino el fallback a datos inventados cuando falla API.
+- La pantalla ahora consume solo `GET /api/v1/customers`.
+- Se incorporaron estados reales:
+  - loading,
+  - error,
+  - empty state (sin datos),
+  - empty state por busqueda sin resultados.
+- Se eliminaron campos falsos/hardcoded:
+  - `lastConversation`,
+  - `totalPurchased`,
+  - `status` comercial derivado por indice.
+- La busqueda local ahora filtra solo por datos reales disponibles:
+  - nombre,
+  - email,
+  - telefono,
+  - identificacion.
+
+### Pendientes relacionados
+1. Agregar datos comerciales reales de clientes (ultima conversacion, total comprado, estado comercial) cuando existan endpoints agregados.
+2. Desmock de Dashboard (parcial con endpoints actuales).
+3. Desmock de Conversations (requiere endpoint de historial de mensajes para desmock completo).
+
 ## Entrada 2026-05-15 (settings de asistente por empresa)
 
 ### Implementado
