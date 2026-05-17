@@ -25,6 +25,7 @@ import { OauthIdentityOrmEntity } from './infrastructure/database/entities/oauth
 import { OauthRegistrationSessionOrmEntity } from './infrastructure/database/entities/oauth-registration-session.orm-entity';
 import { CustomerOauthLinkSessionOrmEntity } from './infrastructure/database/entities/customer-oauth-link-session.orm-entity';
 import { CustomerOauthIdentityOrmEntity } from './infrastructure/database/entities/customer-oauth-identity.orm-entity';
+import { SupplierOrmEntity } from './infrastructure/database/entities/supplier.orm-entity';
 import { CompanyRepository } from './domain/ports/company.repository.port';
 import { UserRepository } from './domain/ports/user.repository.port';
 import { CustomerRepository } from './domain/ports/customer.repository.port';
@@ -52,6 +53,7 @@ import { OauthTempStorePort } from './domain/ports/oauth-temp-store.port';
 import { WhatsappMessageSender } from './domain/ports/whatsapp-message-sender.port';
 import { ExternalIdentityRepository } from './domain/ports/external-identity.repository.port';
 import { ConversationStateRepository } from './domain/ports/conversation-state.repository.port';
+import { SupplierRepository } from './domain/ports/supplier.repository.port';
 import { CompanyTypeormRepository } from './infrastructure/repositories/company.typeorm-repository';
 import { UserTypeormRepository } from './infrastructure/repositories/user.typeorm-repository';
 import { CustomerTypeormRepository } from './infrastructure/repositories/customer.typeorm-repository';
@@ -72,6 +74,7 @@ import { OauthIdentityTypeormRepository } from './infrastructure/repositories/oa
 import { OauthRegistrationSessionTypeormRepository } from './infrastructure/repositories/oauth-registration-session.typeorm-repository';
 import { CustomerOauthLinkSessionTypeormRepository } from './infrastructure/repositories/customer-oauth-link-session.typeorm-repository';
 import { CustomerOauthIdentityTypeormRepository } from './infrastructure/repositories/customer-oauth-identity.typeorm-repository';
+import { SupplierTypeormRepository } from './infrastructure/repositories/supplier.typeorm-repository';
 import { RegisterUserUseCase } from './application/use-cases/register-user.use-case';
 import { LoginUserUseCase } from './application/use-cases/login-user.use-case';
 import { StartGoogleLoginUseCase } from './application/use-cases/start-google-login.use-case';
@@ -117,6 +120,11 @@ import { RemoveCartItemUseCase } from './application/use-cases/remove-cart-item.
 import { ClearCartUseCase } from './application/use-cases/clear-cart.use-case';
 import { ExpireOldCartSessionsUseCase } from './application/use-cases/expire-old-cart-sessions.use-case';
 import { ConfirmCartCheckoutUseCase } from './application/use-cases/confirm-cart-checkout.use-case';
+import { CreateSupplierUseCase } from './application/use-cases/create-supplier.use-case';
+import { GetSuppliersByCompanyUseCase } from './application/use-cases/get-suppliers-by-company.use-case';
+import { GetSupplierByIdUseCase } from './application/use-cases/get-supplier-by-id.use-case';
+import { UpdateSupplierUseCase } from './application/use-cases/update-supplier.use-case';
+import { UpdateSupplierStatusUseCase } from './application/use-cases/update-supplier-status.use-case';
 import { ToolExecutionService } from './application/services/tool-execution.service';
 import { OnboardingProfileExtractorService } from './application/services/onboarding-profile-extractor.service';
 import { AssistantOnboardingToolsService } from './application/services/assistant-onboarding-tools.service';
@@ -133,6 +141,7 @@ import { CompanyWhatsappAppController } from './interfaces/http/controllers/comp
 import { CompanySettingsController } from './interfaces/http/controllers/company-settings.controller';
 import { WhatsappWebhookController } from './interfaces/http/controllers/whatsapp-webhook.controller';
 import { CustomersOAuthController } from './interfaces/http/controllers/customers-oauth.controller';
+import { SupplierController } from './interfaces/http/controllers/supplier.controller';
 import { JwtAuthGuard } from './interfaces/http/guards/jwt-auth.guard';
 import { AiModule } from './infrastructure/ai/ai.module';
 import { MetaWhatsappService } from './infrastructure/whatsapp/meta-whatsapp.service';
@@ -176,6 +185,7 @@ import { InMemoryOauthTempStoreAdapter } from './infrastructure/security/in-memo
           OauthRegistrationSessionOrmEntity,
           CustomerOauthLinkSessionOrmEntity,
           CustomerOauthIdentityOrmEntity,
+          SupplierOrmEntity,
         ],
         synchronize: false,
       }),
@@ -201,6 +211,7 @@ import { InMemoryOauthTempStoreAdapter } from './infrastructure/security/in-memo
       OauthRegistrationSessionOrmEntity,
       CustomerOauthLinkSessionOrmEntity,
       CustomerOauthIdentityOrmEntity,
+      SupplierOrmEntity,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -234,6 +245,7 @@ import { InMemoryOauthTempStoreAdapter } from './infrastructure/security/in-memo
     CompanySettingsController,
     WhatsappWebhookController,
     CustomersOAuthController,
+    SupplierController,
   ],
   providers: [
     AppService,
@@ -279,6 +291,11 @@ import { InMemoryOauthTempStoreAdapter } from './infrastructure/security/in-memo
     ClearCartUseCase,
     ExpireOldCartSessionsUseCase,
     ConfirmCartCheckoutUseCase,
+    CreateSupplierUseCase,
+    GetSuppliersByCompanyUseCase,
+    GetSupplierByIdUseCase,
+    UpdateSupplierUseCase,
+    UpdateSupplierStatusUseCase,
     MetaWhatsappService,
     MockPaymentProvider,
     CloudinaryImageStorageService,
@@ -371,6 +388,10 @@ import { InMemoryOauthTempStoreAdapter } from './infrastructure/security/in-memo
     {
       provide: CustomerOauthIdentityRepository,
       useClass: CustomerOauthIdentityTypeormRepository,
+    },
+    {
+      provide: SupplierRepository,
+      useClass: SupplierTypeormRepository,
     },
     {
       provide: PaymentProviderPort,

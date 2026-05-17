@@ -1,5 +1,38 @@
 # PROGRESSION - AI CRM Frontend
 
+## Entrada 2026-05-17 (modulo suppliers frontend fase 1)
+
+### Implementado
+- Nuevo modulo `Suppliers` conectado a backend real (sin mocks).
+- Endpoints consumidos:
+  - `GET /api/v1/suppliers`
+  - `POST /api/v1/suppliers`
+  - `GET /api/v1/suppliers/:id`
+  - `PATCH /api/v1/suppliers/:id`
+  - `PATCH /api/v1/suppliers/:id/status`
+- Nueva ruta protegida:
+  - `/suppliers`
+- Navegacion actualizada:
+  - nuevo item en sidebar: `Proveedores`.
+- Capa API agregada:
+  - DTOs suppliers,
+  - `supplierService` con operaciones CRUD base y cambio de estado.
+- Pantalla `Suppliers`:
+  - listado real,
+  - busqueda por nombre/contacto/ciudad/documento/email,
+  - filtro por estado (todos/activos/inactivos),
+  - creacion de proveedor,
+  - edicion de proveedor,
+  - activar/desactivar proveedor,
+  - confirmacion simple al desactivar,
+  - estados de loading/error/empty.
+
+### Pendientes siguientes (suppliers)
+1. Relacion producto-proveedor (backend + frontend).
+2. Visualizar productos relacionados por proveedor.
+3. Vista de detalle individual de proveedor (si aplica en UX siguiente).
+4. Tests del modulo (componentes + servicio API).
+
 ## Entrada 2026-05-15 (settings de asistente por empresa)
 
 ### Implementado

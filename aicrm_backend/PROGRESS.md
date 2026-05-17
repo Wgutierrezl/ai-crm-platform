@@ -2,6 +2,50 @@
 
 Fecha de actualizacion: 2026-05-12
 
+## Actualizacion 2026-05-17 - Suppliers backend fase 1
+
+### Implementado
+- Nuevo modulo backend `suppliers` (fase inicial) respetando arquitectura hexagonal y multi-tenant.
+- Dominio:
+  - entidad `Supplier`.
+  - puerto `SupplierRepository`.
+- Infraestructura:
+  - entidad ORM `SupplierOrmEntity`.
+  - repositorio TypeORM `SupplierTypeormRepository`.
+  - migracion `1710000000016-AddSuppliers` para tabla `suppliers`.
+- Application use cases:
+  - `CreateSupplierUseCase`
+  - `GetSuppliersByCompanyUseCase`
+  - `GetSupplierByIdUseCase`
+  - `UpdateSupplierUseCase`
+  - `UpdateSupplierStatusUseCase`
+- Interfaces HTTP:
+  - DTOs:
+    - `CreateSupplierDto`
+    - `UpdateSupplierDto`
+    - `UpdateSupplierStatusDto`
+  - Controller:
+    - `GET /api/v1/suppliers`
+    - `POST /api/v1/suppliers`
+    - `GET /api/v1/suppliers/:id`
+    - `PATCH /api/v1/suppliers/:id`
+    - `PATCH /api/v1/suppliers/:id/status`
+- Registro en `AppModule`:
+  - entidad TypeORM,
+  - controller,
+  - use cases,
+  - binding de puerto `SupplierRepository -> SupplierTypeormRepository`.
+
+### Reglas de seguridad aplicadas
+- Todos los endpoints con `JwtAuthGuard`.
+- `companyId` se toma unicamente desde `CurrentUser` (JWT), no desde body.
+- Consultas y actualizaciones restringidas por `id + companyId` para evitar acceso cross-tenant.
+
+### Fuera de alcance en esta fase
+- Sin frontend de proveedores.
+- Sin relacion `product_suppliers`.
+- Sin cambios en WhatsApp, checkout, providers IA o refactor general.
+
 ## Actualizacion 2026-05-15 - Firma webhook Meta WhatsApp (dynamic-first)
 
 ### Implementado
