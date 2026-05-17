@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { Plus, Search, Loader2, Truck, Image as ImageIcon } from "lucide-react";
+import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { supplierService } from "../../api/services/supplier.service";
 import type {
@@ -53,8 +54,10 @@ const initialForm: SupplierFormState = {
 
 type StatusFilter = "all" | "active" | "inactive";
 type ProductStatusFilter = "all" | "active" | "inactive";
+const PRODUCTS_PER_PAGE = 5;
 
 export default function Suppliers() {
+  const navigate = useNavigate();
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -70,6 +73,7 @@ export default function Suppliers() {
   const [productsModalSearch, setProductsModalSearch] = useState("");
   const [productsModalStatusFilter, setProductsModalStatusFilter] =
     useState<ProductStatusFilter>("all");
+  const [productsModalPage, setProductsModalPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [formData, setFormData] = useState<SupplierFormState>(initialForm);
@@ -126,6 +130,16 @@ export default function Suppliers() {
       return fields.some((value) => value.toLowerCase().includes(term));
     });
   }, [supplierProducts, productsModalSearch, productsModalStatusFilter]);
+
+  const totalSupplierProductsPages = Math.max(
+    1,
+    Math.ceil(filteredSupplierProducts.length / PRODUCTS_PER_PAGE),
+  );
+
+  const paginatedSupplierProducts = useMemo(() => {
+    const start = (productsModalPage - 1) * PRODUCTS_PER_PAGE;
+    return filteredSupplierProducts.slice(start, start + PRODUCTS_PER_PAGE);
+  }, [filteredSupplierProducts, productsModalPage]);
 
   const loadSuppliers = async () => {
     try {
@@ -259,6 +273,7 @@ export default function Suppliers() {
       setIsProductsDialogOpen(true);
       setProductsModalSearch("");
       setProductsModalStatusFilter("all");
+      setProductsModalPage(1);
       setSupplierProductsError(null);
       setLoadingSupplierProducts(true);
       const products = await supplierService.getSupplierProducts(supplier.id);
@@ -271,6 +286,16 @@ export default function Suppliers() {
       setLoadingSupplierProducts(false);
     }
   };
+
+  useEffect(() => {
+    setProductsModalPage(1);
+  }, [productsModalSearch, productsModalStatusFilter, isProductsDialogOpen]);
+
+  useEffect(() => {
+    if (productsModalPage > totalSupplierProductsPages) {
+      setProductsModalPage(totalSupplierProductsPages);
+    }
+  }, [productsModalPage, totalSupplierProductsPages]);
 
   return (
     <div className="space-y-6">
@@ -394,6 +419,13 @@ export default function Suppliers() {
                   </div>
 
                   <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/suppliers/${supplier.id}`)}
+                    >
+                      Ver detalle
+                    </Button>
                     <Button variant="outline" size="sm" onClick={() => openEditDialog(supplier)}>
                       Editar
                     </Button>
@@ -656,7 +688,7 @@ export default function Suppliers() {
                 No hay productos que coincidan con los filtros aplicados.
               </div>
             ) : (
-              filteredSupplierProducts.map((product) => (
+              paginatedSupplierProducts.map((product) => (
                 <div key={product.id} className="rounded-lg border p-3">
                   <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div className="space-y-1">
@@ -696,6 +728,39 @@ export default function Suppliers() {
                 </div>
               ))
             )}
+
+            {!loadingSupplierProducts &&
+              !supplierProductsError &&
+              filteredSupplierProducts.length > 0 &&
+              totalSupplierProductsPages > 1 && (
+                <div className="flex items-center justify-between pt-2">
+                  <p className="text-sm text-muted-foreground">
+                    Página {productsModalPage} de {totalSupplierProductsPages}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={productsModalPage === 1}
+                      onClick={() => setProductsModalPage((prev) => Math.max(1, prev - 1))}
+                    >
+                      Anterior
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={productsModalPage >= totalSupplierProductsPages}
+                      onClick={() =>
+                        setProductsModalPage((prev) =>
+                          Math.min(totalSupplierProductsPages, prev + 1),
+                        )
+                      }
+                    >
+                      Siguiente
+                    </Button>
+                  </div>
+                </div>
+              )}
           </div>
 
           <DialogFooter>

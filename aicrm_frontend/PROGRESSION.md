@@ -56,6 +56,25 @@
 2. Paginacion para productos por proveedor si aumenta el volumen.
 3. Tests frontend del modal y filtros cuando exista setup de pruebas UI.
 
+## Entrada 2026-05-17 (cierre pendientes pequenos suppliers frontend)
+
+### Implementado
+- Nueva ruta protegida:
+  - `/suppliers/:id`
+- Nueva pagina de detalle de proveedor:
+  - datos de proveedor (documento, contacto, telefono, email, direccion, ciudad, notas, estado, fechas),
+  - seccion de productos asociados consumiendo `GET /api/v1/suppliers/:id/products`,
+  - contador, buscador, filtro por estado, limpiar filtros, loading/error/empty states.
+- Paginacion local implementada en:
+  - modal `Ver productos` en `Suppliers`,
+  - pagina detalle `/suppliers/:id`.
+- Navegacion desde listado:
+  - accion `Ver detalle` por proveedor en `/suppliers`.
+
+### Pendientes
+1. Paginacion backend real para productos por proveedor si el volumen crece.
+2. Tests frontend (UI/componentes) cuando exista setup de testing.
+
 ## Entrada 2026-05-17 (modulo suppliers frontend fase 1)
 
 ### Implementado
