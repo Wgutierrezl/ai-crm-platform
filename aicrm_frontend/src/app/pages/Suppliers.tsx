@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
-import { Plus, Search, Loader2, Truck } from "lucide-react";
+import { Plus, Search, Loader2, Truck, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { supplierService } from "../../api/services/supplier.service";
 import type {
@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from "../components/ui/dialog.tsx";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select.tsx";
+import { formatCurrency } from "../../utils/format/currency";
 
 type SupplierFormState = {
   name: string;
@@ -51,6 +52,7 @@ const initialForm: SupplierFormState = {
 };
 
 type StatusFilter = "all" | "active" | "inactive";
+type ProductStatusFilter = "all" | "active" | "inactive";
 
 export default function Suppliers() {
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
@@ -64,6 +66,10 @@ export default function Suppliers() {
     useState<SupplierDto | null>(null);
   const [supplierProducts, setSupplierProducts] = useState<ProductDto[]>([]);
   const [loadingSupplierProducts, setLoadingSupplierProducts] = useState(false);
+  const [supplierProductsError, setSupplierProductsError] = useState<string | null>(null);
+  const [productsModalSearch, setProductsModalSearch] = useState("");
+  const [productsModalStatusFilter, setProductsModalStatusFilter] =
+    useState<ProductStatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [formData, setFormData] = useState<SupplierFormState>(initialForm);
@@ -96,6 +102,30 @@ export default function Suppliers() {
       return fields.some((value) => value.toLowerCase().includes(term));
     });
   }, [suppliers, searchQuery, statusFilter]);
+
+  const filteredSupplierProducts = useMemo(() => {
+    const term = productsModalSearch.trim().toLowerCase();
+
+    return supplierProducts.filter((product) => {
+      const matchesStatus =
+        productsModalStatusFilter === "all" ||
+        (productsModalStatusFilter === "active" && product.isActive) ||
+        (productsModalStatusFilter === "inactive" && !product.isActive);
+
+      if (!matchesStatus) return false;
+      if (!term) return true;
+
+      const categoryName = product.category?.name ?? "";
+      const fields = [
+        product.name,
+        product.sku ?? "",
+        product.brand ?? "",
+        categoryName,
+      ];
+
+      return fields.some((value) => value.toLowerCase().includes(term));
+    });
+  }, [supplierProducts, productsModalSearch, productsModalStatusFilter]);
 
   const loadSuppliers = async () => {
     try {
@@ -227,10 +257,14 @@ export default function Suppliers() {
     try {
       setSelectedSupplierForProducts(supplier);
       setIsProductsDialogOpen(true);
+      setProductsModalSearch("");
+      setProductsModalStatusFilter("all");
+      setSupplierProductsError(null);
       setLoadingSupplierProducts(true);
       const products = await supplierService.getSupplierProducts(supplier.id);
       setSupplierProducts(products);
     } catch {
+      setSupplierProductsError("No se pudieron cargar los productos del proveedor.");
       toast.error("No se pudieron cargar los productos del proveedor");
       setSupplierProducts([]);
     } finally {
@@ -557,25 +591,108 @@ export default function Suppliers() {
           </DialogHeader>
 
           <div className="space-y-3 py-2">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <Badge variant="outline">
+                {supplierProducts.length} producto{supplierProducts.length === 1 ? "" : "s"} asociado
+              </Badge>
+
+              <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                <div className="relative md:w-72">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    className="pl-10"
+                    placeholder="Buscar por nombre, SKU, marca o categoria"
+                    value={productsModalSearch}
+                    onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                      setProductsModalSearch(event.target.value)
+                    }
+                  />
+                </div>
+                <Select
+                  value={productsModalStatusFilter}
+                  onValueChange={(value: ProductStatusFilter) =>
+                    setProductsModalStatusFilter(value)
+                  }
+                >
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="active">Activos</SelectItem>
+                    <SelectItem value="inactive">Inactivos</SelectItem>
+                  </SelectContent>
+                </Select>
+                {(productsModalSearch.trim().length > 0 ||
+                  productsModalStatusFilter !== "all") && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setProductsModalSearch("");
+                      setProductsModalStatusFilter("all");
+                    }}
+                  >
+                    Limpiar filtros
+                  </Button>
+                )}
+              </div>
+            </div>
+
             {loadingSupplierProducts ? (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Cargando productos...
               </div>
+            ) : supplierProductsError ? (
+              <div className="rounded-lg border border-dashed p-4 text-sm text-destructive">
+                {supplierProductsError}
+              </div>
             ) : supplierProducts.length === 0 ? (
               <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
                 Este proveedor no tiene productos relacionados.
               </div>
+            ) : filteredSupplierProducts.length === 0 ? (
+              <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                No hay productos que coincidan con los filtros aplicados.
+              </div>
             ) : (
-              supplierProducts.map((product) => (
+              filteredSupplierProducts.map((product) => (
                 <div key={product.id} className="rounded-lg border p-3">
-                  <p className="font-medium">{product.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Precio: {product.currency} {product.price.toLocaleString()}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Stock: {product.stock}
-                  </p>
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div className="space-y-1">
+                      <p className="font-medium">{product.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Precio: {formatCurrency(product.price, product.currency)}
+                      </p>
+                      <p className="text-sm text-muted-foreground">Stock: {product.stock}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Categoria: {product.category?.name ?? "Sin categoria"}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Marca: {product.brand ?? "No definida"} · SKU: {product.sku ?? "No definido"}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Proveedor: {product.supplier?.name ?? "Sin proveedor"}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <Badge variant={product.isActive ? "default" : "secondary"}>
+                        {product.isActive ? "Activo" : "Inactivo"}
+                      </Badge>
+                      <div className="h-16 w-16 border rounded-md flex items-center justify-center bg-muted/30 overflow-hidden">
+                        {product.imageUrl ? (
+                          <img
+                            src={product.imageUrl}
+                            alt={product.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <ImageIcon className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ))
             )}

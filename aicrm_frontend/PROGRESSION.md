@@ -32,6 +32,30 @@
 - Los filtros combinados en `Products` ya estaban operando en conjunto
   (texto + categoria + proveedor + stock), por lo que no se aplico refactor adicional.
 
+## Entrada 2026-05-17 (mejora modal "Ver productos" en suppliers)
+
+### Implementado
+- Modal de productos por proveedor mejorado en `Suppliers`:
+  - titulo con nombre del proveedor,
+  - contador de productos asociados,
+  - buscador por nombre/SKU/marca/categoria,
+  - filtro por estado (todos/activos/inactivos),
+  - boton de limpiar filtros,
+  - estados de loading/error/empty (sin productos / sin resultados por filtros),
+  - visualizacion extendida por producto:
+    - nombre,
+    - precio,
+    - stock,
+    - categoria,
+    - estado activo/inactivo,
+    - proveedor actual,
+    - imagen o placeholder.
+
+### Pendientes
+1. Pagina detalle de proveedor.
+2. Paginacion para productos por proveedor si aumenta el volumen.
+3. Tests frontend del modal y filtros cuando exista setup de pruebas UI.
+
 ## Entrada 2026-05-17 (modulo suppliers frontend fase 1)
 
 ### Implementado
