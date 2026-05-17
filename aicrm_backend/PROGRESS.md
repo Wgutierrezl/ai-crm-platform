@@ -24,6 +24,20 @@ Fecha de actualizacion: 2026-05-12
     - conversacion sin mensajes,
     - conversacion inexistente.
 
+## Actualizacion 2026-05-17 - Enriquecimiento real de listado de conversaciones
+
+### Implementado
+- `GET /api/v1/conversations` enriquecido con datos reales:
+  - `id`, `companyId`, `customerId`, `createdAt`,
+  - `customer` (id, fullName, firstName, lastName, name, phone, email) o `null`,
+  - `lastMessage` (id, content, role, sourceChannel, createdAt) o `null`,
+  - `messageCount`.
+- Multi-tenant preservado:
+  - listado base por `companyId`,
+  - no mezcla conversaciones de otros tenants,
+  - customer asociado validado contra tenant de la conversacion.
+- No se cambiaron esquemas ni migraciones.
+
 ## Actualizacion 2026-05-15 - Firma webhook Meta WhatsApp (dynamic-first)
 
 ### Implementado

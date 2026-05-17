@@ -53,6 +53,17 @@ function getOrderStatusLabel(status: string): string {
   }
 }
 
+function getConversationCustomerName(conversation: ConversationDto): string {
+  return (
+    conversation.customer?.fullName ||
+    conversation.customer?.name ||
+    [conversation.customer?.firstName, conversation.customer?.lastName]
+      .filter(Boolean)
+      .join(" ") ||
+    "Cliente no disponible"
+  );
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [data, setData] = useState<DashboardData>({
@@ -215,16 +226,16 @@ export default function Dashboard() {
                         onClick={() => navigate("/conversations")}
                       >
                         <div className="flex-1">
-                          <p className="font-medium">Conversacion {conv.id.slice(0, 8)}</p>
+                          <p className="font-medium">{getConversationCustomerName(conv)}</p>
                           <p className="text-sm text-muted-foreground">
-                            Cliente: {conv.customerId.slice(0, 8)}
+                            {conv.lastMessage?.content || "Sin mensajes todavia"}
                           </p>
                         </div>
                         <div className="flex items-center gap-3">
                           <span className="text-sm text-muted-foreground">
-                            {new Date(conv.createdAt).toLocaleString("es-CO")}
+                            {new Date(conv.lastMessage?.createdAt || conv.createdAt).toLocaleString("es-CO")}
                           </span>
-                          <Badge variant="outline">Activa</Badge>
+                          <Badge variant="outline">{(conv.messageCount ?? 0).toString()} msgs</Badge>
                         </div>
                       </div>
                     ))}

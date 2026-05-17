@@ -24,6 +24,26 @@
 2. Sugerencias IA/contexto comercial reales por conversacion (requiere endpoint dedicado).
 3. Tests frontend de UI cuando exista setup formal.
 
+## Entrada 2026-05-17 (desmock fase 4: conversaciones enriquecidas)
+
+### Implementado
+- `GET /api/v1/conversations` ahora se consume enriquecido en frontend:
+  - customer real (nombre/telefono/email cuando existe),
+  - ultimo mensaje real,
+  - contador real de mensajes.
+- `Conversations.tsx` actualizado:
+  - listado muestra nombre real de cliente o fallback honesto,
+  - preview de ultimo mensaje real o \"Sin mensajes todavia\",
+  - timestamp real del ultimo mensaje (o de creacion de conversacion),
+  - busqueda por ID, customerId y nombre real.
+- `Dashboard.tsx` actualizado en bloque de conversaciones recientes:
+  - usa customer real y ultimo mensaje real,
+  - elimina texto generico restante.
+
+### Pendientes
+1. Sugerencias IA/contexto comercial real por conversacion.
+2. Tests frontend de UI cuando exista setup de testing.
+
 ## Entrada 2026-05-17 (desmock fase 2: dashboard real parcial)
 
 ### Implementado

@@ -16,6 +16,12 @@ type ConversationView = {
   id: string;
   customerId: string;
   companyId: string;
+  customerName: string;
+  customerPhone: string | null;
+  customerEmail: string | null;
+  lastMessageContent: string | null;
+  lastMessageCreatedAt: string | null;
+  messageCount: number;
   createdAt: string;
 };
 
@@ -52,6 +58,18 @@ export default function Conversations() {
             id: conv.id,
             customerId: conv.customerId,
             companyId: conv.companyId,
+            customerName:
+              conv.customer?.fullName ||
+              conv.customer?.name ||
+              [conv.customer?.firstName, conv.customer?.lastName]
+                .filter(Boolean)
+                .join(" ") ||
+              "Cliente no disponible",
+            customerPhone: conv.customer?.phone ?? null,
+            customerEmail: conv.customer?.email ?? null,
+            lastMessageContent: conv.lastMessage?.content ?? null,
+            lastMessageCreatedAt: conv.lastMessage?.createdAt ?? null,
+            messageCount: conv.messageCount ?? 0,
             createdAt: conv.createdAt,
           })),
         );
@@ -105,7 +123,8 @@ export default function Conversations() {
       if (!term) return true;
       return (
         conv.id.toLowerCase().includes(term) ||
-        conv.customerId.toLowerCase().includes(term)
+        conv.customerId.toLowerCase().includes(term) ||
+        conv.customerName.toLowerCase().includes(term)
       );
     });
   }, [conversations, searchQuery]);
@@ -165,7 +184,7 @@ export default function Conversations() {
               <Input
                 value={searchQuery}
                 onChange={(event: ChangeEvent<HTMLInputElement>) => setSearchQuery(event.target.value)}
-                placeholder="Buscar por ID o customerId"
+                placeholder="Buscar por ID, customerId o cliente"
                 className="pl-9"
               />
             </div>
@@ -200,14 +219,21 @@ export default function Conversations() {
                       }`}
                     >
                       <div className="mb-1">
-                        <p className="font-medium text-sm">Conv: {conv.id.slice(0, 8)}</p>
-                        <p className="text-xs text-muted-foreground">Customer: {conv.customerId.slice(0, 8)}</p>
+                        <p className="font-medium text-sm">{conv.customerName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Conv: {conv.id.slice(0, 8)} • Customer: {conv.customerId.slice(0, 8)}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {conv.lastMessageContent ?? "Sin mensajes todavia"}
+                        </p>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">
-                          {new Date(conv.createdAt).toLocaleString("es-CO")}
+                          {new Date(
+                            conv.lastMessageCreatedAt ?? conv.createdAt,
+                          ).toLocaleString("es-CO")}
                         </span>
-                        <Badge variant="outline">Activa</Badge>
+                        <Badge variant="outline">{conv.messageCount} msgs</Badge>
                       </div>
                     </div>
                   ))
@@ -228,9 +254,14 @@ export default function Conversations() {
                 </CardTitle>
                 <p className="text-sm text-muted-foreground mt-1">
                   {selectedConversation
-                    ? `Customer: ${selectedConversation.customerId}`
+                    ? `${selectedConversation.customerName} • ${selectedConversation.messageCount} mensajes`
                     : "Selecciona una conversacion para ver mensajes."}
                 </p>
+                {selectedConversation && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {selectedConversation.customerEmail || selectedConversation.customerPhone || `CustomerId: ${selectedConversation.customerId}`}
+                  </p>
+                )}
               </div>
             </div>
           </CardHeader>
