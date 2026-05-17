@@ -3,9 +3,11 @@ import {
   CreateDateColumn,
   Entity,
   Index,
+  OneToMany,
   PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { ProductOrmEntity } from './product.orm-entity';
 
 @Entity('suppliers')
 @Index('IDX_suppliers_company_name', ['companyId', 'name'])
@@ -58,5 +60,7 @@ export class SupplierOrmEntity {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'datetime' })
   updatedAt: Date;
-}
 
+  @OneToMany(() => ProductOrmEntity, (product) => product.supplier)
+  products?: ProductOrmEntity[];
+}

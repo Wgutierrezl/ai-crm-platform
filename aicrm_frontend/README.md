@@ -162,6 +162,29 @@ Este frontend no debe verse como una version final de producto, sino como la bas
 - Creacion y edicion de proveedor.
 - Activar/desactivar proveedor.
 
+## Actualizacion 2026-05-17 (relacion producto -> proveedor)
+
+### Regla aplicada
+- Un proveedor puede tener muchos productos.
+- Un producto puede tener un solo proveedor o ninguno.
+
+### Cambios frontend aplicados
+- `Products`:
+  - selector de proveedor en crear/editar (opcional, `Sin proveedor`).
+  - render de proveedor asociado en listado.
+  - filtro por proveedor.
+- `Suppliers`:
+  - accion `Ver productos` por proveedor.
+  - modal con productos relacionados consumiendo endpoint backend.
+
+### Endpoints usados para la relacion
+- `GET /suppliers`
+- `GET /suppliers/:id/products`
+- `POST /products` (con `supplierId` opcional)
+- `PATCH /products/:id` (con `supplierId` opcional/null)
+- `POST /products/with-image` (con `supplierId` opcional)
+- `PATCH /products/:id/with-image` (con `supplierId` opcional/null)
+
 ### Pendientes siguientes del modulo
 1. Relacion producto-proveedor.
 2. Ver productos relacionados por proveedor.

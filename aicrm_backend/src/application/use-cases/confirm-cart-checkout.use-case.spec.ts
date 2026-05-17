@@ -78,6 +78,7 @@ class InMemoryProductRepo extends ProductRepository {
   async findByIdAndCompanyId(id: string): Promise<Product | null> { return this.product.id === id ? this.product : null; }
   async update(product: Product): Promise<Product> { return product; }
   async findAllByCompanyId(): Promise<Product[]> { return []; }
+  async findAllByCompanyIdAndSupplierId(): Promise<Product[]> { return []; }
   async findActiveByCompanyId(): Promise<Product[]> { return []; }
   async searchActiveByCompanyId(): Promise<Product[]> { return []; }
   async findByApproximateName(): Promise<Product[]> { return []; }
@@ -164,6 +165,7 @@ class InMemoryPaymentTxRepo extends PaymentTransactionRepository {
     );
     return found[found.length - 1] ?? null;
   }
+  async findLatestByOrderId(): Promise<PaymentTransaction | null> { return null; }
 }
 
 describe('ConfirmCartCheckoutUseCase', () => {

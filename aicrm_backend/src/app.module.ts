@@ -125,6 +125,7 @@ import { GetSuppliersByCompanyUseCase } from './application/use-cases/get-suppli
 import { GetSupplierByIdUseCase } from './application/use-cases/get-supplier-by-id.use-case';
 import { UpdateSupplierUseCase } from './application/use-cases/update-supplier.use-case';
 import { UpdateSupplierStatusUseCase } from './application/use-cases/update-supplier-status.use-case';
+import { GetProductsBySupplierUseCase } from './application/use-cases/get-products-by-supplier.use-case';
 import { ToolExecutionService } from './application/services/tool-execution.service';
 import { OnboardingProfileExtractorService } from './application/services/onboarding-profile-extractor.service';
 import { AssistantOnboardingToolsService } from './application/services/assistant-onboarding-tools.service';
@@ -296,6 +297,7 @@ import { InMemoryOauthTempStoreAdapter } from './infrastructure/security/in-memo
     GetSupplierByIdUseCase,
     UpdateSupplierUseCase,
     UpdateSupplierStatusUseCase,
+    GetProductsBySupplierUseCase,
     MetaWhatsappService,
     MockPaymentProvider,
     CloudinaryImageStorageService,

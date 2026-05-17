@@ -11,6 +11,7 @@ import { GetSupplierByIdUseCase } from '../../../application/use-cases/get-suppl
 import { GetSuppliersByCompanyUseCase } from '../../../application/use-cases/get-suppliers-by-company.use-case';
 import { UpdateSupplierStatusUseCase } from '../../../application/use-cases/update-supplier-status.use-case';
 import { UpdateSupplierUseCase } from '../../../application/use-cases/update-supplier.use-case';
+import { GetProductsBySupplierUseCase } from '../../../application/use-cases/get-products-by-supplier.use-case';
 import { CreateSupplierDto } from '../dtos/create-supplier.dto';
 import { UpdateSupplierStatusDto } from '../dtos/update-supplier-status.dto';
 import { UpdateSupplierDto } from '../dtos/update-supplier.dto';
@@ -27,6 +28,7 @@ export class SupplierController {
     private readonly createSupplierUseCase: CreateSupplierUseCase,
     private readonly getSuppliersByCompanyUseCase: GetSuppliersByCompanyUseCase,
     private readonly getSupplierByIdUseCase: GetSupplierByIdUseCase,
+    private readonly getProductsBySupplierUseCase: GetProductsBySupplierUseCase,
     private readonly updateSupplierUseCase: UpdateSupplierUseCase,
     private readonly updateSupplierStatusUseCase: UpdateSupplierStatusUseCase,
   ) {}
@@ -67,6 +69,17 @@ export class SupplierController {
   @ApiResponse({ status: 404, description: 'Proveedor no encontrado' })
   async findOne(@CurrentUser() user: CurrentUserPayload, @Param('id') id: string) {
     return this.getSupplierByIdUseCase.execute(id, user.companyId);
+  }
+
+  @Get(':id/products')
+  @ApiOperation({ summary: 'Listar productos relacionados a un proveedor' })
+  @ApiResponse({ status: 200, description: 'Listado de productos por proveedor' })
+  @ApiResponse({ status: 404, description: 'Proveedor no encontrado' })
+  async findProducts(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') id: string,
+  ) {
+    return this.getProductsBySupplierUseCase.execute(user.companyId, id);
   }
 
   @Patch(':id')
@@ -112,4 +125,3 @@ export class SupplierController {
     });
   }
 }
-

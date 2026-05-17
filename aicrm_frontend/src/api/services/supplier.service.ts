@@ -7,6 +7,7 @@ import type {
   UpdateSupplierRequest,
   UpdateSupplierStatusRequest,
 } from "../dtos/supplier.dto";
+import type { ProductListResponseDto } from "../dtos/product.dto";
 
 export const supplierService = {
   async getSuppliers(): Promise<SupplierListResponseDto> {
@@ -68,5 +69,16 @@ export const supplierService = {
       throw error;
     }
   },
-};
 
+  async getSupplierProducts(id: string): Promise<ProductListResponseDto> {
+    try {
+      const response = await apiClient.get<ProductListResponseDto>(
+        `/suppliers/${id}/products`,
+      );
+      return response.data;
+    } catch (error) {
+      logger.error("Error al obtener productos del proveedor", error);
+      throw error;
+    }
+  },
+};

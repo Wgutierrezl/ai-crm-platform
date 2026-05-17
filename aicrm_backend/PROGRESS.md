@@ -2,6 +2,34 @@
 
 Fecha de actualizacion: 2026-05-12
 
+## Actualizacion 2026-05-17 - Relacion producto -> proveedor (fase 1)
+
+### Implementado
+- Relacion de datos:
+  - `products.supplier_id` nullable.
+  - `ManyToOne` `Product -> Supplier`.
+  - `OneToMany` `Supplier -> Products`.
+- Migracion nueva:
+  - `1710000000017-AddProductSupplierRelation`.
+  - agrega `supplier_id` nullable en `products`.
+  - agrega FK `products.supplier_id -> suppliers.id` con:
+    - `ON DELETE SET NULL`
+    - `ON UPDATE CASCADE`
+- Productos:
+  - `CreateProductDto` y `UpdateProductDto` ahora soportan `supplierId` opcional/null.
+  - create/update validan que `supplierId` exista y pertenezca al mismo `companyId`.
+  - permite productos sin proveedor.
+  - permite quitar proveedor enviando `supplierId: null`.
+- Suppliers:
+  - endpoint nuevo `GET /api/v1/suppliers/:id/products`.
+  - valida ownership por tenant y devuelve lista (vacía si no hay productos).
+- Respuesta de productos:
+  - incluye `supplierId` y `supplier` minimo (`id`, `name`, `isActive`) cuando aplica.
+
+### Alcance controlado
+- Sin cambios en WhatsApp/Bot, IA providers, checkout, PDF/correos u OAuth.
+- Sin relacion muchos-a-muchos (`product_suppliers` no aplica en esta regla).
+
 ## Actualizacion 2026-05-17 - Suppliers backend fase 1
 
 ### Implementado

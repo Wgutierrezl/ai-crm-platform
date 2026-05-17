@@ -7,6 +7,7 @@ import type {
   SupplierDto,
   UpdateSupplierRequest,
 } from "../../api/dtos/supplier.dto";
+import type { ProductDto } from "../../api/dtos/product.dto";
 import { Button } from "../components/ui/button.tsx";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card.tsx";
 import { Input } from "../components/ui/input.tsx";
@@ -58,6 +59,11 @@ export default function Suppliers() {
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<SupplierDto | null>(null);
+  const [isProductsDialogOpen, setIsProductsDialogOpen] = useState(false);
+  const [selectedSupplierForProducts, setSelectedSupplierForProducts] =
+    useState<SupplierDto | null>(null);
+  const [supplierProducts, setSupplierProducts] = useState<ProductDto[]>([]);
+  const [loadingSupplierProducts, setLoadingSupplierProducts] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [formData, setFormData] = useState<SupplierFormState>(initialForm);
@@ -217,6 +223,21 @@ export default function Suppliers() {
     }
   };
 
+  const handleViewSupplierProducts = async (supplier: SupplierDto) => {
+    try {
+      setSelectedSupplierForProducts(supplier);
+      setIsProductsDialogOpen(true);
+      setLoadingSupplierProducts(true);
+      const products = await supplierService.getSupplierProducts(supplier.id);
+      setSupplierProducts(products);
+    } catch {
+      toast.error("No se pudieron cargar los productos del proveedor");
+      setSupplierProducts([]);
+    } finally {
+      setLoadingSupplierProducts(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -341,6 +362,13 @@ export default function Suppliers() {
                   <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" onClick={() => openEditDialog(supplier)}>
                       Editar
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void handleViewSupplierProducts(supplier)}
+                    >
+                      Ver productos
                     </Button>
                     <Button
                       variant="outline"
@@ -512,6 +540,50 @@ export default function Suppliers() {
             </Button>
             <Button onClick={handleSaveSupplier} disabled={saving}>
               {saving ? "Guardando..." : editingSupplier ? "Guardar cambios" : "Crear proveedor"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isProductsDialogOpen} onOpenChange={setIsProductsDialogOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              Productos de {selectedSupplierForProducts?.name ?? "proveedor"}
+            </DialogTitle>
+            <DialogDescription>
+              Lista de productos actualmente asociados a este proveedor.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2">
+            {loadingSupplierProducts ? (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Cargando productos...
+              </div>
+            ) : supplierProducts.length === 0 ? (
+              <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                Este proveedor no tiene productos relacionados.
+              </div>
+            ) : (
+              supplierProducts.map((product) => (
+                <div key={product.id} className="rounded-lg border p-3">
+                  <p className="font-medium">{product.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Precio: {product.currency} {product.price.toLocaleString()}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Stock: {product.stock}
+                  </p>
+                </div>
+              ))
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsProductsDialogOpen(false)}>
+              Cerrar
             </Button>
           </DialogFooter>
         </DialogContent>

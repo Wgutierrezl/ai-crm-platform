@@ -52,6 +52,7 @@ export class ProductController {
   ) {
     return this.createProductUseCase.execute({
       ...dto,
+      supplierId: this.parseNullableIdentifier(dto.supplierId),
       companyId: user.companyId,
     });
   }
@@ -115,6 +116,7 @@ export class ProductController {
       isActive: dto.isActive,
       imageUrl: dto.imageUrl,
       categoryId: dto.categoryId,
+      supplierId: dto.supplierId,
     });
   }
 
@@ -174,6 +176,7 @@ export class ProductController {
       minStock:
         dto.minStock !== undefined ? Number(dto.minStock) : dto.minStock,
       isActive: this.parseOptionalBoolean(dto.isActive),
+      supplierId: this.parseNullableIdentifier(dto.supplierId),
     };
   }
 
@@ -185,6 +188,7 @@ export class ProductController {
       minStock:
         dto.minStock !== undefined ? Number(dto.minStock) : dto.minStock,
       isActive: this.parseOptionalBoolean(dto.isActive),
+      supplierId: this.parseNullableIdentifier(dto.supplierId),
     };
   }
 
@@ -194,5 +198,14 @@ export class ProductController {
     }
     if (typeof value === 'string') return value.toLowerCase() === 'true';
     return undefined;
+  }
+
+  private parseNullableIdentifier(value: unknown): string | null | undefined {
+    if (value === undefined) return undefined;
+    if (value === null) return null;
+
+    const normalized = String(value).trim();
+    if (!normalized || normalized.toLowerCase() === 'null') return null;
+    return normalized;
   }
 }

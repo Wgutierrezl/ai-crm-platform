@@ -1,5 +1,30 @@
 # PROGRESSION - AI CRM Frontend
 
+## Entrada 2026-05-17 (relacion productos-proveedores fase 1)
+
+### Implementado
+- Modulo `Products` actualizado para relacionar producto -> proveedor (1 proveedor por producto, opcional).
+- Formulario de crear/editar producto:
+  - nuevo selector de proveedor con opcion `Sin proveedor`.
+  - carga proveedores reales desde backend (`GET /api/v1/suppliers`).
+  - solo muestra activos por defecto, preservando proveedor inactivo ya asociado al editar.
+- Listado de productos:
+  - muestra proveedor asociado o `Sin proveedor`.
+- Filtros:
+  - nuevo filtro por proveedor (todos/sin proveedor/proveedor especifico).
+- Modulo `Suppliers`:
+  - nueva accion `Ver productos`.
+  - consume `GET /api/v1/suppliers/:id/products`.
+  - muestra listado simple en modal y empty state si no hay relacionados.
+- DTOs/API:
+  - `product.dto.ts` soporta `supplierId` y `supplier`.
+  - `supplier.service.ts` agrega `getSupplierProducts`.
+
+### Pendientes siguientes de esta relacion
+1. Detalle dedicado de proveedor con pestaña de productos relacionados.
+2. Filtro combinado categoria + proveedor en vista productos (optimizacion UX).
+3. Tests de integracion UI/API para asignacion y desasignacion de proveedor.
+
 ## Entrada 2026-05-17 (modulo suppliers frontend fase 1)
 
 ### Implementado

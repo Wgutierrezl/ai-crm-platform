@@ -18,5 +18,9 @@ export class Product {
     public readonly categoryId: string | null = null,
     public readonly createdAt: Date = new Date(),
     public readonly updatedAt: Date = new Date(),
+    public readonly supplierId: string | null = null,
+    public readonly supplier:
+      | { id: string; name: string; isActive: boolean }
+      | null = null,
   ) {}
 }
