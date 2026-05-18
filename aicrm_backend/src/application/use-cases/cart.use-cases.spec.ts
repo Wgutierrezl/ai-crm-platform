@@ -128,6 +128,7 @@ class FakeProductRepo extends ProductRepository {
   }
   async update(product: Product): Promise<Product> { return product; }
   async findAllByCompanyId(companyId: string): Promise<Product[]> { void companyId; return []; }
+  async findAllByCompanyIdAndSupplierId(companyId: string, supplierId: string): Promise<Product[]> { void companyId; void supplierId; return []; }
   async findActiveByCompanyId(companyId: string, limit?: number): Promise<Product[]> { void companyId; void limit; return []; }
   async searchActiveByCompanyId(companyId: string, query: string, limit?: number): Promise<Product[]> { void companyId; void query; void limit; return []; }
   async findByApproximateName(companyId: string, name: string, limit?: number): Promise<Product[]> { void companyId; void name; void limit; return []; }

@@ -9,6 +9,10 @@ export abstract class ProductRepository {
   ): Promise<Product | null>;
   abstract update(product: Product): Promise<Product>;
   abstract findAllByCompanyId(companyId: string): Promise<Product[]>;
+  abstract findAllByCompanyIdAndSupplierId(
+    companyId: string,
+    supplierId: string,
+  ): Promise<Product[]>;
   abstract findActiveByCompanyId(
     companyId: string,
     limit?: number,

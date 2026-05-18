@@ -10,3 +10,4 @@ export { messageService } from "./message.service";
 export { orderService } from "./order.service";
 export { categoryService } from "./category.service";
 export { companySettingsService } from "./company-settings.service";
+export { supplierService } from "./supplier.service";

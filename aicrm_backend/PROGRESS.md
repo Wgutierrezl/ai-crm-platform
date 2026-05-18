@@ -2,6 +2,89 @@
 
 Fecha de actualizacion: 2026-05-12
 
+## Actualizacion 2026-05-17 - Relacion producto -> proveedor (fase 1)
+
+### Implementado
+- Relacion de datos:
+  - `products.supplier_id` nullable.
+  - `ManyToOne` `Product -> Supplier`.
+  - `OneToMany` `Supplier -> Products`.
+- Migracion nueva:
+  - `1710000000017-AddProductSupplierRelation`.
+  - agrega `supplier_id` nullable en `products`.
+  - agrega FK `products.supplier_id -> suppliers.id` con:
+    - `ON DELETE SET NULL`
+    - `ON UPDATE CASCADE`
+- Productos:
+  - `CreateProductDto` y `UpdateProductDto` ahora soportan `supplierId` opcional/null.
+  - create/update validan que `supplierId` exista y pertenezca al mismo `companyId`.
+  - permite productos sin proveedor.
+  - permite quitar proveedor enviando `supplierId: null`.
+- Suppliers:
+  - endpoint nuevo `GET /api/v1/suppliers/:id/products`.
+  - valida ownership por tenant y devuelve lista (vacía si no hay productos).
+- Respuesta de productos:
+  - incluye `supplierId` y `supplier` minimo (`id`, `name`, `isActive`) cuando aplica.
+
+### Alcance controlado
+- Sin cambios en WhatsApp/Bot, IA providers, checkout, PDF/correos u OAuth.
+- Sin relacion muchos-a-muchos (`product_suppliers` no aplica en esta regla).
+
+### Validacion adicional 2026-05-17 (tests backend)
+- Se agrego cobertura especifica de relacion producto-proveedor:
+  - create product con `supplierId` valido del mismo tenant.
+  - rechazo de `supplierId` inexistente.
+  - rechazo de `supplierId` de otro tenant.
+  - create product sin `supplierId`.
+  - update product con `supplierId: null` para quitar proveedor.
+  - consulta de productos por proveedor aislada por tenant.
+- Spec agregado:
+  - `src/application/use-cases/product-supplier-relation.use-case.spec.ts`.
+
+## Actualizacion 2026-05-17 - Suppliers backend fase 1
+
+### Implementado
+- Nuevo modulo backend `suppliers` (fase inicial) respetando arquitectura hexagonal y multi-tenant.
+- Dominio:
+  - entidad `Supplier`.
+  - puerto `SupplierRepository`.
+- Infraestructura:
+  - entidad ORM `SupplierOrmEntity`.
+  - repositorio TypeORM `SupplierTypeormRepository`.
+  - migracion `1710000000016-AddSuppliers` para tabla `suppliers`.
+- Application use cases:
+  - `CreateSupplierUseCase`
+  - `GetSuppliersByCompanyUseCase`
+  - `GetSupplierByIdUseCase`
+  - `UpdateSupplierUseCase`
+  - `UpdateSupplierStatusUseCase`
+- Interfaces HTTP:
+  - DTOs:
+    - `CreateSupplierDto`
+    - `UpdateSupplierDto`
+    - `UpdateSupplierStatusDto`
+  - Controller:
+    - `GET /api/v1/suppliers`
+    - `POST /api/v1/suppliers`
+    - `GET /api/v1/suppliers/:id`
+    - `PATCH /api/v1/suppliers/:id`
+    - `PATCH /api/v1/suppliers/:id/status`
+- Registro en `AppModule`:
+  - entidad TypeORM,
+  - controller,
+  - use cases,
+  - binding de puerto `SupplierRepository -> SupplierTypeormRepository`.
+
+### Reglas de seguridad aplicadas
+- Todos los endpoints con `JwtAuthGuard`.
+- `companyId` se toma unicamente desde `CurrentUser` (JWT), no desde body.
+- Consultas y actualizaciones restringidas por `id + companyId` para evitar acceso cross-tenant.
+
+### Fuera de alcance en esta fase
+- Sin frontend de proveedores.
+- Sin relacion `product_suppliers`.
+- Sin cambios en WhatsApp, checkout, providers IA o refactor general.
+
 ## Actualizacion 2026-05-15 - Firma webhook Meta WhatsApp (dynamic-first)
 
 ### Implementado

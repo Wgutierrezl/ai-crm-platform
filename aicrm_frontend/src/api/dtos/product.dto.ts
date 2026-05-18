@@ -16,6 +16,7 @@ export interface CreateProductRequestDto {
   minStock?: number;
   imageUrl?: string;
   categoryId?: string;
+  supplierId?: string | null;
 }
 
 export interface UpdateProductRequestDto {
@@ -30,6 +31,7 @@ export interface UpdateProductRequestDto {
   minStock?: number;
   imageUrl?: string | null;
   categoryId?: string | null;
+  supplierId?: string | null;
 }
 
 // ===== RESPONSE DTOs =====
@@ -48,12 +50,18 @@ export interface ProductDto {
   minStock: number;
   imageUrl: string | null;
   categoryId: string | null;
+  supplierId: string | null;
   createdAt: string;
   updatedAt: string;
   category?: {
     id: string;
     name: string;
     description?: string | null;
+  } | null;
+  supplier?: {
+    id: string;
+    name: string;
+    isActive: boolean;
   } | null;
 }
 

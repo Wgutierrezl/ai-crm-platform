@@ -78,4 +78,12 @@ export class UpdateProductDto {
   @IsOptional()
   @IsUUID()
   categoryId?: string | null;
+
+  @ApiPropertyOptional({
+    example: 'ab8e9965-ecbc-4d86-9038-7487c35a6120',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsUUID()
+  supplierId?: string | null;
 }

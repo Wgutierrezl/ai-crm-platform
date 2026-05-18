@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Product } from '../../domain/entities/product.entity';
 import { CategoryRepository } from '../../domain/ports/category.repository.port';
 import { ProductRepository } from '../../domain/ports/product.repository.port';
+import { SupplierRepository } from '../../domain/ports/supplier.repository.port';
 
 export interface UpdateProductInput {
   id: string;
@@ -17,6 +18,7 @@ export interface UpdateProductInput {
   isActive?: boolean;
   imageUrl?: string | null;
   categoryId?: string | null;
+  supplierId?: string | null;
 }
 
 @Injectable()
@@ -24,6 +26,7 @@ export class UpdateProductUseCase {
   constructor(
     private readonly productRepository: ProductRepository,
     private readonly categoryRepository: CategoryRepository,
+    private readonly supplierRepository: SupplierRepository,
   ) {}
 
   async execute(input: UpdateProductInput): Promise<Product> {
@@ -47,6 +50,18 @@ export class UpdateProductUseCase {
       }
     }
 
+    if (input.supplierId !== undefined && input.supplierId !== null) {
+      const supplier = await this.supplierRepository.findByIdAndCompanyId(
+        input.supplierId,
+        input.companyId,
+      );
+      if (!supplier) {
+        throw new NotFoundException(
+          'El proveedor enviado no existe para esta empresa',
+        );
+      }
+    }
+
     const updated = new Product(
       existing.id,
       input.name ?? existing.name,
@@ -66,6 +81,8 @@ export class UpdateProductUseCase {
       input.categoryId === undefined ? existing.categoryId : input.categoryId,
       existing.createdAt,
       new Date(),
+      input.supplierId === undefined ? existing.supplierId : input.supplierId,
+      existing.supplier,
     );
 
     return this.productRepository.update(updated);

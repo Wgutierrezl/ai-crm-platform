@@ -20,9 +20,11 @@ import { Textarea } from "../components/ui/textarea.tsx";
 import { toast } from "sonner";
 import { productService } from "../../api/services/product.service";
 import { categoryService } from "../../api/services/category.service";
+import { supplierService } from "../../api/services/supplier.service";
 import { logger } from "../../utils/logger/logger";
 import type { ProductDto } from "../../api/dtos/product.dto";
 import type { CategoryDto } from "../../api/dtos/category.dto";
+import type { SupplierDto } from "../../api/dtos/supplier.dto";
 
 type ProductView = ProductDto & { available?: boolean };
 
@@ -32,6 +34,7 @@ type ProductFormState = {
   price: string;
   stock: string;
   categoryId: string;
+  supplierId: string;
   brand: string;
   sku: string;
   currency: string;
@@ -46,6 +49,7 @@ const initialFormState: ProductFormState = {
   price: "",
   stock: "",
   categoryId: "none",
+  supplierId: "none",
   brand: "",
   sku: "",
   currency: "COP",
@@ -59,9 +63,12 @@ export default function Products() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStock, setFilterStock] = useState<"all" | "low">("all");
   const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [filterSupplier, setFilterSupplier] = useState<string>("all");
   const [products, setProducts] = useState<ProductView[]>([]);
   const [activeCategories, setActiveCategories] = useState<CategoryDto[]>([]);
   const [allCategories, setAllCategories] = useState<CategoryDto[]>([]);
+  const [activeSuppliers, setActiveSuppliers] = useState<SupplierDto[]>([]);
+  const [allSuppliers, setAllSuppliers] = useState<SupplierDto[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductView | null>(null);
   const [loadingProducts, setLoadingProducts] = useState(false);
@@ -76,6 +83,12 @@ export default function Products() {
     for (const category of allCategories) map.set(category.id, category);
     return map;
   }, [allCategories]);
+
+  const suppliersById = useMemo(() => {
+    const map = new Map<string, SupplierDto>();
+    for (const supplier of allSuppliers) map.set(supplier.id, supplier);
+    return map;
+  }, [allSuppliers]);
 
   const loadProducts = async () => {
     try {
@@ -113,9 +126,20 @@ export default function Products() {
     }
   };
 
+  const loadSuppliers = async () => {
+    try {
+      const all = await supplierService.getSuppliers();
+      setAllSuppliers(all);
+      setActiveSuppliers(all.filter((supplier) => supplier.isActive));
+    } catch (error) {
+      logger.error("No se pudieron cargar proveedores", error);
+      toast.warning("No se pudieron cargar los proveedores");
+    }
+  };
+
   useEffect(() => {
     queueMicrotask(() => {
-      void Promise.all([loadProducts(), loadCategories()]);
+      void Promise.all([loadProducts(), loadCategories(), loadSuppliers()]);
     });
   }, []);
 
@@ -129,13 +153,25 @@ export default function Products() {
     return { name: category.name, inactive: !category.isActive };
   }
 
+  function resolveSupplierMeta(product: ProductView): {
+    name: string;
+    inactive: boolean;
+  } {
+    if (!product.supplierId) return { name: "Sin proveedor", inactive: false };
+    const supplier = suppliersById.get(product.supplierId);
+    if (!supplier) return { name: "Proveedor no disponible", inactive: true };
+    return { name: supplier.name, inactive: !supplier.isActive };
+  }
+
   const filteredProducts = products.filter((product) => {
     const term = searchQuery.toLowerCase();
     const categoryMeta = resolveCategoryMeta(product);
+    const supplierMeta = resolveSupplierMeta(product);
     const matchesSearch =
       product.name.toLowerCase().includes(term) ||
       (product.description ?? "").toLowerCase().includes(term) ||
       categoryMeta.name.toLowerCase().includes(term) ||
+      supplierMeta.name.toLowerCase().includes(term) ||
       (product.brand ?? "").toLowerCase().includes(term);
 
     const matchesStock =
@@ -148,11 +184,21 @@ export default function Products() {
           ? !product.categoryId
           : product.categoryId === filterCategory;
 
-    return matchesSearch && matchesStock && matchesCategory;
+    const matchesSupplier =
+      filterSupplier === "all"
+        ? true
+        : filterSupplier === "none"
+          ? !product.supplierId
+          : product.supplierId === filterSupplier;
+
+    return matchesSearch && matchesStock && matchesCategory && matchesSupplier;
   });
 
   const hasActiveFilters =
-    searchQuery.trim().length > 0 || filterStock !== "all" || filterCategory !== "all";
+    searchQuery.trim().length > 0 ||
+    filterStock !== "all" ||
+    filterCategory !== "all" ||
+    filterSupplier !== "all";
 
   function handleOpenDialog(product?: ProductView) {
     if (product) {
@@ -163,6 +209,7 @@ export default function Products() {
         price: product.price.toString(),
         stock: product.stock.toString(),
         categoryId: product.categoryId ?? "none",
+        supplierId: product.supplierId ?? "none",
         brand: product.brand ?? "",
         sku: product.sku ?? "",
         currency: product.currency ?? "COP",
@@ -191,6 +238,16 @@ export default function Products() {
     return [assigned, ...activeCategories];
   }, [activeCategories, allCategories, editingProduct]);
 
+  const selectableSuppliers = useMemo(() => {
+    if (!editingProduct || !editingProduct.supplierId) return activeSuppliers;
+
+    const assigned = allSuppliers.find((s) => s.id === editingProduct.supplierId);
+    if (!assigned || assigned.isActive) return activeSuppliers;
+
+    if (activeSuppliers.some((s) => s.id === assigned.id)) return activeSuppliers;
+    return [assigned, ...activeSuppliers];
+  }, [activeSuppliers, allSuppliers, editingProduct]);
+
   async function handleSave() {
     if (!formData.name.trim() || !formData.price || !formData.stock) {
       toast.error("Nombre, precio y stock son obligatorios");
@@ -206,6 +263,7 @@ export default function Products() {
         price: Number(formData.price),
         stock: Number(formData.stock),
         categoryId: formData.categoryId === "none" ? null : formData.categoryId,
+        supplierId: formData.supplierId === "none" ? null : formData.supplierId,
         brand: formData.brand.trim() || null,
         sku: formData.sku.trim() || null,
         currency: formData.currency.trim() || "COP",
@@ -239,7 +297,7 @@ export default function Products() {
       setIsDialogOpen(false);
       setSelectedImageFile(null);
       setImagePreviewUrl("");
-      await loadCategories();
+      await Promise.all([loadCategories(), loadSuppliers()]);
     } catch (error) {
       logger.error("Error al guardar producto", error);
       toast.error("No se pudo guardar el producto");
@@ -268,6 +326,7 @@ export default function Products() {
       price: number;
       stock: number;
       categoryId: string | null;
+      supplierId: string | null;
       brand: string | null;
       sku: string | null;
       currency: string;
@@ -283,6 +342,7 @@ export default function Products() {
     form.append("price", String(payload.price));
     form.append("stock", String(payload.stock));
     if (payload.categoryId !== null) form.append("categoryId", payload.categoryId);
+    if (payload.supplierId !== null) form.append("supplierId", payload.supplierId);
     if (payload.brand !== null) form.append("brand", payload.brand);
     if (payload.sku !== null) form.append("sku", payload.sku);
     form.append("currency", payload.currency);
@@ -356,11 +416,27 @@ export default function Products() {
                     setSearchQuery("");
                     setFilterStock("all");
                     setFilterCategory("all");
+                    setFilterSupplier("all");
                   }}
                 >
                   Limpiar filtros
                 </Button>
               )}
+
+              <Select value={filterSupplier} onValueChange={setFilterSupplier}>
+                <SelectTrigger className="w-[220px]">
+                  <SelectValue placeholder="Filtrar por proveedor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los proveedores</SelectItem>
+                  <SelectItem value="none">Sin proveedor</SelectItem>
+                  {activeSuppliers.map((supplier) => (
+                    <SelectItem key={supplier.id} value={supplier.id}>
+                      {supplier.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex gap-2">
@@ -399,8 +475,9 @@ export default function Products() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nombre</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead>Precio</TableHead>
+                <TableHead>Categoria</TableHead>
+                <TableHead>Proveedor</TableHead>
+                <TableHead>Precio</TableHead>
                   <TableHead>Stock</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Imagen</TableHead>
@@ -410,6 +487,7 @@ export default function Products() {
               <TableBody>
                 {filteredProducts.map((product) => {
                   const categoryMeta = resolveCategoryMeta(product);
+                  const supplierMeta = resolveSupplierMeta(product);
                   return (
                     <TableRow key={product.id}>
                       <TableCell className="font-medium">
@@ -422,6 +500,12 @@ export default function Products() {
                         <Badge variant={categoryMeta.inactive ? "secondary" : "outline"}>
                           {categoryMeta.name}
                           {categoryMeta.inactive ? " (Inactiva)" : ""}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={supplierMeta.inactive ? "secondary" : "outline"}>
+                          {supplierMeta.name}
+                          {supplierMeta.inactive ? " (Inactivo)" : ""}
                         </Badge>
                       </TableCell>
                       <TableCell>${product.price.toLocaleString()}</TableCell>
@@ -457,6 +541,7 @@ export default function Products() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredProducts.map((product) => {
                 const categoryMeta = resolveCategoryMeta(product);
+                const supplierMeta = resolveSupplierMeta(product);
                 return (
                   <Card key={product.id}>
                     <CardHeader>
@@ -490,6 +575,10 @@ export default function Products() {
                       <Badge variant={categoryMeta.inactive ? "secondary" : "outline"}>
                         {categoryMeta.name}
                         {categoryMeta.inactive ? " (Inactiva)" : ""}
+                      </Badge>
+                      <Badge variant={supplierMeta.inactive ? "secondary" : "outline"}>
+                        {supplierMeta.name}
+                        {supplierMeta.inactive ? " (Inactivo)" : ""}
                       </Badge>
                       <Button variant="outline" className="w-full" onClick={() => handleOpenDialog(product)}>
                         <Edit className="w-4 h-4 mr-2" />
@@ -639,6 +728,34 @@ export default function Products() {
                 {!loadingCategories && activeCategories.length === 0 && (
                   <p className="text-xs text-muted-foreground">
                     Aun no tienes categorias activas. Puedes crear una en el modulo de categorias.
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="supplier">Proveedor (opcional)</Label>
+                <Select
+                  value={formData.supplierId}
+                  onValueChange={(value: string) =>
+                    setFormData((prev) => ({ ...prev, supplierId: value }))
+                  }
+                >
+                  <SelectTrigger id="supplier">
+                    <SelectValue placeholder="Selecciona un proveedor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin proveedor</SelectItem>
+                    {selectableSuppliers.map((supplier) => (
+                      <SelectItem key={supplier.id} value={supplier.id}>
+                        {supplier.name}
+                        {!supplier.isActive ? " (Inactivo actual)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {activeSuppliers.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Aun no tienes proveedores activos. Puedes crear uno en el modulo de proveedores.
                   </p>
                 )}
               </div>
