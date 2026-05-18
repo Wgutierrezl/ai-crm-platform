@@ -1,5 +1,108 @@
 # PROGRESSION - AI CRM Frontend
 
+## Entrada 2026-05-17 (desmock fase 3: conversations con historial real)
+
+### Implementado
+- `Conversations.tsx` ya no usa mocks:
+  - `mockConversations`,
+  - `mockMessages`,
+  - `suggestedProducts`,
+  - `aiSuggestedActions`,
+  - carrito/orden simulada.
+- Lista de conversaciones conectada a backend real:
+  - `GET /api/v1/conversations`.
+- Historial real por conversacion conectado a backend real:
+  - `GET /api/v1/conversations/:id/messages`.
+- Al enviar mensaje (agente o IA), la vista refresca historial real.
+- Estados UX reales agregados:
+  - loading/error/empty para conversaciones,
+  - loading/error/empty para mensajes.
+- Panel lateral mock reemplazado por estado informativo honesto sobre contexto comercial/IA.
+
+### Pendientes
+1. Enriquecer listado con nombre de cliente y ultimo mensaje real (requiere endpoint enriquecido o agregacion adicional).
+2. Sugerencias IA/contexto comercial reales por conversacion (requiere endpoint dedicado).
+3. Tests frontend de UI cuando exista setup formal.
+
+## Entrada 2026-05-17 (desmock fase 4: conversaciones enriquecidas)
+
+### Implementado
+- `GET /api/v1/conversations` ahora se consume enriquecido en frontend:
+  - customer real (nombre/telefono/email cuando existe),
+  - ultimo mensaje real,
+  - contador real de mensajes.
+- `Conversations.tsx` actualizado:
+  - listado muestra nombre real de cliente o fallback honesto,
+  - preview de ultimo mensaje real o \"Sin mensajes todavia\",
+  - timestamp real del ultimo mensaje (o de creacion de conversacion),
+  - busqueda por ID, customerId y nombre real.
+- `Dashboard.tsx` actualizado en bloque de conversaciones recientes:
+  - usa customer real y ultimo mensaje real,
+  - elimina texto generico restante.
+
+### Pendientes
+1. Sugerencias IA/contexto comercial real por conversacion.
+2. Tests frontend de UI cuando exista setup de testing.
+
+## Entrada 2026-05-17 (desmock fase 2: dashboard real parcial)
+
+### Implementado
+- `Dashboard.tsx` ya no usa bloques mock visibles:
+  - `salesData`,
+  - `recentConversations`,
+  - `recentOrders`,
+  - `aiRecommendations`,
+  - KPI fijo de conversion,
+  - trends hardcoded,
+  - valores iniciales falsos.
+- El dashboard ahora consume datos reales desde:
+  - `GET /api/v1/orders`,
+  - `GET /api/v1/conversations`,
+  - `GET /api/v1/products`.
+- KPIs calculadas con datos reales disponibles:
+  - total conversaciones,
+  - total productos,
+  - total ordenes,
+  - ordenes pendientes,
+  - ordenes completadas (`paid`, `confirmed`, `mock_paid`),
+  - ventas acumuladas de ordenes completadas,
+  - productos con stock bajo (`stock <= minStock`).
+- Se agregaron estados UX honestos:
+  - loading,
+  - error,
+  - empty state para ordenes/conversaciones.
+
+### Pendiente por endpoints de backend
+1. `dashboard summary` dedicado.
+2. `sales trend`/serie temporal para grafica real.
+3. tasa de conversion real bot -> orden.
+4. recomendaciones IA reales para dashboard.
+
+## Entrada 2026-05-17 (desmock fase 1: customers)
+
+### Implementado
+- `Customers.tsx` ya no usa `mockCustomers`.
+- Se elimino el fallback a datos inventados cuando falla API.
+- La pantalla ahora consume solo `GET /api/v1/customers`.
+- Se incorporaron estados reales:
+  - loading,
+  - error,
+  - empty state (sin datos),
+  - empty state por busqueda sin resultados.
+- Se eliminaron campos falsos/hardcoded:
+  - `lastConversation`,
+  - `totalPurchased`,
+  - `status` comercial derivado por indice.
+- La busqueda local ahora filtra solo por datos reales disponibles:
+  - nombre,
+  - email,
+  - telefono,
+  - identificacion.
+
+### Pendientes relacionados
+1. Agregar datos comerciales reales de clientes (ultima conversacion, total comprado, estado comercial) cuando existan endpoints agregados.
+2. Desmock de Dashboard (parcial con endpoints actuales).
+3. Desmock de Conversations (requiere endpoint de historial de mensajes para desmock completo).
 ## Entrada 2026-05-17 (relacion productos-proveedores fase 1)
 
 ### Implementado

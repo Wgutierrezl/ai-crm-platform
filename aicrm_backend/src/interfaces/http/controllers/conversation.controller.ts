@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -8,6 +8,7 @@ import {
 } from '@nestjs/swagger';
 import { CreateConversationUseCase } from '../../../application/use-cases/create-conversation.use-case';
 import { GetConversationsUseCase } from '../../../application/use-cases/get-conversations.use-case';
+import { GetConversationMessagesUseCase } from '../../../application/use-cases/get-conversation-messages.use-case';
 import { CreateConversationDto } from '../dtos/create-conversation.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { CurrentUser } from '../guards/current-user.decorator';
@@ -21,6 +22,7 @@ export class ConversationController {
   constructor(
     private readonly createConversationUseCase: CreateConversationUseCase,
     private readonly getConversationsUseCase: GetConversationsUseCase,
+    private readonly getConversationMessagesUseCase: GetConversationMessagesUseCase,
   ) {}
 
   @Post()
@@ -47,5 +49,20 @@ export class ConversationController {
   @ApiResponse({ status: 401, description: 'No autenticado' })
   async list(@CurrentUser() user: CurrentUserPayload) {
     return this.getConversationsUseCase.execute(user.companyId);
+  }
+
+  @Get(':id/messages')
+  @ApiOperation({ summary: 'Listar mensajes por conversacion del tenant' })
+  @ApiResponse({ status: 200, description: 'Listado de mensajes' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 404, description: 'Conversacion no encontrada' })
+  async listMessages(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') conversationId: string,
+  ) {
+    return this.getConversationMessagesUseCase.execute(
+      conversationId,
+      user.companyId,
+    );
   }
 }

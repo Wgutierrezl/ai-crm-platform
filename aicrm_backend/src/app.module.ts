@@ -94,6 +94,7 @@ import { SearchProductsByCategoryOrTextUseCase } from './application/use-cases/s
 import { UpdateCategoryStatusUseCase } from './application/use-cases/update-category-status.use-case';
 import { CreateConversationUseCase } from './application/use-cases/create-conversation.use-case';
 import { GetConversationsUseCase } from './application/use-cases/get-conversations.use-case';
+import { GetConversationMessagesUseCase } from './application/use-cases/get-conversation-messages.use-case';
 import {
   CreateMessageUseCase,
   ProcessIncomingMessageUseCase,
@@ -307,6 +308,7 @@ import { InMemoryOauthTempStoreAdapter } from './infrastructure/security/in-memo
     InMemoryOauthTempStoreAdapter,
     CreateConversationUseCase,
     GetConversationsUseCase,
+    GetConversationMessagesUseCase,
     CreateMessageUseCase,
     ProcessIncomingMessageUseCase,
     CreateOrderUseCase,

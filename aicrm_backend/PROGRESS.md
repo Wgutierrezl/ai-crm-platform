@@ -2,6 +2,41 @@
 
 Fecha de actualizacion: 2026-05-12
 
+## Actualizacion 2026-05-17 - Historial real de mensajes por conversacion
+
+### Implementado
+- Nuevo endpoint protegido:
+  - `GET /api/v1/conversations/:id/messages`
+- Seguridad multi-tenant aplicada:
+  - `companyId` tomado de `CurrentUser` (`JwtAuthGuard`),
+  - validacion de pertenencia de conversacion al tenant,
+  - respuesta `404` si la conversacion no existe o no pertenece a la empresa autenticada.
+- Historial real de mensajes:
+  - devuelve mensajes reales de la conversacion,
+  - orden ascendente por `createdAt`.
+- Cambios tecnicos:
+  - `GetConversationMessagesUseCase` agregado.
+  - `ConversationController` actualizado con `GET :id/messages`.
+  - registro en `AppModule`.
+  - spec unitario del caso de uso agregado para:
+    - tenant valido,
+    - tenant invalido,
+    - conversacion sin mensajes,
+    - conversacion inexistente.
+
+## Actualizacion 2026-05-17 - Enriquecimiento real de listado de conversaciones
+
+### Implementado
+- `GET /api/v1/conversations` enriquecido con datos reales:
+  - `id`, `companyId`, `customerId`, `createdAt`,
+  - `customer` (id, fullName, firstName, lastName, name, phone, email) o `null`,
+  - `lastMessage` (id, content, role, sourceChannel, createdAt) o `null`,
+  - `messageCount`.
+- Multi-tenant preservado:
+  - listado base por `companyId`,
+  - no mezcla conversaciones de otros tenants,
+  - customer asociado validado contra tenant de la conversacion.
+- No se cambiaron esquemas ni migraciones.
 ## Actualizacion 2026-05-17 - Relacion producto -> proveedor (fase 1)
 
 ### Implementado
