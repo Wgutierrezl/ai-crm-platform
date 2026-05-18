@@ -1,5 +1,26 @@
 # PROGRESSION - AI CRM Frontend
 
+## Entrada 2026-05-18 (branding empresa: logo corporativo en settings)
+
+### Implementado
+- `Settings.tsx` incorpora bloque de branding de empresa:
+  - visualizacion de logo actual por tenant,
+  - fallback por iniciales cuando no existe logo,
+  - selector de archivo y subida real de logo.
+- Flujo UX aplicado:
+  - seleccionar logo,
+  - validar tipo/tamano en frontend,
+  - subir logo al backend,
+  - refrescar estado local al guardar.
+- Integracion API:
+  - endpoint nuevo consumido: `PATCH /api/v1/company/settings/logo`.
+  - `company-settings` DTOs actualizados para incluir `logoUrl`.
+
+### Validaciones UI
+- Tipos permitidos: JPG, PNG, WEBP, GIF, AVIF, SVG.
+- Tamano maximo: 5 MB.
+- Estado de carga visible durante upload y manejo de error sin perder estado actual.
+
 ## Entrada 2026-05-17 (desmock fase 3: conversations con historial real)
 
 ### Implementado

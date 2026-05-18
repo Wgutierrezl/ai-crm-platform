@@ -7,6 +7,7 @@ export interface PdfReceiptItem {
 
 export interface GeneratePdfReceiptInput {
   companyName: string;
+  companyLogoUrl?: string | null;
   orderId: string;
   orderDate: Date;
   customerName: string;

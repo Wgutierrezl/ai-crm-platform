@@ -15,7 +15,7 @@ export class PdfkitReceiptGenerator implements PdfReceiptGeneratorPort {
     const chunks: Buffer[] = [];
     doc.on('data', (chunk: Buffer) => chunks.push(chunk));
 
-    this.drawHeader(doc, input.companyName);
+    await this.drawHeader(doc, input.companyName, input.companyLogoUrl ?? null);
     this.drawOrderInfo(doc, input);
     this.drawItemsTable(doc, input);
     this.drawTotal(doc, input);
@@ -36,17 +36,55 @@ export class PdfkitReceiptGenerator implements PdfReceiptGeneratorPort {
     };
   }
 
-  private drawHeader(doc: PDFKit.PDFDocument, companyName: string): void {
+  private async drawHeader(
+    doc: PDFKit.PDFDocument,
+    companyName: string,
+    companyLogoUrl: string | null,
+  ): Promise<void> {
+    const logoBuffer = await this.tryLoadLogo(companyLogoUrl);
+    if (logoBuffer) {
+      try {
+        doc.image(logoBuffer, 50, 45, { fit: [140, 48] });
+      } catch {
+        // Si PDFKit no puede parsear la imagen, continuamos sin bloquear recibo.
+      }
+    }
+
     doc
       .fontSize(20)
       .fillColor('#0f172a')
-      .text(companyName, { align: 'left' })
+      .text(companyName, 200, 50, { align: 'left' })
       .moveDown(0.4);
     doc
       .fontSize(12)
       .fillColor('#334155')
-      .text('Recibo de compra', { align: 'left' });
-    doc.moveDown(1);
+      .text('Recibo de compra', 200, 78, { align: 'left' });
+    doc.moveDown(2.2);
+  }
+
+  private async tryLoadLogo(companyLogoUrl: string | null): Promise<Buffer | null> {
+    const url = String(companyLogoUrl ?? '').trim();
+    if (!url) return null;
+    if (!/^https?:\/\//i.test(url)) return null;
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 2500);
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeout);
+
+      if (!response.ok) return null;
+      const contentType = response.headers.get('content-type') ?? '';
+      if (!contentType.startsWith('image/')) return null;
+
+      const arrayBuffer = await response.arrayBuffer();
+      if (!arrayBuffer || arrayBuffer.byteLength === 0) return null;
+      if (arrayBuffer.byteLength > 2 * 1024 * 1024) return null;
+
+      return Buffer.from(arrayBuffer);
+    } catch {
+      return null;
+    }
   }
 
   private drawOrderInfo(

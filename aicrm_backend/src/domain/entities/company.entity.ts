@@ -6,5 +6,6 @@ export class Company {
     public readonly assistantName: string | null = null,
     public readonly assistantContext: string | null = null,
     public readonly assistantWelcomeMessage: string | null = null,
+    public readonly logoUrl: string | null = null,
   ) {}
 }

@@ -41,12 +41,13 @@ export class TransactionalEmailService {
 
     const company = await this.companyRepository.findById(input.companyId);
     const companyName = company?.name?.trim() || 'AI CRM';
+    const companyLogoUrl = company?.logoUrl?.trim() || null;
     const customerName =
       input.customer.firstName?.trim() ||
       input.customer.fullName?.trim() ||
       'cliente';
     const subject = `Bienvenido a ${companyName}`;
-    const html = this.buildWelcomeHtml({ companyName, customerName });
+    const html = this.buildWelcomeHtml({ companyName, customerName, companyLogoUrl });
 
     try {
       await this.emailSender.send({
@@ -78,6 +79,7 @@ export class TransactionalEmailService {
 
     const company = await this.companyRepository.findById(input.companyId);
     const companyName = company?.name?.trim() || 'AI CRM';
+    const companyLogoUrl = company?.logoUrl?.trim() || null;
     const customerName =
       input.customer?.firstName?.trim() ||
       input.customer?.fullName?.trim() ||
@@ -86,6 +88,7 @@ export class TransactionalEmailService {
     const html = this.buildOrderHtml({
       companyName,
       customerName,
+      companyLogoUrl,
       orderId: input.orderId,
       total: input.total,
       currency: input.currency,
@@ -102,6 +105,7 @@ export class TransactionalEmailService {
     try {
       const receiptPdf = await this.pdfReceiptGenerator.generatePurchaseReceipt({
         companyName,
+        companyLogoUrl,
         orderId: input.orderId,
         orderDate: input.orderDate,
         customerName,
@@ -150,8 +154,11 @@ export class TransactionalEmailService {
   private buildWelcomeHtml(input: {
     companyName: string;
     customerName: string;
+    companyLogoUrl: string | null;
   }): string {
     return this.buildLayout({
+      companyName: input.companyName,
+      companyLogoUrl: input.companyLogoUrl,
       title: `Bienvenido, ${input.customerName}`,
       subtitle: `Tu registro en ${input.companyName} fue completado correctamente.`,
       body: `
@@ -164,6 +171,7 @@ export class TransactionalEmailService {
   private buildOrderHtml(input: {
     companyName: string;
     customerName: string;
+    companyLogoUrl: string | null;
     orderId: string;
     total: number;
     currency: string;
@@ -184,6 +192,8 @@ export class TransactionalEmailService {
       .join('');
 
     return this.buildLayout({
+      companyName: input.companyName,
+      companyLogoUrl: input.companyLogoUrl,
       title: `Compra confirmada #${this.escapeHtml(input.orderId.slice(0, 8))}`,
       subtitle: `Hola ${this.escapeHtml(input.customerName)}, tu pago mock fue aprobado.`,
       body: `
@@ -210,10 +220,16 @@ export class TransactionalEmailService {
   }
 
   private buildLayout(input: {
+    companyName: string;
+    companyLogoUrl: string | null;
     title: string;
     subtitle: string;
     body: string;
   }): string {
+    const logoBlock = input.companyLogoUrl
+      ? `<img src="${this.escapeHtml(input.companyLogoUrl)}" alt="${this.escapeHtml(input.companyName)}" style="max-height:40px;max-width:160px;display:block;border-radius:6px;" />`
+      : `<div style="display:inline-block;padding:8px 12px;border:1px solid rgba(255,255,255,.45);border-radius:8px;font-size:12px;font-weight:600;background:rgba(255,255,255,.12);">${this.escapeHtml(input.companyName)}</div>`;
+
     return `
       <!doctype html>
       <html>
@@ -229,6 +245,9 @@ export class TransactionalEmailService {
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #dbeafe;">
                   <tr>
                     <td style="padding:18px 22px;background:linear-gradient(135deg,#1d4ed8,#0ea5e9);color:#ffffff;">
+                      <div style="margin-bottom:12px;">
+                        ${logoBlock}
+                      </div>
                       <h1 style="margin:0;font-size:20px;line-height:1.3;">${this.escapeHtml(input.title)}</h1>
                       <p style="margin:8px 0 0;opacity:.95;font-size:14px;">${this.escapeHtml(input.subtitle)}</p>
                     </td>

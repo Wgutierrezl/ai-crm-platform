@@ -4,11 +4,13 @@ export interface CompanySettingsDto {
   assistantName: string | null;
   assistantContext: string | null;
   assistantWelcomeMessage: string | null;
+  logoUrl: string | null;
 }
 
 export interface UpdateCompanySettingsRequestDto {
   assistantName?: string | null;
   assistantContext?: string | null;
   assistantWelcomeMessage?: string | null;
+  logoUrl?: string | null;
 }
 

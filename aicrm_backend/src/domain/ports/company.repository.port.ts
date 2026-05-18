@@ -8,6 +8,7 @@ export abstract class CompanyRepository {
     assistantName: string | null;
     assistantContext: string | null;
     assistantWelcomeMessage: string | null;
+    logoUrl: string | null;
   }): Promise<Company>;
   abstract findAllByCompanyId(companyId: string): Promise<Company[]>;
 }

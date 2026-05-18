@@ -20,6 +20,7 @@ export class CompanyTypeormRepository implements CompanyRepository {
       assistantName: company.assistantName,
       assistantContext: company.assistantContext,
       assistantWelcomeMessage: company.assistantWelcomeMessage,
+      logoUrl: company.logoUrl,
     });
     const saved = await this.ormRepo.save(entity);
     return new Company(
@@ -29,6 +30,7 @@ export class CompanyTypeormRepository implements CompanyRepository {
       saved.assistantName ?? null,
       saved.assistantContext ?? null,
       saved.assistantWelcomeMessage ?? null,
+      saved.logoUrl ?? null,
     );
   }
 
@@ -42,6 +44,7 @@ export class CompanyTypeormRepository implements CompanyRepository {
       entity.assistantName ?? null,
       entity.assistantContext ?? null,
       entity.assistantWelcomeMessage ?? null,
+      entity.logoUrl ?? null,
     );
   }
 
@@ -50,6 +53,7 @@ export class CompanyTypeormRepository implements CompanyRepository {
     assistantName: string | null;
     assistantContext: string | null;
     assistantWelcomeMessage: string | null;
+    logoUrl: string | null;
   }): Promise<Company> {
     const entity = await this.ormRepo.findOneBy({ id: input.companyId });
     if (!entity) {
@@ -59,6 +63,7 @@ export class CompanyTypeormRepository implements CompanyRepository {
     entity.assistantName = input.assistantName;
     entity.assistantContext = input.assistantContext;
     entity.assistantWelcomeMessage = input.assistantWelcomeMessage;
+    entity.logoUrl = input.logoUrl;
 
     const saved = await this.ormRepo.save(entity);
     return new Company(
@@ -68,6 +73,7 @@ export class CompanyTypeormRepository implements CompanyRepository {
       saved.assistantName ?? null,
       saved.assistantContext ?? null,
       saved.assistantWelcomeMessage ?? null,
+      saved.logoUrl ?? null,
     );
   }
 

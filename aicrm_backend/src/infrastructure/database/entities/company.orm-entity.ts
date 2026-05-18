@@ -17,6 +17,9 @@ export class CompanyOrmEntity {
   @Column({ name: 'assistant_welcome_message', type: 'text', nullable: true })
   assistantWelcomeMessage!: string | null;
 
+  @Column({ name: 'logo_url', type: 'varchar', length: 2048, nullable: true })
+  logoUrl!: string | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 }

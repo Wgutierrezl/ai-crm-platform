@@ -7,6 +7,7 @@ export interface UpdateCompanySettingsInput {
   assistantName?: string | null;
   assistantContext?: string | null;
   assistantWelcomeMessage?: string | null;
+  logoUrl?: string | null;
 }
 
 @Injectable()
@@ -31,6 +32,7 @@ export class UpdateCompanySettingsUseCase {
         input.assistantWelcomeMessage !== undefined
           ? input.assistantWelcomeMessage
           : company.assistantWelcomeMessage,
+      logoUrl: input.logoUrl !== undefined ? input.logoUrl : company.logoUrl,
     });
 
     return {
@@ -39,6 +41,7 @@ export class UpdateCompanySettingsUseCase {
       assistantName: updated.assistantName,
       assistantContext: updated.assistantContext,
       assistantWelcomeMessage: updated.assistantWelcomeMessage,
+      logoUrl: updated.logoUrl,
     };
   }
 }
