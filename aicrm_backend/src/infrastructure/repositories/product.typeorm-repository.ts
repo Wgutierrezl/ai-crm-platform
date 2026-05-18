@@ -32,6 +32,14 @@ export class ProductTypeormRepository implements ProductRepository {
       e.categoryId ?? null,
       e.createdAt,
       e.updatedAt,
+      e.supplierId ?? null,
+      e.supplier
+        ? {
+            id: e.supplier.id,
+            name: e.supplier.name,
+            isActive: e.supplier.isActive,
+          }
+        : null,
     );
   }
 
@@ -53,6 +61,7 @@ export class ProductTypeormRepository implements ProductRepository {
       minStock: product.minStock,
       metadataJson: product.metadata,
       categoryId: product.categoryId,
+      supplierId: product.supplierId,
       createdAt: product.createdAt,
       updatedAt: product.updatedAt,
     });
@@ -92,6 +101,7 @@ export class ProductTypeormRepository implements ProductRepository {
     existing.minStock = product.minStock;
     existing.imageUrl = product.imageUrl;
     existing.categoryId = product.categoryId;
+    existing.supplierId = product.supplierId;
     existing.updatedAt = product.updatedAt;
 
     const saved = await this.ormRepo.save(existing);
@@ -102,8 +112,21 @@ export class ProductTypeormRepository implements ProductRepository {
     const entities = await this.ormRepo.find({
       where: { companyId },
       order: { createdAt: 'DESC' },
+      relations: { supplier: true },
     });
     return entities.map((e) => this.toDomain(e));
+  }
+
+  async findAllByCompanyIdAndSupplierId(
+    companyId: string,
+    supplierId: string,
+  ): Promise<Product[]> {
+    const entities = await this.ormRepo.find({
+      where: { companyId, supplierId },
+      order: { createdAt: 'DESC' },
+      relations: { supplier: true },
+    });
+    return entities.map((entity) => this.toDomain(entity));
   }
 
   async findActiveByCompanyId(

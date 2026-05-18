@@ -103,6 +103,113 @@
 1. Agregar datos comerciales reales de clientes (ultima conversacion, total comprado, estado comercial) cuando existan endpoints agregados.
 2. Desmock de Dashboard (parcial con endpoints actuales).
 3. Desmock de Conversations (requiere endpoint de historial de mensajes para desmock completo).
+## Entrada 2026-05-17 (relacion productos-proveedores fase 1)
+
+### Implementado
+- Modulo `Products` actualizado para relacionar producto -> proveedor (1 proveedor por producto, opcional).
+- Formulario de crear/editar producto:
+  - nuevo selector de proveedor con opcion `Sin proveedor`.
+  - carga proveedores reales desde backend (`GET /api/v1/suppliers`).
+  - solo muestra activos por defecto, preservando proveedor inactivo ya asociado al editar.
+- Listado de productos:
+  - muestra proveedor asociado o `Sin proveedor`.
+- Filtros:
+  - nuevo filtro por proveedor (todos/sin proveedor/proveedor especifico).
+- Modulo `Suppliers`:
+  - nueva accion `Ver productos`.
+  - consume `GET /api/v1/suppliers/:id/products`.
+  - muestra listado simple en modal y empty state si no hay relacionados.
+- DTOs/API:
+  - `product.dto.ts` soporta `supplierId` y `supplier`.
+  - `supplier.service.ts` agrega `getSupplierProducts`.
+
+### Pendientes siguientes de esta relacion
+1. Detalle dedicado de proveedor con pestaña de productos relacionados.
+2. Filtro combinado categoria + proveedor en vista productos (optimizacion UX).
+3. Tests de integracion UI/API para asignacion y desasignacion de proveedor.
+
+### Nota de validacion 2026-05-17 (continuidad de pendientes)
+- Se priorizo cobertura backend de reglas multi-tenant de `supplierId`.
+- En frontend no se agregaron tests automáticos en esta fase:
+  - no hay setup activo de pruebas UI/componentes en el proyecto.
+- Los filtros combinados en `Products` ya estaban operando en conjunto
+  (texto + categoria + proveedor + stock), por lo que no se aplico refactor adicional.
+
+## Entrada 2026-05-17 (mejora modal "Ver productos" en suppliers)
+
+### Implementado
+- Modal de productos por proveedor mejorado en `Suppliers`:
+  - titulo con nombre del proveedor,
+  - contador de productos asociados,
+  - buscador por nombre/SKU/marca/categoria,
+  - filtro por estado (todos/activos/inactivos),
+  - boton de limpiar filtros,
+  - estados de loading/error/empty (sin productos / sin resultados por filtros),
+  - visualizacion extendida por producto:
+    - nombre,
+    - precio,
+    - stock,
+    - categoria,
+    - estado activo/inactivo,
+    - proveedor actual,
+    - imagen o placeholder.
+
+### Pendientes
+1. Pagina detalle de proveedor.
+2. Paginacion para productos por proveedor si aumenta el volumen.
+3. Tests frontend del modal y filtros cuando exista setup de pruebas UI.
+
+## Entrada 2026-05-17 (cierre pendientes pequenos suppliers frontend)
+
+### Implementado
+- Nueva ruta protegida:
+  - `/suppliers/:id`
+- Nueva pagina de detalle de proveedor:
+  - datos de proveedor (documento, contacto, telefono, email, direccion, ciudad, notas, estado, fechas),
+  - seccion de productos asociados consumiendo `GET /api/v1/suppliers/:id/products`,
+  - contador, buscador, filtro por estado, limpiar filtros, loading/error/empty states.
+- Paginacion local implementada en:
+  - modal `Ver productos` en `Suppliers`,
+  - pagina detalle `/suppliers/:id`.
+- Navegacion desde listado:
+  - accion `Ver detalle` por proveedor en `/suppliers`.
+
+### Pendientes
+1. Paginacion backend real para productos por proveedor si el volumen crece.
+2. Tests frontend (UI/componentes) cuando exista setup de testing.
+
+## Entrada 2026-05-17 (modulo suppliers frontend fase 1)
+
+### Implementado
+- Nuevo modulo `Suppliers` conectado a backend real (sin mocks).
+- Endpoints consumidos:
+  - `GET /api/v1/suppliers`
+  - `POST /api/v1/suppliers`
+  - `GET /api/v1/suppliers/:id`
+  - `PATCH /api/v1/suppliers/:id`
+  - `PATCH /api/v1/suppliers/:id/status`
+- Nueva ruta protegida:
+  - `/suppliers`
+- Navegacion actualizada:
+  - nuevo item en sidebar: `Proveedores`.
+- Capa API agregada:
+  - DTOs suppliers,
+  - `supplierService` con operaciones CRUD base y cambio de estado.
+- Pantalla `Suppliers`:
+  - listado real,
+  - busqueda por nombre/contacto/ciudad/documento/email,
+  - filtro por estado (todos/activos/inactivos),
+  - creacion de proveedor,
+  - edicion de proveedor,
+  - activar/desactivar proveedor,
+  - confirmacion simple al desactivar,
+  - estados de loading/error/empty.
+
+### Pendientes siguientes (suppliers)
+1. Relacion producto-proveedor (backend + frontend).
+2. Visualizar productos relacionados por proveedor.
+3. Vista de detalle individual de proveedor (si aplica en UX siguiente).
+4. Tests del modulo (componentes + servicio API).
 
 ## Entrada 2026-05-15 (settings de asistente por empresa)
 

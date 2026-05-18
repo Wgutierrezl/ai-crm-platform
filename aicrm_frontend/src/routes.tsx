@@ -13,6 +13,8 @@ import Conversations from "./app/pages/Conversations";
 import Orders from "./app/pages/Orders";
 import OrderDetail from "./app/pages/OrderDetail";
 import Settings from "./app/pages/Settings";
+import Suppliers from "./app/pages/Suppliers";
+import SupplierDetail from "./app/pages/SupplierDetail";
 import ProtectedRoute from "./app/components/auth/ProtectedRoute";
 import PublicRoute from "./app/components/auth/PublicRoute";
 import RootRedirect from "./app/components/auth/RootRedirect";
@@ -81,6 +83,14 @@ export const router = createBrowserRouter([
           {
             path: "orders",
             Component: Orders,
+          },
+          {
+            path: "suppliers",
+            Component: Suppliers,
+          },
+          {
+            path: "suppliers/:id",
+            Component: SupplierDetail,
           },
           {
             path: "orders/:id",

@@ -6,6 +6,7 @@ import {
   Package,
   Tags,
   ShoppingCart,
+  Truck,
   Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -17,6 +18,7 @@ const navItems = [
   { path: "/products", label: "Productos", icon: Package },
   { path: "/categories", label: "Categorias", icon: Tags },
   { path: "/orders", label: "Ordenes", icon: ShoppingCart },
+  { path: "/suppliers", label: "Proveedores", icon: Truck },
   { path: "/settings", label: "Configuracion", icon: Settings },
 ];
 

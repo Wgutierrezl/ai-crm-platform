@@ -75,4 +75,13 @@ export class CreateProductDto {
   @IsOptional()
   @IsUUID()
   categoryId?: string;
+
+  @ApiPropertyOptional({
+    example: 'ab8e9965-ecbc-4d86-9038-7487c35a6120',
+    description: 'Proveedor opcional del producto',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsUUID()
+  supplierId?: string | null;
 }

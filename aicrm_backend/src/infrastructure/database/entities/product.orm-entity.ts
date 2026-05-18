@@ -5,10 +5,14 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  JoinColumn,
+  ManyToOne,
 } from 'typeorm';
+import { SupplierOrmEntity } from './supplier.orm-entity';
 
 @Entity('products')
 @Index('IDX_products_company_category', ['companyId', 'categoryId'])
+@Index('IDX_products_company_supplier', ['companyId', 'supplierId'])
 export class ProductOrmEntity {
   @PrimaryColumn('varchar', { length: 36 })
   id: string;
@@ -57,6 +61,13 @@ export class ProductOrmEntity {
 
   @Column({ name: 'category_id', type: 'varchar', length: 36, nullable: true })
   categoryId: string | null;
+
+  @Column({ name: 'supplier_id', type: 'varchar', length: 36, nullable: true })
+  supplierId: string | null;
+
+  @ManyToOne(() => SupplierOrmEntity, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'supplier_id' })
+  supplier?: SupplierOrmEntity | null;
 
   @CreateDateColumn({ type: 'datetime' })
   createdAt: Date;

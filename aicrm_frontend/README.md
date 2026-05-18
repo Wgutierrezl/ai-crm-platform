@@ -21,6 +21,7 @@ El frontend actualmente cubre una primera capa funcional de presentacion con las
 - Conversaciones
 - Ordenes
 - Detalle de orden
+- Proveedores
 - Configuracion
 
 Adicionalmente, se implemento una base de componentes UI reutilizables para sostener el sistema visual del proyecto.
@@ -62,7 +63,8 @@ En este momento el frontend se encuentra en fase de prototipo funcional. Eso sig
 - Comportamiento actual:
   - Si no hay sesion valida: `/` redirige a `/login`.
   - Si hay sesion valida: `/` redirige a `/dashboard`.
-  - Rutas protegidas (`/dashboard`, `/products`, `/customers`, `/conversations`, `/orders`, `/settings`) requieren sesion activa.
+- Rutas protegidas (`/dashboard`, `/products`, `/customers`, `/conversations`, `/orders`, `/settings`) requieren sesion activa.
+- Rutas protegidas (`/dashboard`, `/products`, `/customers`, `/conversations`, `/orders`, `/suppliers`, `/settings`) requieren sesion activa.
   - Rutas publicas (`/login`, `/register`) redirigen a `/dashboard` si ya existe sesion.
 
 ## Causa raiz corregida
@@ -137,6 +139,57 @@ Este frontend no debe verse como una version final de producto, sino como la bas
 - `POST /categories`
 - `PATCH /categories/:id/status`
 - `GET /categories/:id/products`
+
+## Actualizacion 2026-05-17 (suppliers frontend fase 1)
+
+### Estado actual del modulo proveedores
+- Pantalla `Suppliers` implementada y conectada a backend real.
+- Ruta protegida habilitada:
+  - `/suppliers`
+- Navegacion lateral actualizada con acceso `Proveedores`.
+
+### Endpoints backend consumidos (suppliers)
+- `GET /suppliers`
+- `POST /suppliers`
+- `GET /suppliers/:id`
+- `PATCH /suppliers/:id`
+- `PATCH /suppliers/:id/status`
+
+### Alcance implementado
+- Listado de proveedores.
+- Busqueda por nombre/contacto/ciudad/documento/email.
+- Filtro por estado (todos/activos/inactivos).
+- Creacion y edicion de proveedor.
+- Activar/desactivar proveedor.
+
+## Actualizacion 2026-05-17 (relacion producto -> proveedor)
+
+### Regla aplicada
+- Un proveedor puede tener muchos productos.
+- Un producto puede tener un solo proveedor o ninguno.
+
+### Cambios frontend aplicados
+- `Products`:
+  - selector de proveedor en crear/editar (opcional, `Sin proveedor`).
+  - render de proveedor asociado en listado.
+  - filtro por proveedor.
+- `Suppliers`:
+  - accion `Ver productos` por proveedor.
+  - modal con productos relacionados consumiendo endpoint backend.
+
+### Endpoints usados para la relacion
+- `GET /suppliers`
+- `GET /suppliers/:id/products`
+- `POST /products` (con `supplierId` opcional)
+- `PATCH /products/:id` (con `supplierId` opcional/null)
+- `POST /products/with-image` (con `supplierId` opcional)
+- `PATCH /products/:id/with-image` (con `supplierId` opcional/null)
+
+### Pendientes siguientes del modulo
+1. Relacion producto-proveedor.
+2. Ver productos relacionados por proveedor.
+3. Vista detalle individual de proveedor (si se requiere).
+4. Tests de UI y servicio API.
 
 ### Proximos pasos frontend (prioridad)
 1. UX de catalogo mas orientada a operacion comercial.
