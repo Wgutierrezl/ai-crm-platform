@@ -222,8 +222,13 @@ import { InMemoryOauthTempStoreAdapter } from './infrastructure/security/in-memo
         const expiresIn = (configService.get<string>('JWT_EXPIRES_IN') ??
           '1d') as SignOptions['expiresIn'];
 
+        const secret = configService.get<string>('JWT_SECRET');
+        if (!secret) {
+          throw new Error('JWT_SECRET environment variable is required');
+        }
+
         return {
-          secret: configService.get<string>('JWT_SECRET', 'supersecretkey'),
+          secret,
           signOptions: {
             expiresIn,
           },
