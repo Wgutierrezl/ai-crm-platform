@@ -2,6 +2,31 @@
 
 Fecha de actualizacion: 2026-05-12
 
+## Actualizacion 2026-05-18 - Branding corporativo por tenant (logo + templates)
+
+### Implementado
+- Branding empresarial en `companies`:
+  - nueva columna nullable `logo_url`.
+  - migracion: `1710000000018-AddCompanyBrandingLogo`.
+- Settings multi-tenant:
+  - `GET /api/v1/company/settings` y `PATCH /api/v1/company/settings` ahora incluyen `logoUrl`.
+  - endpoint nuevo protegido `PATCH /api/v1/company/settings/logo` (`multipart/form-data`).
+  - upload reutiliza `ImageStoragePort` (Cloudinary) en carpeta `${companyId}/branding`.
+- Correos transaccionales HTML:
+  - bienvenida + confirmacion de compra ahora renderizan logo por tenant cuando existe.
+  - fallback visual a nombre de empresa cuando no hay logo.
+- PDF de recibo:
+  - soporte de logo por tenant con intento de carga remota segura.
+  - si falla carga de logo, el PDF se genera sin logo (sin romper flujo).
+- Callback OAuth customer:
+  - HTML de callback mejorado visualmente con branding por empresa cuando disponible.
+
+### Resiliencia preservada
+- Falla de logo no bloquea correo ni PDF.
+- Falla de PDF mantiene envio de correo sin adjunto.
+- Falla SMTP no revierte orden ni rompe checkout mock.
+- Sin impacto en imagenes de productos ni endpoints `/products/*with-image`.
+
 ## Actualizacion 2026-05-17 - Historial real de mensajes por conversacion
 
 ### Implementado

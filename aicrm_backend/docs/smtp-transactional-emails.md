@@ -51,9 +51,13 @@ Para Gmail/Google Workspace no usar password normal de cuenta.
 - Personalizacion por:
   - nombre del cliente
   - nombre de empresa
+  - logo corporativo por tenant (si existe)
   - para compra: items, cantidades, subtotales y total.
 
 ## Politica de resiliencia
+- Si falla carga de logo:
+  - se usa fallback visual con nombre de empresa
+  - no se bloquea el envio del correo
 - Si SMTP falla:
   - se registra log de error,
   - NO se revierte onboarding ni orden,

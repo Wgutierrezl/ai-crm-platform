@@ -29,6 +29,20 @@
 
 Los endpoints anteriores JSON (`POST /products`, `PATCH /products/:id`) siguen funcionando.
 
+## Branding de empresa (logo corporativo)
+- Endpoint nuevo:
+  - `PATCH /api/v1/company/settings/logo`
+  - `multipart/form-data`
+  - campo requerido: `logo`
+- Seguridad:
+  - requiere `JWT` y toma `companyId` desde `CurrentUser`.
+- Carpeta de subida:
+  - `${companyId}/branding` (aislamiento multi-tenant).
+- Resultado:
+  - persiste `companies.logo_url` y devuelve `company/settings` actualizado.
+- Compatibilidad:
+  - no modifica endpoints ni flujos de imagenes de productos.
+
 ## Validaciones de archivo
 - Tipos permitidos: `image/jpeg`, `image/jpg`, `image/png`, `image/webp`, `image/gif`, `image/avif`.
 - Tamaño máximo: 5 MB.

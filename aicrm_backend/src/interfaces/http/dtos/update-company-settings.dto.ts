@@ -23,5 +23,13 @@ export class UpdateCompanySettingsDto {
   @IsString()
   @MaxLength(3000)
   assistantWelcomeMessage?: string | null;
+
+  @ApiPropertyOptional({
+    example: 'https://res.cloudinary.com/demo/image/upload/v1/company/logo.png',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2048)
+  logoUrl?: string | null;
 }
 

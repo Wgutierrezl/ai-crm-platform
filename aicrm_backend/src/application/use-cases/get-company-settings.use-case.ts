@@ -7,6 +7,7 @@ export interface CompanySettingsOutput {
   assistantName: string | null;
   assistantContext: string | null;
   assistantWelcomeMessage: string | null;
+  logoUrl: string | null;
 }
 
 @Injectable()
@@ -25,6 +26,7 @@ export class GetCompanySettingsUseCase {
       assistantName: company.assistantName,
       assistantContext: company.assistantContext,
       assistantWelcomeMessage: company.assistantWelcomeMessage,
+      logoUrl: company.logoUrl,
     };
   }
 }

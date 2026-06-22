@@ -25,6 +25,7 @@ export interface HandleCustomerGoogleOAuthCallbackInput {
 export interface HandleCustomerGoogleOAuthCallbackOutput {
   success: boolean;
   message: string;
+  companyId: string;
 }
 
 @Injectable()
@@ -157,6 +158,7 @@ export class HandleCustomerGoogleOAuthCallbackUseCase {
     return {
       success: true,
       message: 'Google vinculado correctamente. Puedes volver a WhatsApp.',
+      companyId: session.companyId,
     };
   }
 

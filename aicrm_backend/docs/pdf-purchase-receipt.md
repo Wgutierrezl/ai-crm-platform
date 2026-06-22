@@ -22,6 +22,7 @@ Generar un PDF real por compra aprobada (`checkout mock approved`) y adjuntarlo 
 
 ## Datos incluidos en el PDF
 - empresa/tenant
+- logo corporativo (si existe y se puede cargar)
 - id de orden
 - fecha de compra
 - cliente (nombre/email/telefono si existe)
@@ -33,6 +34,9 @@ Generar un PDF real por compra aprobada (`checkout mock approved`) y adjuntarlo 
   - `Este recibo corresponde a una compra simulada en entorno de prueba. No es una factura legal.`
 
 ## Resiliencia
+- Si falla carga del logo:
+  - se omite logo
+  - el PDF continua y se genera sin bloquear checkout
 - Si falla PDF:
   - log de error
   - correo se envia sin adjunto
@@ -44,6 +48,7 @@ Generar un PDF real por compra aprobada (`checkout mock approved`) y adjuntarlo 
 
 ## Multi-tenant
 - El flujo recibe `companyId` y resuelve nombre de empresa por tenant.
+- tambien resuelve `logoUrl` por tenant.
 - El contenido del recibo se construye con datos del tenant y de la orden del tenant.
 
 ## Limitaciones actuales
