@@ -1,199 +1,213 @@
-# AI CRM Frontend
+# aicrm_frontend
 
-## Descripcion
-Este frontend corresponde a la interfaz web del proyecto AI CRM. Su objetivo es ofrecer una experiencia visual para la gestion comercial de empresas que usan el CRM, incluyendo autenticacion, dashboard, productos, clientes, conversaciones, ordenes y configuracion.
+Panel de administración web del CRM, construido como Single Page Application (SPA) con React 18 y TypeScript. Permite a los operadores gestionar clientes, productos, pedidos, proveedores y conversaciones de WhatsApp, y configurar la empresa. Se conecta al backend exclusivamente a través de la API REST bajo JWT.
 
-La base visual del frontend parte de un prototipo ya definido en Figma. La implementacion actual toma ese prototipo como referencia de estructura, navegacion y estilo para construir una primera version funcional dentro de React + TypeScript + Vite.
+---
 
-## Objetivo del frontend
-- Representar visualmente el flujo del CRM definido en el prototipo de Figma.
-- Servir como base funcional para conectar la interfaz con el backend NestJS del proyecto.
-- Preparar una estructura reutilizable de componentes y paginas para evolucionar desde un prototipo visual hacia una aplicacion real.
+## Contenido
 
-## Alcance actual
-El frontend actualmente cubre una primera capa funcional de presentacion con las siguientes vistas:
+- [Stack tecnológico](#stack-tecnológico)
+- [Páginas y funcionalidades](#páginas-y-funcionalidades)
+- [Estructura de rutas](#estructura-de-rutas)
+- [Flujo de autenticación JWT](#flujo-de-autenticación-jwt)
+- [API layer](#api-layer)
+- [Setup local](#setup-local)
+- [Variables de entorno](#variables-de-entorno)
+- [Limitaciones conocidas](#limitaciones-conocidas)
 
-- Login
-- Registro
-- Dashboard
-- Productos
-- Clientes
-- Conversaciones
-- Ordenes
-- Detalle de orden
-- Proveedores
-- Configuracion
+---
 
-Adicionalmente, se implemento una base de componentes UI reutilizables para sostener el sistema visual del proyecto.
+## Stack tecnológico
 
-## Base de diseno
-- El frontend nace a partir de un prototipo dado desde Figma.
-- La implementacion actual respeta la idea general del flujo y la composicion visual del prototipo.
-- Todavia hay partes del proyecto que funcionan con datos simulados para representar el comportamiento esperado antes de conectar completamente con backend.
+| Tecnología | Versión | Rol |
+|------------|---------|-----|
+| React | 18 | Framework de UI |
+| TypeScript | 5 | Tipado estático |
+| Vite | 5+ | Build tool y dev server |
+| Tailwind CSS | 4 | Estilos utilitarios |
+| Radix UI | — | Componentes accesibles (base para Shadcn-style) |
+| React Router | v7 | Routing SPA (createBrowserRouter) |
+| Recharts | — | Gráficos del dashboard |
+| Sonner | — | Notificaciones toast |
+| Axios | — | Cliente HTTP con interceptores |
 
-## Stack tecnico
-- React 18
-- TypeScript
-- Vite
-- React Router
-- Tailwind CSS 4
-- Sonner
-- Radix UI
-- Recharts
+---
 
-## Estructura general
-- src/app/components: componentes de layout, KPIs y piezas reutilizables.
-- src/app/components/ui: componentes base de interfaz reutilizables.
-- src/app/pages: vistas principales del sistema.
-- src/styles: estilos globales, tema y configuracion visual.
-- src/routes.tsx: definicion central de rutas.
-- src/lib: utilidades compartidas.
+## Páginas y funcionalidades
 
-## Estado actual
-En este momento el frontend se encuentra en fase de prototipo funcional. Eso significa que:
+### Autenticación
 
-- La navegacion principal ya existe.
-- La interfaz ya compila correctamente.
-- El sistema visual base ya esta montado.
-- La mayor parte del contenido mostrado todavia usa datos quemados o simulados.
-- Aun no se ha completado la integracion real con los endpoints del backend.
+- **Login** (`/login`) — Formulario de email/password. Llama a `POST /auth/login` y almacena el JWT en `localStorage`.
+- **Register** (`/register`) — Creación de cuenta de operador con email/password.
+- **Google OAuth** — Flujo completo: inicio desde `/login`, callback en `/login/google/callback`, página de resultado en `/auth/google/success`, manejo de error en `/auth/google/failure`, y completado de registro en `/auth/google/complete-registration`.
 
-## Flujo de autenticacion (actualizado)
-- La app ya no entra directo al dashboard por defecto.
-- Comportamiento actual:
-  - Si no hay sesion valida: `/` redirige a `/login`.
-  - Si hay sesion valida: `/` redirige a `/dashboard`.
-- Rutas protegidas (`/dashboard`, `/products`, `/customers`, `/conversations`, `/orders`, `/settings`) requieren sesion activa.
-- Rutas protegidas (`/dashboard`, `/products`, `/customers`, `/conversations`, `/orders`, `/suppliers`, `/settings`) requieren sesion activa.
-  - Rutas publicas (`/login`, `/register`) redirigen a `/dashboard` si ya existe sesion.
+### Dashboard (`/dashboard`)
 
-## Causa raiz corregida
-- El router inicial montaba `Layout` en `/` con `Dashboard` como `index`, sin guard de autenticacion.
-- Eso permitia visualizar pantallas protegidas sin validar JWT/sesion.
+Métricas del negocio consumidas desde la API real: totales de clientes, productos, pedidos y conversaciones. Incluye gráficos de Recharts para visualizar tendencias.
 
-## Manejo de sesion/token
-- El login consume backend (`POST /auth/login` sobre base `/api/v1`) y guarda:
-  - `auth_token`
-  - `auth_userId`
-  - `auth_companyId`
-  - `auth_role` (opcional)
-- `apiClient` inyecta `Authorization: Bearer <token>` via interceptor.
-- En `401`, se limpia sesion automaticamente.
-- Logout limpia storage y redirige a `/login`.
+### Products (`/products`)
 
-## Integracion esperada con backend
-La siguiente etapa del frontend consiste en conectarse al backend del AI CRM para dejar de depender de mocks locales. Para eso sera necesario:
+CRUD completo de productos del catálogo:
 
-- instalar Axios como cliente HTTP
-- centralizar configuracion de base URL, headers y manejo de token
-- crear funciones o servicios para consumir los endpoints existentes
-- definir interfaces TypeScript para request y response
-- reemplazar los datos quemados por datos reales provenientes del backend
+- Listado con nombre, precio, stock e imagen.
+- Creación y edición con soporte para subida de imagen a Cloudinary (`POST /products/with-image`, `PATCH /products/:id/with-image`).
+- Visualización de proveedores asociados a cada producto.
 
-## Proximo enfoque de desarrollo
-Las siguientes prioridades del frontend son:
+### Categories (`/categories`)
 
-1. Eliminar datos simulados en paginas y componentes.
-2. Instalar Axios y preparar la capa de consumo HTTP.
-3. Implementar servicios para autenticacion, productos, conversaciones, mensajes y ordenes.
-4. Crear interfaces TypeScript para representar contratos de entrada y salida.
-5. Conectar formularios y tablas con datos reales del backend.
+- Listado de categorías con estado activo/inactivo.
+- Creación de nuevas categorías.
+- Cambio de estado (`PATCH /categories/:id/status`).
 
-## Roadmap siguiente sesion (frontend)
-1. Mantener login como entrada principal.
-2. Validar rutas protegidas y redirecciones por sesion.
-3. Integrar vista de conversaciones con datos reales (`Conversation` + `messages`).
-4. Mostrar historial inbound/outbound real del bot y usuario.
-5. Retirar mocks del flujo principal (mantenerlos solo como fixtures opcionales).
-6. Endurecer manejo de errores de API y sesion expirada.
+### Customers (`/customers`)
 
-## Notas
-Este frontend no debe verse como una version final de producto, sino como la base de una implementacion progresiva que parte desde un diseño de Figma ya definido y evoluciona hacia una aplicacion integrada con backend real.
+- Listado de clientes registrados.
+- Creación de nuevos clientes.
 
-## Actualizacion 2026-05-08 (fase catalogo + sincronizacion backend)
+### Conversations (`/conversations`)
 
-### Estado actual del frontend
-- Integracion real con categorias de backend completada.
-- Nueva vista de categorias activa en navegacion:
-  - crear,
-  - listar,
-  - activar/desactivar.
-- Vista de productos sincronizada con backend:
-  - crear producto con categoria opcional,
-  - editar producto por endpoint real,
-  - cambiar/quitar categoria,
-  - mostrar categoria activa/inactiva en listado.
-- Filtros en productos:
-  - por categoria,
-  - por texto,
-  - por stock bajo,
-  - combinables + limpieza rapida.
-- Campo de imagen preparado visualmente (placeholder + preview por URL).
+- Listado de conversaciones de WhatsApp con información del cliente asociado.
+- Detalle de cada conversación con el historial de mensajes completo (`GET /conversations/:id/messages`).
 
-### Endpoints backend consumidos por frontend (catalogo)
-- `GET /products`
-- `POST /products`
-- `PATCH /products/:id`
-- `GET /categories`
-- `GET /categories/active`
-- `POST /categories`
-- `PATCH /categories/:id/status`
-- `GET /categories/:id/products`
+### Orders (`/orders` y `/orders/:id`)
 
-## Actualizacion 2026-05-17 (suppliers frontend fase 1)
+- Listado de pedidos con estado y cliente.
+- Detalle de pedido con líneas de productos (`OrderItem`).
 
-### Estado actual del modulo proveedores
-- Pantalla `Suppliers` implementada y conectada a backend real.
-- Ruta protegida habilitada:
-  - `/suppliers`
-- Navegacion lateral actualizada con acceso `Proveedores`.
+### Suppliers (`/suppliers` y `/suppliers/:id`)
 
-### Endpoints backend consumidos (suppliers)
-- `GET /suppliers`
-- `POST /suppliers`
-- `GET /suppliers/:id`
-- `PATCH /suppliers/:id`
-- `PATCH /suppliers/:id/status`
+- Listado de proveedores con estado activo/inactivo.
+- Creación y edición de proveedores.
+- Cambio de estado.
+- Detalle de proveedor con lista de productos asociados.
 
-### Alcance implementado
-- Listado de proveedores.
-- Busqueda por nombre/contacto/ciudad/documento/email.
-- Filtro por estado (todos/activos/inactivos).
-- Creacion y edicion de proveedor.
-- Activar/desactivar proveedor.
+### Settings (`/settings`)
 
-## Actualizacion 2026-05-17 (relacion producto -> proveedor)
+- Visualización y edición de la configuración de la empresa (nombre, datos de contacto).
+- Subida de logo a Cloudinary.
 
-### Regla aplicada
-- Un proveedor puede tener muchos productos.
-- Un producto puede tener un solo proveedor o ninguno.
+---
 
-### Cambios frontend aplicados
-- `Products`:
-  - selector de proveedor en crear/editar (opcional, `Sin proveedor`).
-  - render de proveedor asociado en listado.
-  - filtro por proveedor.
-- `Suppliers`:
-  - accion `Ver productos` por proveedor.
-  - modal con productos relacionados consumiendo endpoint backend.
+## Estructura de rutas
 
-### Endpoints usados para la relacion
-- `GET /suppliers`
-- `GET /suppliers/:id/products`
-- `POST /products` (con `supplierId` opcional)
-- `PATCH /products/:id` (con `supplierId` opcional/null)
-- `POST /products/with-image` (con `supplierId` opcional)
-- `PATCH /products/:id/with-image` (con `supplierId` opcional/null)
+| Path | Componente | Protegida (JWT) |
+|------|------------|-----------------|
+| `/login` | `LoginPage` | No |
+| `/register` | `RegisterPage` | No |
+| `/auth/google/success` | `GoogleAuthSuccessPage` | No |
+| `/login/google/callback` | `GoogleCallbackPage` | No |
+| `/auth/google/failure` | `GoogleAuthFailurePage` | No |
+| `/auth/google/complete-registration` | `CompleteRegistrationPage` | No |
+| `/dashboard` | `DashboardPage` | Sí |
+| `/products` | `ProductsPage` | Sí |
+| `/categories` | `CategoriesPage` | Sí |
+| `/customers` | `CustomersPage` | Sí |
+| `/conversations` | `ConversationsPage` | Sí |
+| `/orders` | `OrdersPage` | Sí |
+| `/orders/:id` | `OrderDetailPage` | Sí |
+| `/suppliers` | `SuppliersPage` | Sí |
+| `/suppliers/:id` | `SupplierDetailPage` | Sí |
+| `/settings` | `SettingsPage` | Sí |
 
-### Pendientes siguientes del modulo
-1. Relacion producto-proveedor.
-2. Ver productos relacionados por proveedor.
-3. Vista detalle individual de proveedor (si se requiere).
-4. Tests de UI y servicio API.
+Las rutas protegidas están envueltas en un componente `ProtectedRoute` y un `Layout` compartido. Si el usuario no está autenticado, `ProtectedRoute` redirige a `/login`.
 
-### Proximos pasos frontend (prioridad)
-1. UX de catalogo mas orientada a operacion comercial.
-2. Integracion de carga real de imagenes (Cloudinary).
-3. Mejor manejo de estados de edicion y validaciones por campo.
-4. Preparar UI para detalle enriquecido de producto (uso futuro en WhatsApp).
-5. Acompanar la fase de pruebas unitarias/E2E.
+---
+
+## Flujo de autenticación JWT
+
+### Login con email/password
+
+1. El usuario completa el formulario en `/login`.
+2. El frontend llama a `POST /api/v1/auth/login` con `{ email, password }`.
+3. El backend responde con `{ token, userId, companyId, role }`.
+4. El frontend almacena los datos en `localStorage`:
+   - `auth_token` — JWT para autenticar requests
+   - `auth_userId` — ID del operador
+   - `auth_companyId` — ID de la empresa
+   - `auth_role` — rol del operador
+
+### Login con Google OAuth
+
+1. El usuario hace clic en "Iniciar con Google".
+2. El frontend redirige al backend a la URL `VITE_GOOGLE_LOGIN_START_URL` (`/api/v1/auth/google/start`).
+3. El backend redirige al consentimiento de Google.
+4. Google redirige de vuelta al backend (`/api/v1/auth/google/callback`).
+5. El backend redirige al frontend con el token en los query params (`/auth/google/success?token=...`).
+6. La página `GoogleAuthSuccessPage` extrae el token y lo almacena en `localStorage`.
+
+### Adjuntar el token en cada request
+
+El archivo `src/api/client/apiClient.ts` configura un interceptor de Axios que lee `auth_token` de `localStorage` y lo adjunta automáticamente como `Authorization: Bearer <token>` en cada request saliente.
+
+### ProtectedRoute
+
+`ProtectedRoute` lee `auth_token` de `localStorage` antes de renderizar. Si no existe o es inválido, redirige a `/login`. Si existe, renderiza la ruta solicitada dentro del `Layout`.
+
+---
+
+## API layer
+
+La capa de acceso a datos del frontend está organizada en dos niveles:
+
+```
+src/api/
+├── client/
+│   └── apiClient.ts        # Instancia Axios con baseURL y interceptor de Auth
+└── services/
+    ├── auth.service.ts
+    ├── category.service.ts
+    ├── company-settings.service.ts
+    ├── conversation.service.ts
+    ├── customer.service.ts
+    ├── message.service.ts
+    ├── order.service.ts
+    ├── product.service.ts
+    └── supplier.service.ts
+```
+
+Cada servicio importa `apiClient` y expone funciones tipadas que encapsulan los endpoints correspondientes del backend. Los componentes de React no acceden a Axios directamente — siempre pasan por el servicio correspondiente.
+
+---
+
+## Setup local
+
+```bash
+# Desde la raíz del monorepo
+cd aicrm_frontend
+
+# Instalar dependencias
+npm install
+
+# Configurar variables de entorno
+cp .env.example .env
+# Editar .env con los valores reales
+
+# Iniciar dev server
+npm run dev
+# Disponible en http://localhost:5173
+
+# Build de producción (genera dist/)
+npm run build
+
+# Preview del build de producción local
+npm run preview
+```
+
+---
+
+## Variables de entorno
+
+| Variable | Obligatoria | Propósito | Ejemplo |
+|----------|-------------|-----------|---------|
+| `VITE_API_URL` | Sí | URL base de la API backend (sin barra final) | `http://localhost:3000/api/v1` |
+| `VITE_GOOGLE_LOGIN_START_URL` | Sí | URL del backend para iniciar el flujo Google OAuth | `http://localhost:3000/api/v1/auth/google/start` |
+
+---
+
+## Limitaciones conocidas
+
+- El Dockerfile del frontend corre en modo desarrollo con el Vite dev server. No hay Dockerfile de producción con nginx ni build optimizado para deploy.
+- El archivo `.env` está commiteado al repositorio.
+- No existe código de lazy loading de rutas — todas las páginas se cargan en el bundle inicial.
+- No hay tests unitarios ni de integración en el frontend.
+- El JWT se almacena en `localStorage`, lo cual lo expone a ataques XSS. Una alternativa más segura sería usar cookies `HttpOnly`.
